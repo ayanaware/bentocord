@@ -1,0 +1,12 @@
+# build
+build
+
+# dependencies
+node_modules
+
+# coverage
+.nyc_output
+
+# logs & extra
+*.tgz
+*.log
