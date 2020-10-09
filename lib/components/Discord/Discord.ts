@@ -7,8 +7,8 @@ import { Bentocord } from '../../Bentocord';
 const log = Logger.get();
 
 export class Discord implements Component {
-	public name: string = 'Discord';
-	public api?: ComponentAPI;
+	public name = 'Discord';
+	public api!: ComponentAPI;
 	public parent: PluginReference = Bentocord;
 
 	public client: Client;

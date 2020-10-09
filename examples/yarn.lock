@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@ayanaware/bento@^1.0.0-rc.1":
-  version "1.0.0-rc.1"
-  resolved "https://registry.yarnpkg.com/@ayanaware/bento/-/bento-1.0.0-rc.1.tgz#0f947e7c4209f79a7aae0cc5007aaccd69d327c9"
-  integrity sha512-57DqaZUpdXoedH6az0fI7HOPMWm3WqJfYuhfCKMqoHyIHmNAI9n9NfvYBaKU6XXmmsHbA+YRBJnrWdWbZqFiYA==
+"@ayanaware/bento@^1.0.0-rc.2":
+  version "1.0.0-rc.2"
+  resolved "https://registry.yarnpkg.com/@ayanaware/bento/-/bento-1.0.0-rc.2.tgz#317b545973ab3468f64979049b20ea1c274aebaf"
+  integrity sha512-1Z8jmvGYu9ZJWeMh/xfy1Bd6zmSkg2qNbn1cBJJpeh3J2GPkQ0gPq+a+LYb5k7b+cN6Tcy82lEyIep1jwQzfRw==
   dependencies:
     "@ayanaware/errors" "^1.1.0"
 
@@ -35,10 +35,10 @@
     tslint-eslint-rules "^5.4.0"
     tslint-sonarts "^1.9.0"
 
-"@types/node@^14.11.7":
-  version "14.11.7"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-14.11.7.tgz#4d9673b8331ce262628ea89d9ef3964b6c1e5489"
-  integrity sha512-hSEXknS4KiayUdZ7401J/T6eykXHJkDEipnyQMJ4/GstK4kWjbHnwXlcpvIWfPKiEH1JU96DkbzJ1nHRmpmKLw==
+"@types/node@^14.11.8":
+  version "14.11.8"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-14.11.8.tgz#fe2012f2355e4ce08bca44aeb3abbb21cf88d33f"
+  integrity sha512-KPcKqKm5UKDkaYPTuXSx8wEP7vE9GnuaXIZKijwRYcePpZFDVuy2a57LarFKiORbHOuTOOwYzxVxcUzsh2P2Pw==
 
 builtin-modules@^3.1.0:
   version "3.1.0"

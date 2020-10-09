@@ -25,9 +25,5 @@ export class Basic implements Component {
 	@Subscribe(Discord, DiscordEvent.MESSAGE_CREATE)
 	private async onMessageCreate(message: Message) {
 		log.info(`${message.author.username}#${message.author.discriminator}: ${message.content}`);
-
-		if (message.content === 'bentocord ping') {
-			await this.discord.client.createMessage(message.channel.id, 'Pong!');
-		}
 	}
 }
