@@ -10,7 +10,7 @@ You can also bring your own plugin or alternativly directly inject values via `B
 This means Bentocord expects you to set all Variables you care about before `Bento.addPlugin()`
 
 Key | Type | Description | Default
-- | - | - | -
+--- | --- | --- | ---
 BENTOCORD_TOKEN | string | [Discord Authentication Token](https://discord.com/developers/docs/intro#bots-and-apps) | null
 BENTOCORD_COMMAND_PREFIX | string | The default prefix to use for Bentocord's Command Handler | bentocord
 BENTOCORD_STORAGE_ENTITY | EntityReference* | A [StorageLike](#StorageLike) Entity Bentocord uses this for persistentance | null**
