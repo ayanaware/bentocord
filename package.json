@@ -7,11 +7,11 @@
 	"repository": "git@gitlab.com:ayanaware/bentocord.git",
 	"author": "HcgRandon <me@randon.moe>",
 	"scripts": {
-		"build": "ayc build",
+		"build": "ayc clean build",
 		"prepublishOnly": "ayc clean build"
 	},
 	"dependencies": {
-		"@ayanaware/bento": "^1.0.0-rc.4",
+		"@ayanaware/bento": "^1.0.0-rc.5",
 		"@ayanaware/logger-api": "^2.0.0",
 		"eris": "^0.13.3"
 	},

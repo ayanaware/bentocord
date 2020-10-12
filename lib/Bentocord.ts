@@ -1,6 +1,7 @@
-import { Entity, FSComponentLoader, Plugin, PluginAPI } from '@ayanaware/bento';
+import { FSComponentLoader, Plugin, PluginAPI, Variable } from '@ayanaware/bento';
 import { ClientOptions } from 'eris';
 
+import { BentocordVariable } from './constants';
 import { StorageLike } from './interfaces';
 import { RamStorage } from './util';
 
@@ -10,25 +11,16 @@ const log = Logger.get();
 export class Bentocord implements Plugin {
 	public name = 'Bentocord';
 	public version: string;
-
 	public api!: PluginAPI;
 
-	public tokenKey: string;
 	public clientOptions: ClientOptions;
 
-	public storage: StorageLike = null;
-
+	public storage: StorageLike;
 	public fsLoader: FSComponentLoader;
 
-	public constructor(tokenKey = 'BOT_TOKEN', clientOptions?: ClientOptions) {
+	public constructor(clientOptions?: ClientOptions) {
 		this.version = '1.0.0';
-
-		this.tokenKey = tokenKey;
 		this.clientOptions = clientOptions;
-	}
-
-	public setStorage(entity: StorageLike) {
-		this.storage = entity;
 	}
 
 	public setClientOptions(clientOptions: ClientOptions) {
@@ -36,6 +28,8 @@ export class Bentocord implements Plugin {
 	}
 
 	public async onLoad() {
+		this.storage = this.api.getVariable({ name: BentocordVariable.BENTOCORD_STORAGE_ENTITY, default: null });
+
 		// no storage entity was provided use default RamStorage
 		if (!this.storage) {
 			const ramStorage = new RamStorage();

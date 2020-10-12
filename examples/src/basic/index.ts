@@ -1,14 +1,14 @@
 import { Bento, FSComponentLoader } from '@ayanaware/bento';
-import { Bentocord } from '@ayanaware/bentocord';
+import { Bentocord, BentocordVariable } from '@ayanaware/bentocord';
 
 const bento = new Bento();
 
 (async () => {
-	const tokenKey = 'BOT_TOKEN';
-	if (!process.env[tokenKey]) throw new Error(`Please append ${tokenKey}=xxx to the front of your command`);
+	const key = BentocordVariable.BENTOCORD_TOKEN;
+	if (!process.env[key]) throw new Error(`Please append ${key}=xxx to the front of your command`);
 
-	const bentocord = new Bentocord(tokenKey);
-	bento.setVariable('BOT_TOKEN', process.env[tokenKey]);
+	const bentocord = new Bentocord();
+	bento.setVariable(key, process.env[key]);
 
 	const fsloader = new FSComponentLoader();
 	await fsloader.addDirectory(__dirname, 'components');

@@ -2,8 +2,9 @@ import { BentoError, Component, ComponentAPI, Inject, Plugin, Subscribe, Variabl
 import { Message } from 'eris';
 
 import { Bentocord } from '../../Bentocord';
-import { DiscordEvent } from '../../constants';
+import { BentocordVariable, DiscordEvent } from '../../constants';
 import { Discord } from '../Discord';
+
 import { Command } from './Command';
 import { CommandContext } from './CommandContext';
 
@@ -27,7 +28,7 @@ export class CommandManager implements Component {
 	private readonly commands: Map<string, Command> = new Map();
 	private readonly aliases: Map<string, string> = new Map();
 
-	@Variable({ name: 'BENTOCORD_COMMAND_PREFIX', default: 'bentocord' })
+	@Variable({ name: BentocordVariable.BENTOCORD_COMMAND_PREFIX, default: 'bentocord' })
 	public defaultPrefix: string;
 	private selfId: string = null;
 
@@ -39,7 +40,8 @@ export class CommandManager implements Component {
 
 	public async onLoad() {
 		// load built-in commands
-		return this.api.loadComponents(this.bentocord.fsLoader, __dirname, 'commands');
+		const loadBuiltin = this.api.getVariable({ name: BentocordVariable.BENTOCORD_BUILTIN_COMMANDS, default: true });
+		if (loadBuiltin) return this.api.loadComponents(this.bentocord.fsLoader, __dirname, 'commands');
 	}
 
 	public async onChildLoad(entity: Command) {
@@ -115,12 +117,12 @@ export class CommandManager implements Component {
 	}
 	
 	public async getPrefix(guildId: string) {
-		const key = `${guildId}.prefix`;
+		const key = `prefix.${guildId}`;
 		return this.bentocord.storage.get<string>(key);
 	}
 
 	public async setPrefix(guildId: string, prefix: string) {
-		const key = `${guildId}.prefix`;
+		const key = `prefix.${guildId}`;
 		return this.bentocord.storage.set<string>(key, prefix);
 	}
 

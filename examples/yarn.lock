@@ -2,12 +2,13 @@
 # yarn lockfile v1
 
 
-"@ayanaware/bento@^1.0.0-rc.2":
-  version "1.0.0-rc.2"
-  resolved "https://registry.yarnpkg.com/@ayanaware/bento/-/bento-1.0.0-rc.2.tgz#317b545973ab3468f64979049b20ea1c274aebaf"
-  integrity sha512-1Z8jmvGYu9ZJWeMh/xfy1Bd6zmSkg2qNbn1cBJJpeh3J2GPkQ0gPq+a+LYb5k7b+cN6Tcy82lEyIep1jwQzfRw==
+"@ayanaware/bento@^1.0.0-rc.5":
+  version "1.0.0-rc.5"
+  resolved "https://registry.yarnpkg.com/@ayanaware/bento/-/bento-1.0.0-rc.5.tgz#21bd1aa9b4944166b807f10b1b927b04ab4e89eb"
+  integrity sha512-YUWuggHYTbzfjj7+RlZ2/MXrG06WRY/9RRxKque9YOJS74p/rYnUE4UhefCq+a6rSESkl+FCMzopjUKH2b2YDA==
   dependencies:
     "@ayanaware/errors" "^1.1.0"
+    "@ayanaware/logger-api" "^2.0.0"
 
 "@ayanaware/bentocord@../build":
   version "0.0.0"
@@ -16,6 +17,11 @@
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/@ayanaware/errors/-/errors-1.1.0.tgz#f2cb5c73d60e9236d7e5c0b97a76083184f79a80"
   integrity sha512-YJixth1wsnzUbwXwKDmP4f9b7eBmuLL6/8sgeAAvlQlUHxBdcAafKjk655OvsGqoqYoHiM6CKx1coN8Lews+ZA==
+
+"@ayanaware/logger-api@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@ayanaware/logger-api/-/logger-api-2.0.0.tgz#f25538110c184a951580b21601088eb1194f0960"
+  integrity sha512-94qXdjjPWpizWbHCLRdZ5EHG3qZP2MsLxZwRJOduD5e66KeVnoxibW9rInzlfPRXvUTwn+pP0j5vVVh4WuZgPg==
 
 "@ayanaware/logger@^2.0.0-beta.3":
   version "2.2.1"
@@ -91,9 +97,9 @@ tslib@1.9.0:
   integrity sha512-f/qGG2tUkrISBlQZEjEqoZ3B2+npJjIf04H1wuAv9iA8i04Icp+61KRXxFdha22670NJopsZCIjhC3SnjPRKrQ==
 
 tslib@^1.8.1, tslib@^1.9.2:
-  version "1.14.0"
-  resolved "https://registry.yarnpkg.com/tslib/-/tslib-1.14.0.tgz#d624983f3e2c5e0b55307c3dd6c86acd737622c6"
-  integrity sha512-+Zw5lu0D9tvBMjGP8LpvMb0u2WW2QV3y+D8mO6J+cNzCYIN4sVy43Bf9vl92nqFahutN0I8zHa7cc4vihIshnw==
+  version "1.14.1"
+  resolved "https://registry.yarnpkg.com/tslib/-/tslib-1.14.1.tgz#cf2d38bdc34a134bcaf1091c41f6619e2f672d00"
+  integrity sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==
 
 tslint-config-security@^1.16.0:
   version "1.16.0"

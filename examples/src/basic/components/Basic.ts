@@ -6,7 +6,7 @@ import { Message } from 'eris';
 const log = Logger.get();
 
 export class Basic implements Component {
-	public name: string = 'Basic';
+	public name = 'Basic';
 	public api!: ComponentAPI;
 
 	@Inject(Discord)

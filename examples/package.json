@@ -5,7 +5,7 @@
 		"build": "ayc clean build"
 	},
 	"dependencies": {
-		"@ayanaware/bento": "^1.0.0-rc.2",
+		"@ayanaware/bento": "^1.0.0-rc.5",
 		"@ayanaware/bentocord": "../build",
 		"@ayanaware/logger": "^2.0.0-beta.3",
 		"@ayanaware/ts": "^1.1.2",
