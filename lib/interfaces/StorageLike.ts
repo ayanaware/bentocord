@@ -7,8 +7,7 @@ import { Entity } from "@ayanaware/bento";
  * There is support for optional id's in this system. And when
  * defined they must and should be handled. Basically Bentocord
  * expects that `has('prefix', 123)` and `has('prefix', 456)` to
- * be associated with seperate pieces of data. It's designed this way
- * to allow for key
+ * be associated with seperate pieces of data.
  */
 export interface StorageLike extends Entity {
 	/**
