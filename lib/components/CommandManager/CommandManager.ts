@@ -9,7 +9,7 @@ import { Command } from './Command';
 import { CommandContext } from './CommandContext';
 
 import { Logger } from '@ayanaware/logger-api';
-const log = Logger.get();
+const log = Logger.get(null);
 
 export class CommandManagerError extends BentoError {
 	public command: Command;
@@ -117,18 +117,18 @@ export class CommandManager implements Component {
 	}
 	
 	public async getPrefix(guildId: string) {
-		return this.bentocord.storage.get<string>('prefix', guildId);
+		return this.bentocord.storage.get<string>('prefix', guildId) || this.defaultPrefix;
 	}
 
 	public async setPrefix(guildId: string, prefix: string) {
-		return this.bentocord.storage.set<string>('prefix', prefix, guildId);
+		await this.bentocord.storage.set<string>('prefix', prefix, guildId);
+		return prefix;
 	}
 
 	@Subscribe(Discord, DiscordEvent.SHARD_READY)
 	@Subscribe(Discord, DiscordEvent.SHARD_RESUME)
 	private async refreshSelfId() {
 		const self = await this.discord.client.getSelf();
-
 		if (self.id) this.selfId = self.id;
 	}
 
@@ -141,7 +141,7 @@ export class CommandManager implements Component {
 		const raw = message.content;
 
 		let prefix = this.defaultPrefix;
-		if (message.guildID) prefix = (await this.getPrefix(message.guildID)) || this.defaultPrefix;
+		if (message.guildID) prefix = await this.getPrefix(message.guildID);
 
 		// escape prefix
 		prefix = this.escapePrefix(prefix);

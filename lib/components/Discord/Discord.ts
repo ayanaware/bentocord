@@ -1,11 +1,11 @@
-import { Component, ComponentAPI, Inject, PluginReference } from '@ayanaware/bento';
+import { Component, ComponentAPI, Inject, PluginReference, Subscribe } from '@ayanaware/bento';
 import { Client } from 'eris';
 
 import { Bentocord } from '../../Bentocord';
 import { BentocordVariable, DiscordEvent } from '../../constants';
 
 import { Logger } from '@ayanaware/logger-api';
-const log = Logger.get();
+const log = Logger.get(null);
 
 export class Discord implements Component {
 	public name = 'Discord';
@@ -39,5 +39,23 @@ export class Discord implements Component {
 	public async disconnect() {
 		this.client.disconnect({ reconnect: false });
 		this.client.removeAllListeners();
+	}
+
+	@Subscribe(Discord, DiscordEvent.SHARD_READY)
+	private handleShardReady(id: number) {
+		log.info(`Shard "${id}" ready`);
+	}
+
+	@Subscribe(Discord, DiscordEvent.SHARD_RESUME)
+	private handleShardResume(id: number) {
+		log.info(`Shard "${id}" resume`);
+	}
+
+	@Subscribe(Discord, DiscordEvent.SHARD_RESUME)
+	private handleShardDisconnect(e: Error, id: number) {
+		let message = `Shard "${id}" disconnect`;
+		if (e) message = `${message}, ${e}`;
+
+		log.info(message);
 	}
 }
