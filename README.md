@@ -35,7 +35,7 @@ hit your backend every call. Both for your backend and responsiveness to the use
 
 #### Why?
 Storage is used for internal features. A good example is per guild prefix functionality.
-The CommandManager invokes `StorageLike.get('prefix.${guildId}')`, when looking for a custom prefix.
+The CommandManager invokes `StorageLike.get('prefix', guildId)`, when looking for a custom prefix.
 If this data is not persisted users may get frusturated having to reset their custom prefix evertime
 your Bot is restarted.
 

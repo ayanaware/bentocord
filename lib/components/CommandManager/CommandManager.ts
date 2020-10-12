@@ -117,13 +117,11 @@ export class CommandManager implements Component {
 	}
 	
 	public async getPrefix(guildId: string) {
-		const key = `prefix.${guildId}`;
-		return this.bentocord.storage.get<string>(key);
+		return this.bentocord.storage.get<string>('prefix', guildId);
 	}
 
 	public async setPrefix(guildId: string, prefix: string) {
-		const key = `prefix.${guildId}`;
-		return this.bentocord.storage.set<string>(key, prefix);
+		return this.bentocord.storage.set<string>('prefix', prefix, guildId);
 	}
 
 	@Subscribe(Discord, DiscordEvent.SHARD_READY)
