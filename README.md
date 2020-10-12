@@ -1,4 +1,4 @@
-# Bentocord
+# @ayanaware/bentocord [![npm (scoped)](https://img.shields.io/npm/v/@ayanaware/bentocord.svg)](https://www.npmjs.com/package/@ayanaware/bentocord) [![Discord](https://discordapp.com/api/guilds/508903834853310474/embed.png)](https://discord.gg/eaa5pYf) [![install size](https://packagephobia.now.sh/badge?p=@ayanaware/bentocord)](https://packagephobia.now.sh/result?p=@ayanaware/bentocord)
 Bentocord is a Bento plugin designed to rapidly build fully functional Discord Bots. But stay powerful enough that you never have to leave
 
 ## Bento Variables
@@ -13,7 +13,7 @@ Key | Type | Description | Default
 --- | --- | --- | ---
 BENTOCORD_TOKEN | string | [Discord Authentication Token](https://discord.com/developers/docs/intro#bots-and-apps) | null
 BENTOCORD_COMMAND_PREFIX | string | The default prefix to use for Bentocord's Command Handler | bentocord
-BENTOCORD_STORAGE_ENTITY | EntityReference* | A [StorageLike](#StorageLike) Entity Bentocord uses this for persistentance | null**
+BENTOCORD_STORAGE_ENTITY | EntityReference* | A [StorageLike](#storagelike) Entity Bentocord uses this for persistentance | null**
 BENTOCORD_BUILTIN_COMMANDS | boolean | Should Bentocord load it's built-in Commands (ex: ping, bento) | true
 
 \* An EntityReference is a `string | Function | Entity`. Bento will attempt to auto resolve it to a loaded entity

@@ -1,4 +1,5 @@
 import { Bentocord } from "../../../Bentocord";
+import { CodeblockBuilder } from '../../../builders';
 import { Command, CommandAPI } from "../Command";
 import { CommandContext } from "../CommandContext";
 import { CommandManager } from "../CommandManager";
@@ -13,12 +14,11 @@ export class BentocordBento implements Command {
 	public async execute(ctx: CommandContext) {
 		const channel = ctx.channel;
 
-		let build = '```\n';
-		build += `Bento Version     : ${this.api.getBentoVersion()}\n`;
-		build += `Bentocord Version : ${this.api.getEntity(Bentocord).version || 'Error'}`;
-		build += '```';
+		const builder = new CodeblockBuilder();
+		builder.addLine('Bento Version', this.api.getBentoVersion());
+		builder.addLine('Bentocord Version', this.api.getEntity(Bentocord).version);
 
-		await channel.createMessage(build);
+		await channel.createMessage(await builder.render());
 		
 		return;
 	}

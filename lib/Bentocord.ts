@@ -1,4 +1,4 @@
-import { FSComponentLoader, Plugin, PluginAPI, Variable } from '@ayanaware/bento';
+import { FSComponentLoader, Plugin, PluginAPI } from '@ayanaware/bento';
 import { ClientOptions } from 'eris';
 
 import { BentocordVariable } from './constants';
@@ -19,7 +19,13 @@ export class Bentocord implements Plugin {
 	public fsLoader: FSComponentLoader;
 
 	public constructor(clientOptions?: ClientOptions) {
-		this.version = '1.0.0';
+		try {
+			const { version } = require('../package.json');
+			this.version = version;
+		} catch (e) {
+			this.version = 'Error';
+		}
+
 		this.clientOptions = clientOptions;
 	}
 

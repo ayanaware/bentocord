@@ -1,4 +1,4 @@
-import { BentoError, Component, ComponentAPI, Inject, Plugin, Subscribe, Variable } from '@ayanaware/bento';
+import { BentoError, Component, ComponentAPI, Entity, Inject, Plugin, Subscribe, Variable } from '@ayanaware/bento';
 import { Message } from 'eris';
 
 import { Bentocord } from '../../Bentocord';
@@ -178,6 +178,7 @@ export class CommandManager implements Component {
 
 		try {
 			await command.execute(ctx);
+			log.debug(`Command ${command.name} successfully executed by user "${ctx.author.id}"`);
 		} catch (e) {
 			log.error(`Command ${command.name}.execute() error: ${e}`);
 
