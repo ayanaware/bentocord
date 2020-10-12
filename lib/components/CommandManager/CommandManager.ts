@@ -117,7 +117,7 @@ export class CommandManager implements Component {
 	}
 	
 	public async getPrefix(guildId: string) {
-		return this.bentocord.storage.get<string>('prefix', guildId) || this.defaultPrefix;
+		return (await this.bentocord.storage.get<string>('prefix', guildId)) || this.defaultPrefix;
 	}
 
 	public async setPrefix(guildId: string, prefix: string) {
