@@ -1,9 +1,13 @@
 import { Guild, Message, TextableChannel, TextChannel, User } from "eris";
+import { Messenger } from '../../abstractions';
+import Discord from '../Discord';
 
 export class CommandContext<T extends TextableChannel = TextableChannel> {
-	public readonly message: Message;
+	public readonly message: Message<T>;
 	public readonly channel: T;
 	public readonly author: User;
+
+	public readonly messenger: Messenger;
 
 	public readonly guild?: Guild;
 
@@ -13,11 +17,13 @@ export class CommandContext<T extends TextableChannel = TextableChannel> {
 
 	private argIndex = 0;
 
-	public constructor(message: Message<T>, prefix: string, alias: string, args: Array<string>) {
+	public constructor(discord: Discord, message: Message<T>, prefix: string, alias: string, args: Array<string>) {
 		this.message = message;
 
 		this.channel = message.channel;
 		this.author = message.author;
+
+		this.messenger = new Messenger(discord, this.channel.id);
 
 		// God help us
 		if ((message.channel as TextChannel).guild) this.guild = (message.channel as TextChannel).guild;

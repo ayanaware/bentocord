@@ -168,6 +168,7 @@ export class CommandManager implements Component {
 
 		// build CommandContext
 		const ctx = new CommandContext(
+			this.discord,
 			message,
 			matches.groups.prefix,
 			alias,
