@@ -2,8 +2,8 @@ import { FSComponentLoader, Plugin, PluginAPI } from '@ayanaware/bento';
 import { ClientOptions } from 'eris';
 
 import { BentocordVariable } from './constants';
-import { StorageLike } from './interfaces';
-import { RamStorage } from './util';
+import { PermissionLike, StorageLike } from './interfaces';
+import { RamStorage, Permissions } from './util';
 
 import { Logger } from '@ayanaware/logger-api';
 const log = Logger.get();
@@ -16,6 +16,8 @@ export class Bentocord implements Plugin {
 	public clientOptions: ClientOptions;
 
 	public storage: StorageLike;
+	public permissions: PermissionLike;
+
 	public fsLoader: FSComponentLoader;
 
 	public constructor(clientOptions?: ClientOptions) {
@@ -35,6 +37,7 @@ export class Bentocord implements Plugin {
 
 	public async onLoad() {
 		this.storage = this.api.getVariable({ name: BentocordVariable.BENTOCORD_STORAGE_ENTITY, default: null });
+		this.permissions = this.api.getVariable({ name: BentocordVariable.BENTOCORD_PERMISSIONS_ENTITY, default: null });
 
 		// no storage entity was provided use default RamStorage
 		if (!this.storage) {
@@ -42,12 +45,25 @@ export class Bentocord implements Plugin {
 			await this.api.bento.addComponent(ramStorage);
 
 			this.storage = ramStorage;
+		} else {
+			// attempt to resolve provided storage entity
+			if (!this.api.hasEntity(this.storage)) throw new Error(`Storage Entity "${this.storage}" not found`);
+			const storage = this.api.getEntity<StorageLike>(this.storage);
+			this.storage = storage;
 		}
 
-		// attempt to resolve storage entity
-		if (!this.api.hasEntity(this.storage)) throw new Error(`Storage Entity "${this.storage}" not found`);
-		const entity = this.api.getEntity<StorageLike>(this.storage);
-		this.storage = entity;
+		// no permission entity was provided use default
+		if (!this.permissions) {
+			const permissions = new Permissions();
+			await this.api.bento.addComponent(permissions);
+
+			this.permissions = permissions;
+		} else {
+			// attempt to resolve provided permission entity
+			if (!this.api.hasEntity(this.permissions)) throw new Error(`Permissions Entity "${this.permissions}" not found`);
+			const permissions = this.api.getEntity<PermissionLike>(this.permissions);
+			this.permissions = permissions;
+		}
 
 		// Create Own FSLoader instance
 		this.fsLoader = new FSComponentLoader();

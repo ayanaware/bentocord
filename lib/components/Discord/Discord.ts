@@ -1,5 +1,5 @@
 import { Component, ComponentAPI, Inject, PluginReference, Subscribe } from '@ayanaware/bento';
-import { Client } from 'eris';
+import { Client, ClientOptions } from 'eris';
 
 import { Bentocord } from '../../Bentocord';
 import { BentocordVariable, DiscordEvent } from '../../constants';
@@ -14,11 +14,14 @@ export class Discord implements Component {
 
 	public client: Client;
 
+	@Inject(Bentocord)
+	private bentocord: Bentocord;
+
 	public async onLoad() {
 		return this.connect();
 	}
 
-	public async connect(tokenOverride?: string) {
+	public async connect(tokenOverride?: string, optionsOverride?: ClientOptions) {
 		const token = tokenOverride || this.api.getVariable({ name: BentocordVariable.BENTOCORD_TOKEN, default: null });
 		if (!token) {
 			throw new Error(`Failed to find token: Variable "${BentocordVariable.BENTOCORD_TOKEN}" and param tokenOverride empty`);
@@ -26,7 +29,11 @@ export class Discord implements Component {
 
 		if (this.client) await this.disconnect();
 
-		this.client = new Client(token);
+		// merge options & overrides
+		const clientOptions = {...this.bentocord.clientOptions, ...optionsOverride};
+		clientOptions.autoreconnect = true;
+
+		this.client = new Client(token, clientOptions);
 		this.client.on('error', e => {
 			log.error(`Client Error: ${e}`);
 		});

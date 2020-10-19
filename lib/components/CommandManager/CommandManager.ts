@@ -168,12 +168,18 @@ export class CommandManager implements Component {
 
 		// build CommandContext
 		const ctx = new CommandContext(
-			this.discord,
+			this.api,
 			message,
 			matches.groups.prefix,
+			command.name,
 			alias,
 			args,
 		);
+
+		// Permissions
+		if (await ctx.hasPermission(command.name) === false) {
+			return ctx.messenger.createMessage(`Sorry, You lack permission to execute this command.`);
+		}
 
 		try {
 			await command.execute(ctx);
@@ -182,7 +188,7 @@ export class CommandManager implements Component {
 			log.error(`Command ${command.name}.execute() error: ${e}`);
 
 			if (e instanceof Error) {
-				await this.discord.client.createMessage(message.channel.id, `There was an error executing this command:\`\`\`${e.message}\`\`\` `)
+				return ctx.messenger.createMessage(`There was an error executing this command:\`\`\`${e.message}\`\`\` `)
 			}
 		}
 	}

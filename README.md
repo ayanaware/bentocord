@@ -14,13 +14,13 @@ Key | Type | Description | Default
 BENTOCORD_TOKEN | string | [Discord Authentication Token](https://discord.com/developers/docs/intro#bots-and-apps) | null
 BENTOCORD_COMMAND_PREFIX | string | The default prefix to use for Bentocord's Command Handler | bentocord
 BENTOCORD_STORAGE_ENTITY | EntityReference* | A [StorageLike](#storagelike) Entity Bentocord uses this for persistentance | null**
+BENTOCORD_PERMISSIONS_ENTITY | EntityReference* | A [PermissionLike](#permissionlike) Entity Bentocord uses for permissions | null**
 BENTOCORD_BUILTIN_COMMANDS | boolean | Should Bentocord load it's built-in Commands (ex: ping, bento) | true
 
 \* An EntityReference is a `string | Function | Entity`. Bento will attempt to auto resolve it to a loaded entity
 
-\*\* This is a required system for Bentocord. If `null` Bentocord will automatically create and use a
-[RamStorage](https://gitlab.com/ayanaware/bentocord/-/blob/master/lib/util/RamStorage.ts) instance. See more
-details below.
+\*\* This is a required system for Bentocord. If `null` Bentocord will automatically create and use a default.
+See more details below.
 
 ## StorageLike
 [StorageLike](https://gitlab.com/ayanaware/bentocord/-/blob/master/lib/interfaces/StorageLike.ts) is an abstraction
@@ -41,3 +41,8 @@ your Bot is restarted.
 
 It should be relatively easy to implement a StorageLike Entity. Simply create a normal
 Bento Entity (Plugin(preferred) or Component). Extend StorageLike and implement the missing functions. You can find all required functions [here](https://gitlab.com/ayanaware/bentocord/-/blob/master/lib/interfaces/StorageLike.ts).
+
+## PermissionLike
+[PermissionLike](https://gitlab.com/ayanaware/bentocord/-/blob/master/lib/interfaces/PermissionLike.ts) is an abstraction
+Bentocord uses to handle permissions. [Permissions](https://gitlab.com/ayanaware/bentocord/-/blob/master/lib/util/Permissions.ts)
+is used by default. And should be sufficent for most applications

@@ -29,7 +29,7 @@ export class Messenger {
 		return { content, file };
 	}
 
-	public async sendMessage(content: MessageContent, file?: MessageFile, options?: MessageOptions) {
+	public async createMessage(content: MessageContent, file?: MessageFile, options?: MessageOptions): Promise<Message> {
 		const prepare = this.prepareMessage(content, file, options);
 
 		return this.discord.client.createMessage(this.channelId, prepare.content, prepare.file);
@@ -40,5 +40,10 @@ export class Messenger {
 		const prepare = this.prepareMessage(content, null, options);
 
 		return this.discord.client.editMessage(this.channelId, message, prepare.content);
+	}
+
+	// alias
+	public async sendMessage(content: MessageContent, file?: MessageFile, options?: MessageOptions): Promise<Message> {
+		return this.sendMessage(content, file, options);
 	}
 }
