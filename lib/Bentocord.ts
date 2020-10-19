@@ -41,10 +41,10 @@ export class Bentocord implements Plugin {
 
 		// no storage entity was provided use default RamStorage
 		if (!this.storage) {
-			const ramStorage = new RamStorage();
-			await this.api.bento.addComponent(ramStorage);
+			const storage = new RamStorage();
+			await this.api.bento.addComponent(storage);
 
-			this.storage = ramStorage;
+			this.storage = storage;
 		} else {
 			// attempt to resolve provided storage entity
 			if (!this.api.hasEntity(this.storage)) throw new Error(`Storage Entity "${this.storage}" not found`);

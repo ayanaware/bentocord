@@ -16,4 +16,7 @@ const bento = new Bento();
 	await bento.addPlugins([fsloader, bentocord]);
 
 	await bento.verify();
-})().catch(e => console.log(e));
+})().catch(e => {
+	console.log(e);
+	process.exit(1);
+});
