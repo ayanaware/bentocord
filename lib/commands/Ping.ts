@@ -1,10 +1,9 @@
 import { ComponentAPI } from '@ayanaware/bento';
-import { Command } from "../Command";
-import { CommandContext } from "../CommandContext";
-import { CommandManager } from "../CommandManager";
+
+import { Command, CommandContext, CommandManager } from '../components/CommandManager';
 
 export class BentocordPing implements Command {
-	public name = 'bentocordPing';
+	public name = 'ping';
 	public api!: ComponentAPI;
 	public parent = CommandManager;
 

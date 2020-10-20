@@ -1,15 +1,14 @@
 import { ComponentAPI, Entity, Inject } from '@ayanaware/bento';
 import * as util from 'util';
 
-import { CodeblockBuilder } from '../../../builders';
-import { Command, CommandContext, CommandManager } from '../../../components';
-
+import { CodeblockBuilder } from '../builders';
+import { Command, CommandContext, CommandManager } from '../components/CommandManager';
 
 import Logger from '@ayanaware/logger-api';
 const log = Logger.get();
 
 export class Eval implements Command {
-	public name = 'bentocordEval';
+	public name = 'eval';
 	public api!: ComponentAPI;
 	public parent = CommandManager;
 
@@ -34,7 +33,7 @@ export class Eval implements Command {
 		__evalHelp.addLine('getEntity(ref)', 'Get a Bento Entity');
 		__evalHelp.addLine('getCommand(alias)', 'Attempt to get a Command by an alias');
 
-		const __args = ctx.raw.replace('\n', ' ').split(' ');
+		const __args = ctx.raw.trim().split(' ').filter(v => !!v);
 		if (__args.length === 0) return ctx.messenger.createMessage(await __evalHelp.render(), null, { zws: false });
 
 		const __evalOptions = {
@@ -63,8 +62,9 @@ export class Eval implements Command {
 		const getEntity = (ref: Entity | Function | string) => this.api.getEntity(ref);
 		const getCommand = (alias: string) => {
 			const command = this.commandManager.findCommandByAlias(alias);
-
 			if (command == null) throw new Error(`Alias "${alias}" is not associated with any known command.`);
+
+			return command;
 		};
 
 		const asyncTimeout = async (timeout: number) => new Promise(resolve => setTimeout(resolve, timeout));

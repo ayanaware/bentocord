@@ -38,12 +38,6 @@ export class CommandManager implements Component {
 	@Inject(Discord)
 	private readonly discord: Discord;
 
-	public async onLoad() {
-		// load built-in commands
-		const loadBuiltin = this.api.getVariable({ name: BentocordVariable.BENTOCORD_BUILTIN_COMMANDS, default: true });
-		if (loadBuiltin) return this.api.loadComponents(this.bentocord.fsLoader, __dirname, 'commands');
-	}
-
 	public async onChildLoad(entity: Command) {
 		try {
 			await this.addCommand(entity);

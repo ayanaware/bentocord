@@ -47,6 +47,6 @@ export class Messenger {
 
 	// alias
 	public async sendMessage(content: MessageContent, file?: MessageFile, options?: MessageOptions): Promise<Message> {
-		return this.sendMessage(content, file, options);
+		return this.createMessage(content, file, options);
 	}
 }

@@ -1,13 +1,11 @@
 import { ComponentAPI, Inject } from '@ayanaware/bento';
 import { ActivityPartial, BotActivityType } from 'eris';
 
-import Discord from '../../Discord';
-import { Command } from '../Command';
-import { CommandContext } from '../CommandContext';
-import { CommandManager } from '../CommandManager';
+import {Command, CommandContext, CommandManager } from '../components/CommandManager';
+import { Discord } from '../components/Discord';
 
 export class SetGame implements Command {
-	public name = 'bentocordSetGame';
+	public name = 'setgame';
 	public api!: ComponentAPI;
 	public parent = CommandManager;
 
@@ -17,14 +15,14 @@ export class SetGame implements Command {
 	private discord: Discord;
 
 	public async execute(ctx: CommandContext) {
-		if (!ctx.isOwner()) return ctx.messenger.createMessage(`This command can only be executed by a Bot Owner`);
+		if (!ctx.isOwner()) return ctx.messenger.createMessage(`You lack permission to perform this command.`);
 
-		if (ctx.args.length < 2) return ctx.messenger.createMessage(`${ctx.alias} [type] Example Status Message`);
+		if (ctx.args.length < 2) return ctx.messenger.createMessage(`Usage: \`${ctx.alias} [type] Example Status Message\``);
 
 		const game: ActivityPartial<BotActivityType> = { type: null, name: null };
 
 		const type = parseInt(ctx.nextArg());
-		if ([0, 1, 2, 3].includes(type)) {
+		if (![0, 1, 2, 3].includes(type)) {
 			return ctx.messenger.createMessage('Type must be one of the following: `0, 1, 2, 3`. Reference: https://discord.com/developers/docs/game-sdk/activities#data-models-activitytype-enum');
 		}
 

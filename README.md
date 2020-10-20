@@ -12,15 +12,20 @@ This means Bentocord expects you to set all Variables you care about before `Ben
 Key | Type | Description | Default
 --- | --- | --- | ---
 BENTOCORD_TOKEN | string | [Discord Authentication Token](https://discord.com/developers/docs/intro#bots-and-apps) | null
+BENTOCORD_BOT_OWNERS | list | Discord user id list | null
 BENTOCORD_COMMAND_PREFIX | string | The default prefix to use for Bentocord's Command Handler | bentocord
-BENTOCORD_STORAGE_ENTITY | EntityReference* | A [StorageLike](#storagelike) Entity Bentocord uses this for persistentance | null**
-BENTOCORD_PERMISSIONS_ENTITY | EntityReference* | A [PermissionLike](#permissionlike) Entity Bentocord uses for permissions | null**
 BENTOCORD_BUILTIN_COMMANDS | boolean | Should Bentocord load it's built-in Commands (ex: ping, bento) | true
+BENTOCORD_STORAGE_ENTITY | EntityReference | A [StorageLike](#storagelike) Entity Bentocord uses for persistentance | null*
+BENTOCORD_PERMISSIONS_ENTITY | EntityReference | A [PermissionLike](#permissionlike) Entity Bentocord uses for permissions | null*
 
-\* An EntityReference is a `string | Function | Entity`. Bento will attempt to auto resolve it to a loaded entity
-
-\*\* This is a required system for Bentocord. If `null` Bentocord will automatically create and use a default.
+\* This is a required system for Bentocord. If `null` Bentocord will automatically create and use a default.
 See more details below.
+
+## Special Types
+Type | Description
+--- | ---
+list | Comma seperated string of items
+EntityReference | A `string | Function | Entity`. Bentocord will attempt to resolve it
 
 ## StorageLike
 [StorageLike](https://gitlab.com/ayanaware/bentocord/-/blob/master/lib/interfaces/StorageLike.ts) is an abstraction

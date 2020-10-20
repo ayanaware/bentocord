@@ -70,6 +70,10 @@ export class Bentocord implements Plugin {
 		this.fsLoader.name = 'BentocordFSComponentLoader';
 		await this.api.bento.addPlugin(this.fsLoader);
 
-		return this.api.loadComponents(this.fsLoader, __dirname, 'components');
+		await this.api.loadComponents(this.fsLoader, __dirname, 'components');
+
+		// load built-in commands
+		const loadBuiltin = this.api.getVariable({ name: BentocordVariable.BENTOCORD_BUILTIN_COMMANDS, default: true });
+		if (loadBuiltin) return this.api.loadComponents(this.fsLoader, __dirname, 'commands');
 	}
 }
