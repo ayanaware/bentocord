@@ -9,14 +9,15 @@ export class Permissions implements PermissionLike {
 	public api!: ComponentAPI;
 
 	private owners: Set<string> = new Set();
-
-	@Inject(Bentocord)
 	private bentocord: Bentocord;
 
 	public async onLoad() {
 		// fill owners
 		const owners = this.api.getVariable<string>({ name: BentocordVariable.BENTOCORD_BOT_OWNERS, default: null });
 		if (owners) owners.split(',').forEach(i => this.owners.add(i));
+
+		// For some reason `Inject` doesn't work here, temp fix
+		this.api.injectEntity(Bentocord, 'bentocord');
 	}
 
 	public isOwner(userId: string) {

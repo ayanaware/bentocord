@@ -16,6 +16,9 @@ export class Messenger {
 
 	private prepareMessage(content: MessageContent, file?: MessageFile, options?: MessageOptions) {
 		if (typeof content === 'string') content = { content };
+		if (typeof options === 'undefined') options = {};
+
+		if (typeof file === 'undefined') file = null;
 
 		// handle zws
 		if (options.zws) content.content = `\u200b${content.content}`;

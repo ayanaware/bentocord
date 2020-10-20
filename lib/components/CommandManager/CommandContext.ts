@@ -29,15 +29,19 @@ export class CommandContext<T extends TextableChannel = TextableChannel> {
 	public readonly alias: string;
 	public readonly args: Array<string>;
 
+	public readonly raw: string;
+
 	private argIndex = 0;
 
 	public constructor(api: ComponentAPI, message: Message<T>, prefix: string, name: string, alias: string, args: Array<string>) {
 		this.discord = api.getEntity(Discord);
 
-		this.storage = api.getEntity(api.getVariable(BentocordVariable.BENTOCORD_STORAGE_ENTITY));
-		this.permissions = api.getEntity(api.getVariable(BentocordVariable.BENTOCORD_PERMISSIONS_ENTITY));
+		const bentocord = api.getEntity<Bentocord>(Bentocord);
+		this.storage = bentocord.storage;
+		this.permissions = bentocord.permissions;
 
 		this.message = message;
+		this.raw = args.join(' ');
 
 		this.channel = message.channel;
 		this.channelId = this.channel.id;

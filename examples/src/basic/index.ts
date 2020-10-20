@@ -9,6 +9,7 @@ const bento = new Bento();
 
 	const bentocord = new Bentocord();
 	bento.setVariable(key, process.env[key]);
+	bento.setVariable(BentocordVariable.BENTOCORD_BOT_OWNERS, process.env[BentocordVariable.BENTOCORD_BOT_OWNERS]);
 
 	const fsloader = new FSComponentLoader();
 	await fsloader.addDirectory(__dirname, 'components');
