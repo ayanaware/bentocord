@@ -18,6 +18,6 @@ const bento = new Bento();
 
 	await bento.verify();
 })().catch(e => {
-	console.log(e)
+	console.log(e);
 	process.exit(1);
 });

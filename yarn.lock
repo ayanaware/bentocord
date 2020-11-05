@@ -2,13 +2,14 @@
 # yarn lockfile v1
 
 
-"@ayanaware/bento@^1.0.0-rc.5":
-  version "1.0.0-rc.5"
-  resolved "https://registry.yarnpkg.com/@ayanaware/bento/-/bento-1.0.0-rc.5.tgz#21bd1aa9b4944166b807f10b1b927b04ab4e89eb"
-  integrity sha512-YUWuggHYTbzfjj7+RlZ2/MXrG06WRY/9RRxKque9YOJS74p/rYnUE4UhefCq+a6rSESkl+FCMzopjUKH2b2YDA==
+"@ayanaware/bento@^1.0.0-rc.10":
+  version "1.0.0-rc.10"
+  resolved "https://registry.yarnpkg.com/@ayanaware/bento/-/bento-1.0.0-rc.10.tgz#6b0e5e73a5645b4bb9b95452a27bad4a55cec6a6"
+  integrity sha512-8BcpKTCequulPoibvFMsWId3nwXDztWSUHpjfaNwHeTwgFloRJVTeaQuVAQ9lsWieVePLKkGR6yRrnh3PbbISA==
   dependencies:
     "@ayanaware/errors" "^1.1.0"
     "@ayanaware/logger-api" "^2.0.0"
+    reflect-metadata "^0.1.13"
 
 "@ayanaware/errors@^1.1.0":
   version "1.1.0"
@@ -38,10 +39,10 @@
     tslint-eslint-rules "^5.4.0"
     tslint-sonarts "^1.9.0"
 
-"@types/node@^14.11.10":
-  version "14.11.10"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-14.11.10.tgz#8c102aba13bf5253f35146affbf8b26275069bef"
-  integrity sha512-yV1nWZPlMFpoXyoknm4S56y2nlTAuFYaJuQtYRAOU7xA/FJ9RY0Xm7QOkaYMMmr8ESdHIuUb6oQgR/0+2NqlyA==
+"@types/node@^14.14.6":
+  version "14.14.6"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-14.14.6.tgz#146d3da57b3c636cc0d1769396ce1cfa8991147f"
+  integrity sha512-6QlRuqsQ/Ox/aJEQWBEJG7A9+u7oSYl3mem/K8IzxXG/kAGbV1YPD9Bg9Zw3vyxC/YP+zONKwy8hGkSt1jxFMw==
 
 builtin-modules@^3.1.0:
   version "3.1.0"
@@ -56,10 +57,10 @@ doctrine@0.7.2:
     esutils "^1.1.6"
     isarray "0.0.1"
 
-eris@^0.13.3:
-  version "0.13.3"
-  resolved "https://registry.yarnpkg.com/eris/-/eris-0.13.3.tgz#22abb71f9ce0d453200b537cad457dc39c7b302b"
-  integrity sha512-WBtLyknOWZpYZL9yPhez0oKUWvYpunSg43hGxawwjwSf3gFXmbEPYrT8KlmZXtpJnX16eQ7mzIq+MgSh3LarEg==
+eris@^0.13.4:
+  version "0.13.4"
+  resolved "https://registry.yarnpkg.com/eris/-/eris-0.13.4.tgz#06159ff619446046e392e28a70667d73c27aa631"
+  integrity sha512-IFA14nasCig8xp8cVCULvzBuJ0qpYqJ3XyEtm9OLdC177DYDCJ9QM2Aq+KOpejIVl7838n9AyRlLI6w9Eu3PiQ==
   dependencies:
     ws "^7.2.1"
   optionalDependencies:
@@ -90,6 +91,11 @@ opusscript@^0.0.7:
   version "0.0.7"
   resolved "https://registry.yarnpkg.com/opusscript/-/opusscript-0.0.7.tgz#7dd7ec55b302d26bf588e6fc3feb090b8c7da856"
   integrity sha512-DcBadTdYTUuH9zQtepsLjQn4Ll6rs3dmeFvN+SD0ThPnxRBRm/WC1zXWPg+wgAJimB784gdZvUMA57gDP7FdVg==
+
+reflect-metadata@^0.1.13:
+  version "0.1.13"
+  resolved "https://registry.yarnpkg.com/reflect-metadata/-/reflect-metadata-0.1.13.tgz#67ae3ca57c972a2aa1642b10fe363fe32d49dc08"
+  integrity sha512-Ts1Y/anZELhSsjMcU605fU9RE4Oi3p5ORujwbIKXfWa+0Zxs510Qrmrce5/Jowq3cHSZSJqBjypxmHarc+vEWg==
 
 ret@~0.1.10:
   version "0.1.15"
@@ -148,10 +154,10 @@ tweetnacl@^1.0.1:
   resolved "https://registry.yarnpkg.com/tweetnacl/-/tweetnacl-1.0.3.tgz#ac0af71680458d8a6378d0d0d050ab1407d35596"
   integrity sha512-6rt+RN7aOi1nGMyC4Xa5DdYiukl2UWCbcJft7YhxReBGQD7OAM8Pbxw6YMo4r2diNEA8FEmu32YOn9rhaiE5yw==
 
-typescript@^4.0.3:
-  version "4.0.3"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-4.0.3.tgz#153bbd468ef07725c1df9c77e8b453f8d36abba5"
-  integrity sha512-tEu6DGxGgRJPb/mVPIZ48e69xCn2yRmCgYmDugAVwmJ6o+0u1RI18eO7E7WBTLYLaEVVOhwQmcdhQHweux/WPg==
+typescript@^4.0.5:
+  version "4.0.5"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-4.0.5.tgz#ae9dddfd1069f1cb5beb3ef3b2170dd7c1332389"
+  integrity sha512-ywmr/VrTVCmNTJ6iV2LwIrfG1P+lv6luD8sUJs+2eI9NLGigaN+nUQc13iHqisq7bra9lnmUSYqbJvegraBOPQ==
 
 ws@^7.2.1:
   version "7.3.1"

@@ -1,8 +1,16 @@
-export enum DiscordEvent {
+export enum DiscordEvent { 
+	// Eris
+	ERROR = 'error', // error, shardId
+	WARN = 'warn', // message, shardId
+	DEBUG = 'debug', // message, shardId
+	UNKNOWN = 'unknown', // packet, shardId
+
+	RAW_WS = 'rawWS', // packet, shardId
+
 	// shard
-	SHARD_READY = 'shardReady', // shardID
-	SHARD_RESUME = 'shardResume', // shardID
-	SHARD_DISCONNECT = 'shardDisconnect', // error, shardID
+	SHARD_READY = 'shardReady', // shardId
+	SHARD_RESUME = 'shardResume', // shardId
+	SHARD_DISCONNECT = 'shardDisconnect', // error, shardId
 
 	// precenses
 	PRESENCE_UPDATE = 'presenceUpdate', // other, oldPresence
@@ -15,9 +23,9 @@ export enum DiscordEvent {
 	MESSAGE_DELETE_BULK = 'messageDeleteBulk', // Array<PartialMessage>
 
 	// reactions
-	MESSAGE_REACTION_ADD = 'messageReactionAdd',
-	MESSAGE_REACTION_REMOVE = 'messageReactionRemove',
-	MESSAGE_REACTION_REMOVE_ALL = 'messageReactionRemoveAll',
+	MESSAGE_REACTION_ADD = 'messageReactionAdd', // https://abal.moe/Eris/docs/Client#event-messageReactionAdd
+	MESSAGE_REACTION_REMOVE = 'messageReactionRemove', // https://abal.moe/Eris/docs/Client#event-messageReactionRemove
+	MESSAGE_REACTION_REMOVE_ALL = 'messageReactionRemoveAll', // https://abal.moe/Eris/docs/Client#event-messageReactionRemoveAll
 
 	// guild
 	GUILD_CREATE = 'guildCreate', // guild
@@ -50,6 +58,9 @@ export enum DiscordEvent {
 	VOICE_CHANNEL_LEAVE = 'voiceChannelLeave',
 	VOICE_CHANNEL_SWITCH = 'voiceChannelSwitch',
 	VOICE_STATE_UPDATE = 'voiceStateUpdate',
+
+	// webhooks
+	WEBHOOKS_UPDATE = 'webhooksUpdate', // data, data.channelID, data.shardID
 
 	// call
 	CALL_CREATE = 'callCreate', // call

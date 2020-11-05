@@ -34,10 +34,6 @@ export class Discord implements Component {
 		clientOptions.autoreconnect = true;
 
 		this.client = new Client(token, clientOptions);
-		this.client.on('error', e => {
-			log.error(`Client Error: ${e}`);
-		});
-
 		this.api.forwardEvents(this.client, Object.values(DiscordEvent));
 
 		return this.client.connect();
@@ -46,6 +42,11 @@ export class Discord implements Component {
 	public async disconnect() {
 		this.client.disconnect({ reconnect: false });
 		this.client.removeAllListeners();
+	}
+
+	@Subscribe(Discord, DiscordEvent.ERROR)
+	private handleShardError(e: Error, id: number) {
+		log.error(`Shard "${id}": ${e}`);
 	}
 
 	@Subscribe(Discord, DiscordEvent.SHARD_READY)
@@ -58,7 +59,7 @@ export class Discord implements Component {
 		log.info(`Shard "${id}" resume`);
 	}
 
-	@Subscribe(Discord, DiscordEvent.SHARD_RESUME)
+	@Subscribe(Discord, DiscordEvent.SHARD_DISCONNECT)
 	private handleShardDisconnect(e: Error, id: number) {
 		let message = `Shard "${id}" disconnect`;
 		if (e) message = `${message}, ${e}`;

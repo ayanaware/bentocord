@@ -1,10 +1,11 @@
 import { ComponentAPI } from '@ayanaware/bento';
 import { Guild, Member, Message, TextableChannel, TextChannel, User } from "eris";
+
 import { Messenger } from '../../abstractions';
 import { Bentocord } from '../../Bentocord';
-import { BentocordVariable } from '../../constants';
 import { PermissionLike, StorageLike } from '../../interfaces';
-import Discord from '../Discord';
+
+import { Discord } from '../Discord';
 
 export class CommandContext<T extends TextableChannel = TextableChannel> {
 	public readonly discord: Discord;

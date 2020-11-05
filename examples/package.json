@@ -5,12 +5,12 @@
 		"build": "ayc clean build"
 	},
 	"dependencies": {
-		"@ayanaware/bento": "^1.0.0-rc.5",
+		"@ayanaware/bento": "^1.0.0-rc.10",
 		"@ayanaware/bentocord": "../build",
 		"@ayanaware/logger": "^2.0.0-beta.3",
 		"@ayanaware/ts": "^1.1.2",
-		"@types/node": "^14.11.11",
-		"typescript": "^4.0.3"
+		"@types/node": "^14.14.6",
+		"typescript": "^4.0.5"
 	},
 	"license": "MIT"
 }

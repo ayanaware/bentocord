@@ -2,13 +2,14 @@
 # yarn lockfile v1
 
 
-"@ayanaware/bento@^1.0.0-rc.5":
-  version "1.0.0-rc.5"
-  resolved "https://registry.yarnpkg.com/@ayanaware/bento/-/bento-1.0.0-rc.5.tgz#21bd1aa9b4944166b807f10b1b927b04ab4e89eb"
-  integrity sha512-YUWuggHYTbzfjj7+RlZ2/MXrG06WRY/9RRxKque9YOJS74p/rYnUE4UhefCq+a6rSESkl+FCMzopjUKH2b2YDA==
+"@ayanaware/bento@^1.0.0-rc.10":
+  version "1.0.0-rc.10"
+  resolved "https://registry.yarnpkg.com/@ayanaware/bento/-/bento-1.0.0-rc.10.tgz#6b0e5e73a5645b4bb9b95452a27bad4a55cec6a6"
+  integrity sha512-8BcpKTCequulPoibvFMsWId3nwXDztWSUHpjfaNwHeTwgFloRJVTeaQuVAQ9lsWieVePLKkGR6yRrnh3PbbISA==
   dependencies:
     "@ayanaware/errors" "^1.1.0"
     "@ayanaware/logger-api" "^2.0.0"
+    reflect-metadata "^0.1.13"
 
 "@ayanaware/bentocord@../build":
   version "0.0.0"
@@ -41,10 +42,10 @@
     tslint-eslint-rules "^5.4.0"
     tslint-sonarts "^1.9.0"
 
-"@types/node@^14.11.11":
-  version "14.11.11"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-14.11.11.tgz#359ea52236b5ccc04a71d4001c8467178a9d3699"
-  integrity sha512-UcaAZrL8uO5GNS+NLxkYg1RiOMgdLxCXGqs+TTupltXN8rTvUEKTOpqCV3tlcAIZJXzcBQajzmjdrvuPvnuMUw==
+"@types/node@^14.14.6":
+  version "14.14.6"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-14.14.6.tgz#146d3da57b3c636cc0d1769396ce1cfa8991147f"
+  integrity sha512-6QlRuqsQ/Ox/aJEQWBEJG7A9+u7oSYl3mem/K8IzxXG/kAGbV1YPD9Bg9Zw3vyxC/YP+zONKwy8hGkSt1jxFMw==
 
 builtin-modules@^3.1.0:
   version "3.1.0"
@@ -78,6 +79,11 @@ isarray@0.0.1:
   version "0.0.1"
   resolved "https://registry.yarnpkg.com/isarray/-/isarray-0.0.1.tgz#8a18acfca9a8f4177e09abfc6038939b05d1eedf"
   integrity sha1-ihis/Kmo9Bd+Cav8YDiTmwXR7t8=
+
+reflect-metadata@^0.1.13:
+  version "0.1.13"
+  resolved "https://registry.yarnpkg.com/reflect-metadata/-/reflect-metadata-0.1.13.tgz#67ae3ca57c972a2aa1642b10fe363fe32d49dc08"
+  integrity sha512-Ts1Y/anZELhSsjMcU605fU9RE4Oi3p5ORujwbIKXfWa+0Zxs510Qrmrce5/Jowq3cHSZSJqBjypxmHarc+vEWg==
 
 ret@~0.1.10:
   version "0.1.15"
@@ -131,7 +137,7 @@ tsutils@^3.0.0:
   dependencies:
     tslib "^1.8.1"
 
-typescript@^4.0.3:
-  version "4.0.3"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-4.0.3.tgz#153bbd468ef07725c1df9c77e8b453f8d36abba5"
-  integrity sha512-tEu6DGxGgRJPb/mVPIZ48e69xCn2yRmCgYmDugAVwmJ6o+0u1RI18eO7E7WBTLYLaEVVOhwQmcdhQHweux/WPg==
+typescript@^4.0.5:
+  version "4.0.5"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-4.0.5.tgz#ae9dddfd1069f1cb5beb3ef3b2170dd7c1332389"
+  integrity sha512-ywmr/VrTVCmNTJ6iV2LwIrfG1P+lv6luD8sUJs+2eI9NLGigaN+nUQc13iHqisq7bra9lnmUSYqbJvegraBOPQ==

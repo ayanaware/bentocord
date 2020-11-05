@@ -11,15 +11,15 @@
 		"prepublishOnly": "ayc clean build"
 	},
 	"dependencies": {
-		"@ayanaware/bento": "^1.0.0-rc.5",
+		"@ayanaware/bento": "^1.0.0-rc.10",
 		"@ayanaware/logger-api": "^2.0.0",
-		"eris": "^0.13.3"
+		"eris": "^0.13.4"
 	},
 	"devDependencies": {
 		"@ayanaware/logger": "^2.2.1",
 		"@ayanaware/ts": "^1.1.3",
-		"@types/node": "^14.11.10",
-		"typescript": "^4.0.3"
+		"@types/node": "^14.14.6",
+		"typescript": "^4.0.5"
 	},
 	"license": "MIT",
 	"private": false
