@@ -6,25 +6,16 @@
  */
 
 import { ParsedType, TokenType } from './constants';
-import { Parsed, Token } from './interfaces';
-import { Tokenizer } from './Tokenizer';
+import { Parsed, ParsedResult, Token } from './interfaces';
 
-export interface ParsedArguments {
-	all: Array<Parsed>;
-	phrases: Array<Parsed>;
-	flags: Array<Parsed>;
-	optionFlags: Array<Parsed>;
-}
-
-export class ArgumentParser {
-	public results: ParsedArguments;
+export class Parser {
+	public results: ParsedResult;
 
 	public readonly tokens: Array<Token>;
 	private poistion = 0;
 
-	public constructor(content: string) {
-		const tokenizer = new Tokenizer(content);
-		this.tokens = tokenizer.tokenize();
+	public constructor(tokens: Array<Token>) {
+		this.tokens = tokens;
 	}
 
 	public parse() {

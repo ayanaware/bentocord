@@ -2,7 +2,7 @@ import { Guild, Member, Message, TextableChannel, TextChannel, User } from "eris
 
 import { Bentocord } from '../Bentocord';
 import { Discord, Messenger } from '../discord';
-import { ArgumentParser, ParsedType } from '../arguments/internal';
+import { Parser, ParsedType } from '../arguments/internal';
 import { PermissionLike, StorageLike } from '../plugins';
 
 import { Command } from './interfaces';
@@ -25,15 +25,13 @@ export class CommandContext<T extends TextableChannel = TextableChannel> {
 	public readonly alias: string;
 	public readonly raw: string;
 
-	public discord: Discord;
-	public storage: StorageLike;
-	public permissions: PermissionLike;
+	public readonly discord: Discord;
+	public readonly storage: StorageLike;
+	public readonly permissions: PermissionLike;
 
-	public messenger: Messenger;
-	public parser: ArgumentParser;
+	public readonly messenger: Messenger;
 
-	public args: Array<string>;
-	private argIndex = 0;
+	public args: { [key: string]: any } = {};
 
 	public constructor(command: Command, message: Message<T>, prefix: string, alias: string, raw: string) {
 		this.command = command;
@@ -68,19 +66,8 @@ export class CommandContext<T extends TextableChannel = TextableChannel> {
 		this.permissions = bentocord.permissions;
 
 		this.messenger = new Messenger(this.discord, this.channel.id);
-		this.parser = new ArgumentParser(this.raw);
-		this.parser.parse();
 
-		// backwards compatiable
-		this.args = this.parser.results.all.filter(i => i.type == ParsedType.PHRASE).map(i => i.value);
-	}
-
-	public prepare() {
-
-	}
-
-	public async collectArguments() {
-
+		// this.args = this.parser.results.all.filter(i => i.type == ParsedType.PHRASE).map(i => i.value);
 	}
 
 	get isMention() {
@@ -106,21 +93,5 @@ export class CommandContext<T extends TextableChannel = TextableChannel> {
 		}
 
 		return this.permissions.hasPermission(permission, this.guildId, scopes);
-	}
-
-	public nextArg() {
-		const arg = this.args[this.argIndex];
-		if (arg == null) return null;
-
-		// increment index
-		this.argIndex++;
-
-		return arg;
-	}
-
-	public remainingArgs() {
-		if (this.argIndex > this.args.length) return [];
-
-		return this.args.slice(this.argIndex);
 	}
 }

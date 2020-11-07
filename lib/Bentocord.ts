@@ -9,6 +9,7 @@ import { PermissionLike, SimplePermissions, SimpleStorage, StorageLike } from '.
 import { Logger } from '@ayanaware/logger-api';
 import CommandManager from './commands';
 import Discord from './discord';
+import { ArgumentManager } from './arguments';
 const log = Logger.get();
 
 export class Bentocord implements Plugin {
@@ -80,8 +81,12 @@ export class Bentocord implements Plugin {
 		const discord: Discord = await (this.fsLoader as any).createInstance(path.resolve(__dirname, 'discord'));
 		await this.api.bento.addComponent(discord);
 
+		const argumentManager: ArgumentManager = await (this.fsLoader as any).createInstance(path.resolve(__dirname, 'arguments'));
+		await this.api.bento.addComponent(argumentManager);
+
 		const commandManager: CommandManager = await (this.fsLoader as any).createInstance(path.resolve(__dirname, 'commands'));
 		await this.api.bento.addComponent(commandManager);
+
 
 		// load built-in commands
 		const loadBuiltin = this.api.getVariable({ name: BentocordVariable.BENTOCORD_BUILTIN_COMMANDS, default: true });

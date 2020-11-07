@@ -1,6 +1,9 @@
 # build
 build
 
+# env config file
+env.json
+
 # dependencies
 node_modules
 

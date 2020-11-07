@@ -5,6 +5,7 @@ import Discord from '../../discord';
 import { Command, CommandDefinition } from '../interfaces';
 import { CommandManager } from '../CommandManager';
 import { CommandContext } from '../CommandContext';
+import { ArgumentMatch, ArgumentType } from '../../arguments';
 
 export class SetGame implements Command {
 	public name = 'setgame';
@@ -13,6 +14,10 @@ export class SetGame implements Command {
 
 	public definition: CommandDefinition = {
 		aliases: ['setgame'],
+		args: [
+			{ name: 'type', type: ArgumentType.NUMBER },
+			{ name: 'status', type: ArgumentType.STRING, match: ArgumentMatch.REST },
+		]
 	}
 
 	@Inject(Discord) private discord: Discord;
@@ -24,13 +29,13 @@ export class SetGame implements Command {
 
 		const game: ActivityPartial<BotActivityType> = { type: null, name: null };
 
-		const type = parseInt(ctx.nextArg());
+		const type = ctx.args.type;
 		if (![0, 1, 2, 3].includes(type)) {
 			return ctx.messenger.createMessage('Type must be one of the following: `0, 1, 2, 3`. Reference: https://discord.com/developers/docs/game-sdk/activities#data-models-activitytype-enum');
 		}
 
 		game.type = type as BotActivityType;
-		game.name = ctx.remainingArgs().join(' ');
+		game.name = ctx.args.status;
 
 		this.discord.client.editStatus('online', game);
 

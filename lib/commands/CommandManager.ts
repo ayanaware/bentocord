@@ -1,6 +1,9 @@
+import * as util from 'util';
+
 import { BentoError, Component, ComponentAPI, Entity, Inject, Plugin, Subscribe, Variable } from '@ayanaware/bento';
 import { Message } from 'eris';
 
+import { ArgumentManager } from '../arguments';
 import { Bentocord } from '../Bentocord';
 import { BentocordVariable } from '../BentocordVariable';
 import { Discord, DiscordEvent } from '../discord';
@@ -34,6 +37,7 @@ export class CommandManager implements Component {
 
 	@Inject(Bentocord) private readonly bentocord: Bentocord;
 	@Inject(Discord) private readonly discord: Discord;
+	@Inject(ArgumentManager) private readonly argumentManager: ArgumentManager;
 
 	public async onChildLoad(entity: Command) {
 		try {
@@ -150,7 +154,7 @@ export class CommandManager implements Component {
 		// find command and arguments
 		build = `${build})\\s?(?<alias>[\\w]+)\\s?(?<args>.+)?$`
 
-		// example of finished regex: `^(?<prefix>=|<@!?185476724627210241>)\s?(?<command>[\w]+)\s?(?<args>.+)?`
+		// example of finished regex: `/^(?<prefix>=|<@!?185476724627210241>)\s?(?<command>[\w]+)\s?(?<args>.+)?$/si`
 		const matches = new RegExp(build, 'si').exec(raw);
 		
 		// message is not a command
@@ -175,10 +179,13 @@ export class CommandManager implements Component {
 		}
 
 		try {
+			// Fulfill Command Arguments
+			if (command.definition.args) ctx.args = await this.argumentManager.fulfill(ctx, command.definition.args);
+
 			await command.execute(ctx);
 			log.debug(`Command "${command.name}" executed by "${ctx.author.id}"`);
 		} catch (e) {
-			log.error(`Command ${command.name}.execute() error: ${e}`);
+			log.error(`Command ${command.name}.execute() error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
 				return ctx.messenger.createMessage(`There was an error executing this command:\`\`\`${e.message}\`\`\` `)
