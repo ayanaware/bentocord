@@ -1,15 +1,22 @@
 import { ComponentAPI, Inject } from '@ayanaware/bento';
 import { ActivityPartial, BotActivityType } from 'eris';
 
-import {Command, CommandContext, CommandManager } from '../components/CommandManager';
-import { Discord } from '../components/Discord';
+import {
+	Command,
+	CommandContext,
+	CommandDefinition,
+	CommandManager,
+	Discord
+} from '../components';
 
 export class SetGame implements Command {
 	public name = 'setgame';
 	public api!: ComponentAPI;
 	public parent = CommandManager;
 
-	public aliases = ['setgame'];
+	public definition: CommandDefinition = {
+		aliases: ['setgame'],
+	}
 
 	@Inject(Discord)
 	private discord: Discord;

@@ -1,5 +1,5 @@
 import { Message, MessageContent, MessageFile } from 'eris';
-import { Discord } from '../components';
+import { Discord } from '../Discord';
 
 export interface MessageOptions {
 	zws?: boolean;

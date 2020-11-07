@@ -13,7 +13,7 @@
 	"dependencies": {
 		"@ayanaware/bento": "^1.0.0-rc.10",
 		"@ayanaware/logger-api": "^2.0.0",
-		"eris": "^0.13.4"
+		"eris": "^0.14.0"
 	},
 	"devDependencies": {
 		"@ayanaware/logger": "^2.2.1",

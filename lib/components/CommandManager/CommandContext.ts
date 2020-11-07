@@ -1,16 +1,15 @@
-import { ComponentAPI } from '@ayanaware/bento';
 import { Guild, Member, Message, TextableChannel, TextChannel, User } from "eris";
 
-import { Messenger } from '../../abstractions';
 import { Bentocord } from '../../Bentocord';
+import { Discord, Messenger } from '../Discord';
 import { PermissionLike, StorageLike } from '../../interfaces';
 
-import { Discord } from '../Discord';
+import { ArgumentParser, ParsedArgumentType } from './ArgumentParser';
+
+import { Command } from './interfaces';
 
 export class CommandContext<T extends TextableChannel = TextableChannel> {
-	public readonly discord: Discord;
-	public readonly storage: StorageLike;
-	public readonly permissions: PermissionLike;
+	public readonly command: Command;
 
 	public readonly message: Message<T>;
 	public readonly channel: T;
@@ -19,51 +18,70 @@ export class CommandContext<T extends TextableChannel = TextableChannel> {
 	public readonly author: User;
 	public readonly authorId: string;
 
-	public readonly messenger: Messenger;
-
 	public readonly guild?: Guild;
 	public readonly guildId?: string;
 	public readonly member?: Member;
 
 	public readonly prefix: string;
-	public readonly name: string;
 	public readonly alias: string;
-	public readonly args: Array<string>;
-
 	public readonly raw: string;
 
+	public discord: Discord;
+	public storage: StorageLike;
+	public permissions: PermissionLike;
+
+	public messenger: Messenger;
+	public parser: ArgumentParser;
+
+	public args: Array<string>;
 	private argIndex = 0;
 
-	public constructor(api: ComponentAPI, message: Message<T>, prefix: string, name: string, alias: string, args: Array<string>) {
-		this.discord = api.getEntity(Discord);
-
-		const bentocord = api.getEntity<Bentocord>(Bentocord);
-		this.storage = bentocord.storage;
-		this.permissions = bentocord.permissions;
-
+	public constructor(command: Command, message: Message<T>, prefix: string, alias: string, raw: string) {
+		this.command = command;
 		this.message = message;
-		this.raw = args.join(' ');
 
+		this.prefix = prefix;
+		this.alias = alias;
+		this.raw = raw;
+
+		// Channel
 		this.channel = message.channel;
 		this.channelId = this.channel.id;
 
+		// Author
 		this.author = message.author;
 		this.authorId = this.author.id;
 
-		this.messenger = new Messenger(this.discord, this.channel.id);
 
-		// God help us
+		// God help us (Guild, If Available)
 		if ((message.channel as TextChannel).guild) {
 			this.guild = (message.channel as TextChannel).guild;
 			this.guildId = this.guild.id;
 		}
 
+		// Member (If Available)
 		if (message.member) this.member = message.member;
 
-		this.name = name;
-		this.prefix = prefix;
-		this.alias = alias;
-		this.args = args;
+		// Entities
+		this.discord = this.command.api.getEntity(Discord);
+		const bentocord = this.command.api.getEntity<Bentocord>(Bentocord);
+		this.storage = bentocord.storage;
+		this.permissions = bentocord.permissions;
+
+		this.messenger = new Messenger(this.discord, this.channel.id);
+		this.parser = new ArgumentParser(this.raw);
+		this.parser.parse();
+
+		// backwards compatiable
+		this.args = this.parser.results.all.filter(i => i.type == ParsedArgumentType.PHRASE).map(i => i.value);
+	}
+
+	public prepare() {
+
+	}
+
+	public async collectArguments() {
+
 	}
 
 	get isMention() {

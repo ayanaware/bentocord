@@ -2,7 +2,9 @@ import { Component, ComponentAPI, Inject, PluginReference, Subscribe } from '@ay
 import { Client, ClientOptions } from 'eris';
 
 import { Bentocord } from '../../Bentocord';
-import { BentocordVariable, DiscordEvent } from '../../constants';
+import { BentocordVariable } from '../../BentocordVariable';
+
+import { DiscordEvent } from './constants';
 
 import { Logger } from '@ayanaware/logger-api';
 const log = Logger.get(null);

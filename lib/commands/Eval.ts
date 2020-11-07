@@ -1,8 +1,8 @@
 import { ComponentAPI, Entity, Inject } from '@ayanaware/bento';
 import * as util from 'util';
 
-import { CodeblockBuilder } from '../builders';
-import { Command, CommandContext, CommandManager } from '../components/CommandManager';
+import { CodeblockBuilder } from '../abstractions';
+import { Command, CommandContext, CommandDefinition, CommandManager } from '../components';
 
 import Logger from '@ayanaware/logger-api';
 const log = Logger.get();
@@ -12,7 +12,9 @@ export class Eval implements Command {
 	public api!: ComponentAPI;
 	public parent = CommandManager;
 
-	public aliases = ['eval', 'hack'];
+	public definition: CommandDefinition = {
+		aliases: ['eval', 'hack'],
+	};
 
 	@Inject(CommandManager)
 	private commandManager: CommandManager;

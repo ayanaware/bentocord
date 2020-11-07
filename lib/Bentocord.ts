@@ -1,7 +1,7 @@
 import { FSComponentLoader, Plugin, PluginAPI } from '@ayanaware/bento';
 import { ClientOptions } from 'eris';
 
-import { BentocordVariable } from './constants';
+import { BentocordVariable } from './BentocordVariable';
 import { PermissionLike, StorageLike } from './interfaces';
 import { RamStorage, Permissions } from './util';
 

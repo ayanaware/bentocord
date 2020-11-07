@@ -1,13 +1,20 @@
 import { ComponentAPI } from '@ayanaware/bento';
 
-import { Command, CommandContext, CommandManager } from '../components/CommandManager';
+import {
+	Command,
+	CommandContext,
+	CommandDefinition,
+	CommandManager
+} from '../components';
 
 export class BentocordPing implements Command {
 	public name = 'ping';
 	public api!: ComponentAPI;
 	public parent = CommandManager;
 
-	public aliases = ['ping', 'pong'];
+	public definition: CommandDefinition = {
+		aliases: ['ping', 'pong'],
+	};
 
 	public async execute(ctx: CommandContext) {
 		const start = process.hrtime();

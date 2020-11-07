@@ -1,4 +1,6 @@
 export { CommandManager, CommandManagerError, CommandManager as default } from './CommandManager';
 
-export * from './Command';
 export * from './CommandContext';
+
+export * from './constants';
+export * from './interfaces';

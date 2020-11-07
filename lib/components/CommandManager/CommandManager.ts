@@ -2,10 +2,10 @@ import { BentoError, Component, ComponentAPI, Entity, Inject, Plugin, Subscribe,
 import { Message } from 'eris';
 
 import { Bentocord } from '../../Bentocord';
-import { BentocordVariable, DiscordEvent } from '../../constants';
-import { Discord } from '../Discord';
+import { BentocordVariable } from '../../BentocordVariable';
+import { Discord, DiscordEvent } from '../Discord';
 
-import { Command } from './Command';
+import { Command } from './interfaces';
 import { CommandContext } from './CommandContext';
 
 import { Logger } from '@ayanaware/logger-api';
@@ -67,13 +67,19 @@ export class CommandManager implements Component {
 	}
 
 	public async addCommand(command: Command) {
-		if (typeof command.execute !== 'function') throw new CommandManagerError(command, 'Execute must be a function');
-		if (!Array.isArray(command.aliases)) throw new CommandManagerError(command, 'Aliases must be an array');
-		if (command.aliases.length < 1) throw new CommandManagerError(command, 'Aliases array must contain at least one element')
+		if (typeof command.execute !== 'function') throw new CommandManagerError(command, 'Execute must be function');
+		if (typeof command.definition !== 'object') {
+			// legacy support for .aliases
+			if (!Array.isArray(command.aliases)) command.definition = { aliases: command.aliases };
+			else throw new CommandManagerError(command, 'Definition must be Object');
+		}
+		const definition = command.definition;
+		
+		if (definition.aliases.length < 1) throw new CommandManagerError(command, 'At least one alias must be defined')
 
 		// check if dupe
 		// TODO: build a system to replace commands etc
-		if (this.commands.has(command.name)) throw new CommandManagerError(command, `Command with name of "${command.name}" already exists`);
+		if (this.commands.has(command.name)) throw new CommandManagerError(command, `Command name "${command.name}" already exists`);
 
 		// save command
 		this.commands.set(command.name, command);
@@ -81,11 +87,11 @@ export class CommandManager implements Component {
 		// TODO: ensure aliases is a unique array
 
 		// verify no clashing alises
-		const clashes = command.aliases.filter(alias => this.aliases.has(alias));
+		const clashes = definition.aliases.filter(alias => this.aliases.has(alias));
 		if (clashes.length > 0) throw new CommandManagerError(command, `Attempted to register pre-existing aliases: "${clashes.join('", "')}"`);
 
 		// regiser aliases
-		for (let alias of command.aliases) {
+		for (let alias of definition.aliases) {
 			alias = alias.toLowerCase();
 
 			// ex: ping => Entity.name
@@ -157,17 +163,13 @@ export class CommandManager implements Component {
 		const command = this.findCommandByAlias(alias);
 		if (command === null) return; // command not found
 
-		let args: Array<string> = [];
-		if (matches.groups.args) args = matches.groups.args.split(' ');
-
 		// build CommandContext
 		const ctx = new CommandContext(
-			this.api,
+			command,
 			message,
 			matches.groups.prefix,
-			command.name,
 			alias,
-			args,
+			matches.groups.args,
 		);
 
 		// Permissions
@@ -177,7 +179,7 @@ export class CommandManager implements Component {
 
 		try {
 			await command.execute(ctx);
-			log.debug(`Command ${command.name} successfully executed by user "${ctx.author.id}"`);
+			log.debug(`Command "${command.name}" executed by "${ctx.author.id}"`);
 		} catch (e) {
 			log.error(`Command ${command.name}.execute() error: ${e}`);
 

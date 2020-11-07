@@ -1,14 +1,21 @@
 import { ComponentAPI, Inject } from "@ayanaware/bento";
 import { TextChannel } from 'eris';
 
-import { Command, CommandContext, CommandManager } from "../components/CommandManager";
+import {
+	Command,
+	CommandContext,
+	CommandDefinition,
+	CommandManager
+} from "../components/CommandManager";
 
 export class Prefix implements Command {
 	public name = 'prefix';
 	public api!: ComponentAPI;
 	public parent = CommandManager;
 
-	public aliases = ['prefix', 'pfx'];
+	public definition: CommandDefinition = {
+		aliases: ['prefix', 'pfx'],
+	};
 
 	@Inject(CommandManager)
 	public commandManager: CommandManager;

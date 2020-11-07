@@ -1,7 +1,7 @@
 import { ComponentAPI, Inject } from '@ayanaware/bento';
 
 import { Bentocord } from '../Bentocord';
-import { BentocordVariable } from '../constants';
+import { BentocordVariable } from '../BentocordVariable';
 import { PermissionLike } from '../interfaces';
 
 export class Permissions implements PermissionLike {
