@@ -1,6 +1,6 @@
 {
 	"name": "@ayanaware/bentocord",
-	"version": "1.0.0-beta.16",
+	"version": "1.0.0-beta.17",
 	"description": "Bentocord is a Bento plugin designed to rapidly build fully functional Discord Bots.",
 	"main": "build/index.js",
 	"types": "build/index.d.ts",
@@ -13,7 +13,7 @@
 	"dependencies": {
 		"@ayanaware/bento": "^1.0.0-rc.10",
 		"@ayanaware/logger-api": "^2.0.0",
-		"eris": "^0.14.0"
+		"eris": "0.13.4"
 	},
 	"devDependencies": {
 		"@ayanaware/logger": "^2.2.1",
