@@ -1,3 +1,6 @@
 {
-    "extends": "@ayanaware/ts/config"
+	"extends": "@ayanaware/ts/config",
+	"compilerOptions": {
+		"emitDecoratorMetadata": true
+	}
 }

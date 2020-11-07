@@ -2,10 +2,10 @@ import { ComponentAPI, Inject } from '@ayanaware/bento';
 
 import { Bentocord } from '../Bentocord';
 import { BentocordVariable } from '../BentocordVariable';
-import { PermissionLike } from '../interfaces';
+import { PermissionLike } from './interfaces';
 
-export class Permissions implements PermissionLike {
-	public name = 'Permissions';
+export class SimplePermissions implements PermissionLike {
+	public name = 'SimplePermissions';
 	public api!: ComponentAPI;
 
 	private owners: Set<string> = new Set();

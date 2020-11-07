@@ -9,8 +9,7 @@ export class Basic implements Component {
 	public name = 'Basic';
 	public api!: ComponentAPI;
 
-	@Inject(Discord)
-	private discord: Discord;
+	@Inject(Discord) private discord: Discord;
 
 	@Subscribe(Discord, DiscordEvent.SHARD_READY)
 	private onShardReady(id: number) {

@@ -5,19 +5,15 @@
  * This was heavily inspired from Akario: https://github.com/discord-akairo/discord-akairo
  */
 
-export enum ParsedArgumentType { PHRASE, FLAG, OPTION_FLAG }
-
-export interface ParsedArgument {
-	type: ParsedArgumentType;
-	value: string;
-	raw?: string;
-}
+import { ParsedType, TokenType } from './constants';
+import { Parsed, Token } from './interfaces';
+import { Tokenizer } from './Tokenizer';
 
 export interface ParsedArguments {
-	all: Array<ParsedArgument>;
-	phrases: Array<ParsedArgument>;
-	flags: Array<ParsedArgument>;
-	optionFlags: Array<ParsedArgument>;
+	all: Array<Parsed>;
+	phrases: Array<Parsed>;
+	flags: Array<Parsed>;
+	optionFlags: Array<Parsed>;
 }
 
 export class ArgumentParser {
@@ -70,7 +66,7 @@ export class ArgumentParser {
 
 	private parseWhitespace() {
 		// consume whitespace
-		this.match([TokenType.WS], true);
+		this.match([TokenType.WHITESPACE], true);
 	}
 
 	private parseFlag() {
@@ -79,7 +75,7 @@ export class ArgumentParser {
 
 		const flagValue = flagToken.value.replace(/^-{1,2}/gi, '');
 		for (const c of flagValue) {
-			const flag = { type: ParsedArgumentType.FLAG, value: c, raw: flagToken.value };
+			const flag = { type: ParsedType.FLAG, value: c, raw: flagToken.value };
 
 			this.results.all.push(flag);
 			this.results.flags.push(flag);
@@ -95,7 +91,7 @@ export class ArgumentParser {
 			const collector = [];
 
 			let token = null;
-			while(token = this.match([TokenType.WORD, TokenType.WS], true)) {
+			while(token = this.match([TokenType.WORD, TokenType.WHITESPACE], true)) {
 				if (typeof token !== 'object') continue; // make typescript happy
 				raw = `${raw}${token.value}`;
 
@@ -110,7 +106,7 @@ export class ArgumentParser {
 			}
 			raw = `${raw}${quoteCloseToken.value}`;
 
-			const phrase: ParsedArgument = { type: ParsedArgumentType.PHRASE, value: collector.join(' '), raw };
+			const phrase: Parsed = { type: ParsedType.PHRASE, value: collector.join(' '), raw };
 			this.results.all.push(phrase);
 			this.results.phrases.push(phrase);
 
@@ -121,120 +117,8 @@ export class ArgumentParser {
 		const wordToken = this.match([TokenType.WORD], true);
 		if (!wordToken) return;
 
-		const phrase: ParsedArgument = { type: ParsedArgumentType.PHRASE, value: wordToken.value, raw: wordToken.value };
+		const phrase: Parsed = { type: ParsedType.PHRASE, value: wordToken.value, raw: wordToken.value };
 		this.results.all.push(phrase);
 		this.results.phrases.push(phrase);
-	}
-}
-
-enum TokenType {
-	WS,
-	WORD,
-	FLAG,
-	OPTIONFLAG,
-	QUOTE_OPEN,
-	QUOTE_CLOSE,
-	EOF,
-}
-
-interface Token {
-	type: TokenType;
-	value?: string;
-}
-
-class Tokenizer {
-	private content: string;
-	private position = 0;
-
-	private quoteState: boolean;
-
-	private tokens: Array<Token> = [];
-
-	public constructor(content: string) {
-		this.content = content;
-	}
-
-	public tokenize() {
-		while (this.content && this.position < this.content.length) this.findNextToken();
-
-		this.addToken(TokenType.EOF, null);
-		return this.tokens;
-	}
-
-	private addToken(type: TokenType, value: string) {
-		this.tokens.push({ type, value });
-	}
-
-	private advance(n: number) {
-		this.position += n;
-	}
-
-	private match(r: RegExp) {
-		return this.content.slice(this.position).match(r);
-	}
-
-	private findNextToken() {
-		const order = [this.findWhitespace, this.findQuote, this.findFlags ,this.findWord];
-
-		for (const fn of order) {
-			if (fn.bind(this)()) break;
-		}
-	}
-
-	private findWhitespace() {
-		const ws = this.match(/^\s+/);
-		if (!ws) return false;
-
-		this.addToken(TokenType.WS, ws[0]);
-		this.advance(ws[0].length);
-
-		return true;
-	}
-
-	private findQuote() {
-		if (this.quoteState) {
-			// quote is OPEN right now
-			const quoteClose = this.match(/^["“”]/);
-			if (!quoteClose) return false;
-
-			this.addToken(TokenType.QUOTE_CLOSE, '"');
-			this.advance(1);
-
-			this.quoteState = false;
-
-			return true;
-		}
-
-		// No sign of quote
-		const quoteOpen = this.match(/^["“”]/);
-		if (!quoteOpen) return false;
-
-		this.addToken(TokenType.QUOTE_OPEN, '"');
-		this.advance(1);
-
-		this.quoteState = true;
-
-		return true;
-	}
-
-	private findFlags() {
-		const flags = this.match(/^-[^-\s]+/);
-		if (!flags) return false;
-
-		// add group 1 match, this just drops the -
-		this.addToken(TokenType.FLAG, flags[0]);
-		this.advance(flags[0].length);
-
-		return true;
-	}
-
-	private findWord() {
-		const word = this.match(this.quoteState ? /^[^\s"“”]+/ : /^\S+/);
-		if (!word) return false;
-
-		this.addToken(TokenType.WORD, word[0]);
-		this.advance(word[0].length);
-
-		return true;
 	}
 }

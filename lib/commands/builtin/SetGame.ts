@@ -1,13 +1,10 @@
 import { ComponentAPI, Inject } from '@ayanaware/bento';
 import { ActivityPartial, BotActivityType } from 'eris';
 
-import {
-	Command,
-	CommandContext,
-	CommandDefinition,
-	CommandManager,
-	Discord
-} from '../components';
+import Discord from '../../discord';
+import { Command, CommandDefinition } from '../interfaces';
+import { CommandManager } from '../CommandManager';
+import { CommandContext } from '../CommandContext';
 
 export class SetGame implements Command {
 	public name = 'setgame';
@@ -18,8 +15,7 @@ export class SetGame implements Command {
 		aliases: ['setgame'],
 	}
 
-	@Inject(Discord)
-	private discord: Discord;
+	@Inject(Discord) private discord: Discord;
 
 	public async execute(ctx: CommandContext) {
 		if (!ctx.isOwner()) return ctx.messenger.createMessage(`You lack permission to perform this command.`);

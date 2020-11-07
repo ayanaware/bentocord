@@ -1,5 +1,4 @@
-import { ArgumentType } from '../constants';
-import { Argument } from './Argument';
+import { Argument } from '../../arguments';
 
 export interface CommandDefinition {
 	aliases: Array<string>;

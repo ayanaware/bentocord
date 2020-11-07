@@ -1,9 +1,10 @@
 import { ComponentAPI } from '@ayanaware/bento';
 
-import { Bentocord } from "../Bentocord";
-import { CodeblockBuilder } from '../abstractions';
-import { Command, CommandContext, CommandManager  } from "../components/CommandManager";
-import { CommandDefinition } from '../components/CommandManager/interfaces/CommandDefinition';
+import { Bentocord } from "../../Bentocord";
+import { CodeblockBuilder } from '../../builders';
+import { Command, CommandDefinition } from '../interfaces';
+import { CommandManager } from '../CommandManager';
+import { CommandContext } from '../CommandContext';
 
 export class BentocordBento implements Command {
 	public name = 'bento';

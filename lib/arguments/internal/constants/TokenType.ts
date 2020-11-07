@@ -1,0 +1,9 @@
+export enum TokenType {
+	WORD,
+	FLAG,
+	OPTIONFLAG,
+	QUOTE_OPEN,
+	QUOTE_CLOSE,
+	WHITESPACE,
+	EOF,
+}

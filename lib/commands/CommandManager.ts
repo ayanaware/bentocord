@@ -1,9 +1,9 @@
 import { BentoError, Component, ComponentAPI, Entity, Inject, Plugin, Subscribe, Variable } from '@ayanaware/bento';
 import { Message } from 'eris';
 
-import { Bentocord } from '../../Bentocord';
-import { BentocordVariable } from '../../BentocordVariable';
-import { Discord, DiscordEvent } from '../Discord';
+import { Bentocord } from '../Bentocord';
+import { BentocordVariable } from '../BentocordVariable';
+import { Discord, DiscordEvent } from '../discord';
 
 import { Command } from './interfaces';
 import { CommandContext } from './CommandContext';
@@ -32,11 +32,8 @@ export class CommandManager implements Component {
 	public defaultPrefix: string;
 	private selfId: string = null;
 
-	@Inject(Bentocord)
-	private readonly bentocord: Bentocord;
-
-	@Inject(Discord)
-	private readonly discord: Discord;
+	@Inject(Bentocord) private readonly bentocord: Bentocord;
+	@Inject(Discord) private readonly discord: Discord;
 
 	public async onChildLoad(entity: Command) {
 		try {
@@ -154,7 +151,7 @@ export class CommandManager implements Component {
 		build = `${build})\\s?(?<alias>[\\w]+)\\s?(?<args>.+)?$`
 
 		// example of finished regex: `^(?<prefix>=|<@!?185476724627210241>)\s?(?<command>[\w]+)\s?(?<args>.+)?`
-		const matches = new RegExp(build).exec(raw);
+		const matches = new RegExp(build, 'si').exec(raw);
 		
 		// message is not a command
 		if (!matches) return;

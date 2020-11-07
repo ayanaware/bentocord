@@ -28,9 +28,9 @@ list | Comma seperated string of items
 EntityReference | A `string | Function | Entity`. Bentocord will attempt to resolve it
 
 ## StorageLike
-[StorageLike](https://gitlab.com/ayanaware/bentocord/-/blob/master/lib/interfaces/StorageLike.ts) is an abstraction
-Bentocord uses to allow for persitant storage. [RamStorage](https://gitlab.com/ayanaware/bentocord/-/blob/master/lib/util/RamStorage.ts)
-is used by default, however this is only persisted while the bot is running.
+[StorageLike](https://gitlab.com/ayanaware/bentocord/-/blob/master/lib/plugins/interfaces/StorageLike.ts) is an abstraction
+Bentocord uses to allow for persitant storage. [SimpleStorage](https://gitlab.com/ayanaware/bentocord/-/blob/master/lib/plugins/SimpleStorage.ts)
+is used by default, however this is only persisted in ram, while the bot is running.
 We strongly recommend creating a custom implementation for your Bot
 
 **IMPORTANT**: A StorageLike implementation should include a cache for reading from and potentially based
@@ -48,6 +48,6 @@ It should be relatively easy to implement a StorageLike Entity. Simply create a 
 Bento Entity (Plugin(preferred) or Component). Extend StorageLike and implement the missing functions. You can find all required functions [here](https://gitlab.com/ayanaware/bentocord/-/blob/master/lib/interfaces/StorageLike.ts).
 
 ## PermissionLike
-[PermissionLike](https://gitlab.com/ayanaware/bentocord/-/blob/master/lib/interfaces/PermissionLike.ts) is an abstraction
-Bentocord uses to handle permissions. [Permissions](https://gitlab.com/ayanaware/bentocord/-/blob/master/lib/util/Permissions.ts)
+[PermissionLike](https://gitlab.com/ayanaware/bentocord/-/blob/master/lib/plugins/interfaces/PermissionLike.ts) is an abstraction
+Bentocord uses to handle permissions. [SimplePermissions](https://gitlab.com/ayanaware/bentocord/-/blob/master/lib/plugins/SimplePermissions.ts)
 is used by default. And should be sufficent for most applications

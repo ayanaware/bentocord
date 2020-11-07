@@ -1,10 +1,9 @@
 import { Guild, Member, Message, TextableChannel, TextChannel, User } from "eris";
 
-import { Bentocord } from '../../Bentocord';
-import { Discord, Messenger } from '../Discord';
-import { PermissionLike, StorageLike } from '../../interfaces';
-
-import { ArgumentParser, ParsedArgumentType } from './ArgumentParser';
+import { Bentocord } from '../Bentocord';
+import { Discord, Messenger } from '../discord';
+import { ArgumentParser, ParsedType } from '../arguments/internal';
+import { PermissionLike, StorageLike } from '../plugins';
 
 import { Command } from './interfaces';
 
@@ -73,7 +72,7 @@ export class CommandContext<T extends TextableChannel = TextableChannel> {
 		this.parser.parse();
 
 		// backwards compatiable
-		this.args = this.parser.results.all.filter(i => i.type == ParsedArgumentType.PHRASE).map(i => i.value);
+		this.args = this.parser.results.all.filter(i => i.type == ParsedType.PHRASE).map(i => i.value);
 	}
 
 	public prepare() {

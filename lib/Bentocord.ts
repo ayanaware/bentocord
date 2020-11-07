@@ -1,11 +1,14 @@
+import * as path from 'path';
+
 import { FSComponentLoader, Plugin, PluginAPI } from '@ayanaware/bento';
 import { ClientOptions } from 'eris';
 
 import { BentocordVariable } from './BentocordVariable';
-import { PermissionLike, StorageLike } from './interfaces';
-import { RamStorage, Permissions } from './util';
+import { PermissionLike, SimplePermissions, SimpleStorage, StorageLike } from './plugins';
 
 import { Logger } from '@ayanaware/logger-api';
+import CommandManager from './commands';
+import Discord from './discord';
 const log = Logger.get();
 
 export class Bentocord implements Plugin {
@@ -39,41 +42,49 @@ export class Bentocord implements Plugin {
 		this.storage = this.api.getVariable({ name: BentocordVariable.BENTOCORD_STORAGE_ENTITY, default: null });
 		this.permissions = this.api.getVariable({ name: BentocordVariable.BENTOCORD_PERMISSIONS_ENTITY, default: null });
 
-		// no storage entity was provided use default RamStorage
-		if (!this.storage) {
-			const storage = new RamStorage();
-			await this.api.bento.addComponent(storage);
-
-			this.storage = storage;
-		} else {
-			// attempt to resolve provided storage entity
-			if (!this.api.hasEntity(this.storage)) throw new Error(`Storage Entity "${this.storage}" not found`);
-			const storage = this.api.getEntity<StorageLike>(this.storage);
-			this.storage = storage;
-		}
-
-		// no permission entity was provided use default
-		if (!this.permissions) {
-			const permissions = new Permissions();
-			await this.api.bento.addComponent(permissions);
-
-			this.permissions = permissions;
-		} else {
-			// attempt to resolve provided permission entity
-			if (!this.api.hasEntity(this.permissions)) throw new Error(`Permissions Entity "${this.permissions}" not found`);
-			const permissions = this.api.getEntity<PermissionLike>(this.permissions);
-			this.permissions = permissions;
-		}
-
 		// Create Own FSLoader instance
 		this.fsLoader = new FSComponentLoader();
 		this.fsLoader.name = 'BentocordFSComponentLoader';
 		await this.api.bento.addPlugin(this.fsLoader);
 
-		await this.api.loadComponents(this.fsLoader, __dirname, 'components');
+		// (this.fsloader as any) is Manual Component Loading, its a temp hack until new EntityLoaders are done
+
+		// no storage entity was provided use default RamStorage
+		if (!this.storage) {
+			const simpleStorage: SimpleStorage = await (this.fsLoader as any).createInstance(path.resolve(__dirname, 'plugins', 'SimpleStorage'));
+			await this.api.bento.addComponent(simpleStorage);
+
+			this.storage = simpleStorage;
+		} 
+
+		// attempt to resolve provided storage entity
+		if (!this.api.hasEntity(this.storage)) throw new Error(`Storage Entity "${this.storage}" not found`);
+		const storage = this.api.getEntity<StorageLike>(this.storage);
+		this.storage = storage;
+
+		// no permission entity was provided use default
+		if (!this.permissions) {
+			const simplePermissions: SimplePermissions = await (this.fsLoader as any).createInstance(path.resolve(__dirname, 'plugins', 'SimplePermissions'));
+			await this.api.bento.addComponent(simplePermissions);
+
+			this.permissions = simplePermissions;
+		}
+
+		// attempt to resolve provided permission entity
+		if (!this.api.hasEntity(this.permissions)) throw new Error(`Permissions Entity "${this.permissions}" not found`);
+		const permissions = this.api.getEntity<PermissionLike>(this.permissions);
+		this.permissions = permissions;
+
+		// Load Discord, CommandManager, and ArgumentManager
+
+		const discord: Discord = await (this.fsLoader as any).createInstance(path.resolve(__dirname, 'discord'));
+		await this.api.bento.addComponent(discord);
+
+		const commandManager: CommandManager = await (this.fsLoader as any).createInstance(path.resolve(__dirname, 'commands'));
+		await this.api.bento.addComponent(commandManager);
 
 		// load built-in commands
 		const loadBuiltin = this.api.getVariable({ name: BentocordVariable.BENTOCORD_BUILTIN_COMMANDS, default: true });
-		if (loadBuiltin) return this.api.loadComponents(this.fsLoader, __dirname, 'commands');
+		if (loadBuiltin) return this.api.loadComponents(this.fsLoader, __dirname, 'commands', 'builtin');
 	}
 }

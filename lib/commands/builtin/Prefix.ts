@@ -1,12 +1,10 @@
 import { ComponentAPI, Inject } from "@ayanaware/bento";
 import { TextChannel } from 'eris';
 
-import {
-	Command,
-	CommandContext,
-	CommandDefinition,
-	CommandManager
-} from "../components/CommandManager";
+import { Command, CommandDefinition } from '../interfaces';
+import { CommandManager } from '../CommandManager';
+import { CommandContext } from '../CommandContext';
+
 
 export class Prefix implements Command {
 	public name = 'prefix';
@@ -17,8 +15,7 @@ export class Prefix implements Command {
 		aliases: ['prefix', 'pfx'],
 	};
 
-	@Inject(CommandManager)
-	public commandManager: CommandManager;
+	@Inject(CommandManager) public commandManager: CommandManager;
 
 	public async execute(ctx: CommandContext<TextChannel>) {
 		if (!ctx.guild) return ctx.messenger.createMessage(`This command can only be run in a Guild`);

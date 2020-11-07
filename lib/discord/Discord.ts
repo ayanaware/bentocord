@@ -1,8 +1,8 @@
 import { Component, ComponentAPI, Inject, PluginReference, Subscribe } from '@ayanaware/bento';
 import { Client, ClientOptions } from 'eris';
 
-import { Bentocord } from '../../Bentocord';
-import { BentocordVariable } from '../../BentocordVariable';
+import { Bentocord } from '../Bentocord';
+import { BentocordVariable } from '../BentocordVariable';
 
 import { DiscordEvent } from './constants';
 
@@ -16,8 +16,7 @@ export class Discord implements Component {
 
 	public client: Client;
 
-	@Inject(Bentocord)
-	private bentocord: Bentocord;
+	@Inject(Bentocord) private bentocord: Bentocord;
 
 	public async onLoad() {
 		return this.connect();

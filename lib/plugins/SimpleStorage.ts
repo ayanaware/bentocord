@@ -1,8 +1,9 @@
 import { ComponentAPI } from "@ayanaware/bento";
-import { StorageLike } from "../interfaces";
 
-export class RamStorage implements StorageLike {
-	public name = 'RamStorage';
+import { StorageLike } from "./interfaces";
+
+export class SimpleStorage implements StorageLike {
+	public name = 'SimpleStorage';
 	public api!: ComponentAPI;
 
 	private data: Map<string, any> = new Map();

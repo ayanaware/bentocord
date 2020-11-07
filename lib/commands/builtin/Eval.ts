@@ -1,8 +1,12 @@
 import { ComponentAPI, Entity, Inject } from '@ayanaware/bento';
 import * as util from 'util';
 
-import { CodeblockBuilder } from '../abstractions';
-import { Command, CommandContext, CommandDefinition, CommandManager } from '../components';
+import { CodeblockBuilder } from '../../builders';
+import { Command, CommandDefinition } from '../interfaces';
+import { CommandManager } from '../CommandManager';
+import { CommandContext } from '../CommandContext';
+
+
 
 import Logger from '@ayanaware/logger-api';
 const log = Logger.get();
@@ -16,8 +20,7 @@ export class Eval implements Command {
 		aliases: ['eval', 'hack'],
 	};
 
-	@Inject(CommandManager)
-	private commandManager: CommandManager;
+	@Inject(CommandManager) private commandManager: CommandManager;
 
 	public async execute(ctx: CommandContext) {
 		// NOTE: __varname in this command is used to prevent clashes with eval code
@@ -28,15 +31,19 @@ export class Eval implements Command {
 		if (!ctx.isOwner()) return ctx.messenger.createMessage(`You lack permission to perform this command.`);
 
 		// eval help
-		const __evalHelp = new CodeblockBuilder();
-		__evalHelp.addLine('ctx', `Command Context`);
+		const __sendHelp = async () => {
+			const __evalHelp = new CodeblockBuilder();
+			__evalHelp.addLine('ctx', `Command Context`);
 
-		__evalHelp.addLine('api', `This Command's ComponentAPI`)
-		__evalHelp.addLine('getEntity(ref)', 'Get a Bento Entity');
-		__evalHelp.addLine('getCommand(alias)', 'Attempt to get a Command by an alias');
+			__evalHelp.addLine('api', `This Command's ComponentAPI`)
+			__evalHelp.addLine('getEntity(ref)', 'Get a Bento Entity');
+			__evalHelp.addLine('getCommand(alias)', 'Attempt to get a Command by an alias');
+			return ctx.messenger.createMessage(await __evalHelp.render(), null, { zws: false });
+		}
 
-		const __args = ctx.raw.trim().split(' ').filter(v => !!v);
-		if (__args.length === 0) return ctx.messenger.createMessage(await __evalHelp.render(), null, { zws: false });
+		if (!ctx.raw) return __sendHelp();
+		const __args = ctx.raw.trim().replace(/\n/g, ' ').split(' ').filter(v => !!v);
+		if (__args.length === 0) return __sendHelp();
 
 		const __evalOptions = {
 			async: false,
