@@ -87,10 +87,8 @@ export class Parser {
 		// option must be allowed
 		const allowedOption = this.allowedOptions.find(i => i.name === optionKey);
 		if (!allowedOption) return;
-
 		// option enabled we can consume it
 		this.poistion++;
-
 
 		const option: Parsed = { value: null, key: optionKey, raw: `${optionToken.value}` };
 
@@ -98,11 +96,12 @@ export class Parser {
 		if (allowedOption.phrase) {
 			// handle whitespace
 			const ws = this.match([TokenType.WHITESPACE], true);
+			if (ws) option.raw = `${option.raw}${ws.value}`;
+
 			const phrase = this.parsePhrase(true) || { value: null, raw: '' };
-			if (ws) phrase.raw = `${ws.value}${phrase.raw}`;
 
 			option.value = phrase.value;
-			option.raw = phrase.raw;
+			option.raw = `${option.raw}${phrase.raw}`;
 		}
 
 		this.output.all.push(option);
