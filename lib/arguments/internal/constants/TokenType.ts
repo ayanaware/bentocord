@@ -1,9 +1,9 @@
 export enum TokenType {
-	WORD,
-	FLAG,
-	OPTIONFLAG,
-	QUOTE_OPEN,
-	QUOTE_CLOSE,
 	WHITESPACE,
+	WORD,
+	QUOTE_START,
+	QUOTE_END,
+	FLAG,
+	OPTION,
 	EOF,
 }

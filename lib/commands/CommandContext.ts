@@ -2,7 +2,6 @@ import { Guild, Member, Message, TextableChannel, TextChannel, User } from "eris
 
 import { Bentocord } from '../Bentocord';
 import { Discord, Messenger } from '../discord';
-import { Parser, ParsedType } from '../arguments/internal';
 import { PermissionLike, StorageLike } from '../plugins';
 
 import { Command } from './interfaces';

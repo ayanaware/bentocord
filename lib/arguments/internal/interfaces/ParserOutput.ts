@@ -1,8 +1,8 @@
 import {Parsed} from './Parsed';
 
-export interface ParsedResult {
+export interface ParserOutput {
 	all: Array<Parsed>;
 	phrases: Array<Parsed>;
 	flags: Array<Parsed>;
-	optionFlags: Array<Parsed>;
+	options: Array<Parsed>;
 }

@@ -3,7 +3,7 @@ import { CommandContext } from '../commands';
 import { ArgumentMatch, ArgumentType } from './constants';
 import { Argument } from './interfaces';
 
-import { Parser, ParsedResult, Tokenizer, Parsed } from './internal';
+import { Parser, ParserOutput, Tokenizer, Parsed } from './internal';
 
 interface FulfillState {
 	phraseIndex: number;
@@ -12,8 +12,8 @@ interface FulfillState {
 /**
  * ArgumentManager takes in Array<Argument> and attempts to fulfill them
  */
-export class ArgumentManager implements Component {
-	public name = 'ArgumentManager';
+export class ArgumentResolver implements Component {
+	public name = 'ArgumentResolver';
 	public api!: ComponentAPI;
 
 	public async fulfill(ctx: CommandContext, args: Array<Argument>) {
@@ -62,7 +62,7 @@ export class ArgumentManager implements Component {
 		return result;
 	}
 
-	private async processPhrase(ctx: CommandContext, state: FulfillState, arg: Argument, result: ParsedResult) {
+	private async processPhrase(ctx: CommandContext, state: FulfillState, arg: Argument, result: ParserOutput) {
 		const parsed = result.phrases[state.phraseIndex];
 		if (!parsed) return null;
 
@@ -71,7 +71,7 @@ export class ArgumentManager implements Component {
 		return this.processArgument(ctx, arg, parsed.value);
 	}
 
-	private async processRest(ctx: CommandContext, state: FulfillState, arg: Argument, result: ParsedResult) {
+	private async processRest(ctx: CommandContext, state: FulfillState, arg: Argument, result: ParserOutput) {
 		const rest = result.phrases.slice(state.phraseIndex)
 		if (rest.length < 1) return null;
 
@@ -80,7 +80,7 @@ export class ArgumentManager implements Component {
 		return this.processArgument(ctx, arg, rest.map(i => i.value).join(' '));
 	}
 
-	private async processFlag(ctx: CommandContext, state: FulfillState, arg: Argument, result: ParsedResult) {
+	private async processFlag(ctx: CommandContext, state: FulfillState, arg: Argument, result: ParserOutput) {
 
 	}
 }

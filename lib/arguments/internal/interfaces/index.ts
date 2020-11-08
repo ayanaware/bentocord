@@ -1,3 +1,3 @@
 export * from './Parsed';
-export * from './ParsedResult';
+export * from './ParserOutput';
 export * from './Token';

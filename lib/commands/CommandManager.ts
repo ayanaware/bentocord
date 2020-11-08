@@ -3,7 +3,7 @@ import * as util from 'util';
 import { BentoError, Component, ComponentAPI, Entity, Inject, Plugin, Subscribe, Variable } from '@ayanaware/bento';
 import { Message } from 'eris';
 
-import { ArgumentManager } from '../arguments';
+import { ArgumentResolver } from '../arguments';
 import { Bentocord } from '../Bentocord';
 import { BentocordVariable } from '../BentocordVariable';
 import { Discord, DiscordEvent } from '../discord';
@@ -37,7 +37,7 @@ export class CommandManager implements Component {
 
 	@Inject(Bentocord) private readonly bentocord: Bentocord;
 	@Inject(Discord) private readonly discord: Discord;
-	@Inject(ArgumentManager) private readonly argumentManager: ArgumentManager;
+	@Inject(ArgumentResolver) private readonly argumentResolver: ArgumentResolver;
 
 	public async onChildLoad(entity: Command) {
 		try {
@@ -180,7 +180,7 @@ export class CommandManager implements Component {
 
 		try {
 			// Fulfill Command Arguments
-			if (command.definition.args) ctx.args = await this.argumentManager.fulfill(ctx, command.definition.args);
+			if (command.definition.args) ctx.args = await this.argumentResolver.fulfill(ctx, command.definition.args);
 
 			await command.execute(ctx);
 			log.debug(`Command "${command.name}" executed by "${ctx.author.id}"`);
