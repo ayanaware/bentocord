@@ -1,12 +1,21 @@
 import { ArgumentMatch, ArgumentType } from '../constants';
+import { PromptOptions } from './PromptOptions';
 
 export interface Argument<T extends any = any> {
 	name: string;
 	type: ArgumentType;
+	/** ArgumentMatch method to use */
 	match?: ArgumentMatch;
 
+	/** Usable on FLAG ArgumentMatch method */
 	flags?: Array<string>;
+
+	/** Define option that argument is associated with */
 	option?: string;
+
+	/** Default value if none can be resolved */
+	default?: T;
+	optional?: boolean;
 
 	/** Consume the "rest" of available phrases */
 	rest?: boolean;
@@ -14,10 +23,10 @@ export interface Argument<T extends any = any> {
 	/** Limit how many phrases "rest" will consume */
 	limit?: number;
 
-	/** Default value if non can be resolved */
-	default?: T;
+	prompt?: PromptOptions;
 
-	optional?: boolean;
+	/** Define custom phrase seperators */
+	phraseSeperators?: Array<string>;
 
 	/** Transform function. This is the last thing to run before argument is fully processed */
 	transform?: string | ((i: T) => T);

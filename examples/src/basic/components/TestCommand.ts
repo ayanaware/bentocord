@@ -9,7 +9,7 @@ export class ArgTest implements Command {
 	public definition: CommandDefinition = {
 		aliases: ['argtest'],
 		args: [
-			{ type: ArgumentType.MEMBERS, name: 'target' },
+			{ type: ArgumentType.MEMBERS, name: 'target', rest: true, prompt: { startText: 'Please type the name of a Member:' }},
 		]
 	};
 

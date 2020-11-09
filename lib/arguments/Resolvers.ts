@@ -1,29 +1,25 @@
-import { AnyGuildChannel, Channel, Member, Role, TextableChannel, TextChannel, User, VoiceChannel } from 'eris';
+import { AnyGuildChannel, Member, Role, User } from 'eris';
 import { CommandContext } from '../commands';
 
 import { ArgumentType } from './constants';
-import { Resolver } from './interfaces';
+import { Resolver, ResolverFn } from './interfaces';
 
 const resolvers: Array<Resolver<any>> = [];
-const add = (type: ArgumentType, fn: (ctx: CommandContext, phrase: string) => any | Promise<any>) => resolvers.push({ type, fn });
+const add = (type: ArgumentType, fn: ResolverFn<any>) => resolvers.push({ type, fn });
 
-add(ArgumentType.STRING, (ctx: CommandContext, phrase: string) => {
-	if (!phrase) return null;
-	
-	return phrase;
+add(ArgumentType.STRING, (ctx: CommandContext, phrases: Array<string>) => {
+	return phrases.join(' ');
 });
 
-add(ArgumentType.NUMBER, (ctx: CommandContext, phrase: string) => {
-	if (!phrase) return null;
-
-	const number = parseInt(phrase);
+add(ArgumentType.NUMBER, (ctx: CommandContext, phrases: Array<string>) => {
+	const number = parseInt(phrases.join(' '));
 	if (Number.isNaN(number)) return null;
 
 	return number;
 });
 
-add(ArgumentType.BOOLEAN, (ctx: CommandContext, phrase: string) => {
-	if (!phrase) return null;
+add(ArgumentType.BOOLEAN, (ctx: CommandContext, phrases: Array<string>) => {
+	const phrase = phrases.join(' ');
 
 	const findTrue = phrase.match(/^true|yes|1$/);
 	if (findTrue) return true;
@@ -34,12 +30,13 @@ add(ArgumentType.BOOLEAN, (ctx: CommandContext, phrase: string) => {
 	return null;
 });
 
-add(ArgumentType.USER, (ctx: CommandContext, phrase: string) => {
+add(ArgumentType.USER, (ctx: CommandContext, phrases: Array<string>) => {
+	const phrase = phrases.join(' ');
 	return ctx.discord.client.users.get(phrase) || ctx.discord.client.users.find(u => checkUser(phrase, u));
 });
 
-add(ArgumentType.USERS, (ctx: CommandContext, phrase: string) => {
-	return ctx.discord.client.users.filter(u => checkUser(phrase, u));
+add(ArgumentType.USERS, (ctx: CommandContext, phrases: Array<string>) => {
+	return ctx.discord.client.users.filter(u => phrases.some(p => checkUser(p, u)));
 });
 
 function checkUser(phrase: string, user: User | Member) {
@@ -62,16 +59,18 @@ function checkUser(phrase: string, user: User | Member) {
 	return false;
 }
 
-add(ArgumentType.MEMBER, (ctx: CommandContext, phrase: string) => {
+add(ArgumentType.MEMBER, (ctx: CommandContext, phrases: Array<string>) => {
 	if (!ctx.guild) return null;
+
+	const phrase = phrases.join(' ');
 
 	return ctx.guild.members.get(phrase) || ctx.guild.members.find(m => checkMember(phrase, m));
 });
 
-add(ArgumentType.MEMBERS, (ctx: CommandContext, phrase: string) => {
+add(ArgumentType.MEMBERS, (ctx: CommandContext, phrases: Array<string>) => {
 	if (!ctx.guild) return null;
 
-	return ctx.guild.members.filter(m => checkMember(phrase, m));
+	return ctx.guild.members.filter(m => phrases.some(p => checkMember(p, m)));
 });
 
 function checkMember(phrase: string, member: Member) {
@@ -83,30 +82,36 @@ function checkMember(phrase: string, member: Member) {
 	return false;
 }
 
-add(ArgumentType.RELEVANT, (ctx: CommandContext, phrase: string) => {
+add(ArgumentType.RELEVANT, (ctx: CommandContext, phrase: Array<string>) => {
 	const userResolver = resolvers.find(r => r.type === ArgumentType.USER);
 	const memberResolver = resolvers.find(r => r.type === ArgumentType.MEMBER);
+
 	if (ctx.guild) return memberResolver.fn(ctx, phrase);
+
 	return userResolver.fn(ctx, phrase);
 });
 
-add(ArgumentType.RELEVANTS, (ctx: CommandContext, phrase: string) => {
+add(ArgumentType.RELEVANTS, (ctx: CommandContext, phrases: Array<string>) => {
 	const usersResolver = resolvers.find(r => r.type === ArgumentType.USERS);
 	const membersResolver = resolvers.find(r => r.type === ArgumentType.MEMBERS);
-	if (ctx.guild) return membersResolver.fn(ctx, phrase);
-	return usersResolver.fn(ctx, phrase);
+
+	if (ctx.guild) return membersResolver.fn(ctx, phrases);
+
+	return usersResolver.fn(ctx, phrases);
 });
 
-add(ArgumentType.CHANNEL, (ctx: CommandContext, phrase: string) => {
+add(ArgumentType.CHANNEL, (ctx: CommandContext, phrases: Array<string>) => {
 	if (!ctx.guild) return null;
+
+	const phrase = phrases.join(' ');
 
 	return ctx.guild.channels.get(phrase) || ctx.guild.channels.find(c => checkChannel(phrase, c));
 });
 
-add(ArgumentType.CHANNELS, (ctx: CommandContext, phrase: string) => {
+add(ArgumentType.CHANNELS, (ctx: CommandContext, phrases: Array<string>) => {
 	if (!ctx.guild) return null;
 
-	return ctx.guild.channels.filter(c => checkChannel(phrase, c));
+	return ctx.guild.channels.filter(c => phrases.some(p => checkChannel(p, c)));
 });
 
 function checkChannel(phrase: string, channel: AnyGuildChannel) {
@@ -122,16 +127,18 @@ function checkChannel(phrase: string, channel: AnyGuildChannel) {
 	return channel.name.toLowerCase().includes(phrase.toLowerCase());
 }
 
-add(ArgumentType.ROLE, (ctx: CommandContext, phrase: string) => {
+add(ArgumentType.ROLE, (ctx: CommandContext, phrases: Array<string>) => {
 	if (!ctx.guild) return null;
+
+	const phrase = phrases.join(' ');
 
 	return ctx.guild.roles.get(phrase) || ctx.guild.roles.find(r => checkRole(phrase, r));
 });
 
-add(ArgumentType.ROLES, (ctx: CommandContext, phrase: string) => {
+add(ArgumentType.ROLES, (ctx: CommandContext, phrases: Array<string>) => {
 	if (!ctx.guild) return null;
 
-	return ctx.guild.roles.filter(r => checkRole(phrase, r));
+	return ctx.guild.roles.filter(r => phrases.some(p => checkRole(p, r)));
 });
 
 function checkRole(phrase: string, role: Role) {
