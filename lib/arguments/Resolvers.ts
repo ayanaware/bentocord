@@ -48,6 +48,8 @@ function checkUser(phrase: string, user: User | Member) {
 
 	// handle username
 	const match = phrase.match(/([^#]+)#?(\d{4})?/i);
+	if (!match) return false;
+
 	const username = match[1];
 	const discrim = match[2] || null;
 

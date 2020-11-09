@@ -1,3 +1,4 @@
+import { CommandContext } from '../../commands';
 import { ArgumentMatch, ArgumentType } from '../constants';
 import { PromptOptions } from './PromptOptions';
 
@@ -16,6 +17,9 @@ export interface Argument<T extends any = any> {
 	/** Default value if none can be resolved */
 	default?: T;
 	optional?: boolean;
+
+	/** If we fail to resolve, then print this */
+	unresolved?: string | ((ctx: CommandContext, arg: Argument) => string);
 
 	/** Consume the "rest" of available phrases */
 	rest?: boolean;

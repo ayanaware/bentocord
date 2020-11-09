@@ -8,15 +8,17 @@ export class ArgTest implements Command {
 
 	public definition: CommandDefinition = {
 		aliases: ['argtest'],
-		args: [
-			{ type: ArgumentType.MEMBERS, name: 'target', rest: true, prompt: { startText: 'Please type the name of a Member:' }},
-		]
+		args: [{
+			type: ArgumentType.MEMBER, name: 'target', rest: true,
+			prompt: { startText: 'Please type the name of a Member:' },
+			unresolved: 'Failed to find a target user.'
+		}]
 	};
 
 	public async execute(ctx: CommandContext) {
 		const target = ctx.args.target;
 		if (!target) return ctx.messenger.createMessage(`Syntax: \`${ctx.alias} user\``);
 
-		return ctx.messenger.createMessage(`You Targeted: ${target.map((t: any) => t.username).join(' ')}`);
+		return ctx.messenger.createMessage(`You Targeted: ${target.username}`);
 	}
 }
