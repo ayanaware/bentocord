@@ -1,25 +1,22 @@
 export enum ArgumentType {
 	// Primitives
-	STRING = 'STRING',
-	NUMBER = 'NUMBER',
-	BOOLEAN = 'BOOLEAN',
+	STRING,
+	NUMBER,
+	BOOLEAN,
 
-	// Advanced
-	LIST = 'LIST',
+	// Discord User
+	USER, USERS,
 
-	// Discord
-	USER = 'USER',
-	GUILD = 'GUILD',
+	// Discord Member
+	MEMBER, MEMBERS,
+	RELEVANT, RELEVANTS,
 
-	// roles
-	ROLE = 'ROLE',
+	// Discord Channel
+	CHANNEL, CHANNELS,
 
-	// Channels
-	CHANNEL = 'CHANNEL',
-	TEXT_CHANNEL = 'TEXT_CHANNEL',
-	VOICE_CHANNEL = 'VOICE_CHANNEL',
+	// Discord Role
+	ROLE, ROLES,
 
-	// Guild Member
-	MEMBER = 'MEMBER',
-	RELEVANT = 'RELEVANT',
+	// Discord Guild
+	GUILD, GUILDS,
 }

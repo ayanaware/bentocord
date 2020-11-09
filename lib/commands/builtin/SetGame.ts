@@ -15,8 +15,8 @@ export class SetGame implements Command {
 	public definition: CommandDefinition = {
 		aliases: ['setgame'],
 		args: [
-			{ name: 'type', type: ArgumentType.NUMBER },
-			{ name: 'status', type: ArgumentType.STRING, match: ArgumentMatch.REST },
+			{ type: ArgumentType.NUMBER, name: 'type' },
+			{ type: ArgumentType.STRING, name: 'status', rest: true },
 		]
 	}
 

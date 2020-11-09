@@ -1,3 +1,2 @@
 export * from './Argument';
-
-export * from './ParsedArguments';
+export * from './Resolver';

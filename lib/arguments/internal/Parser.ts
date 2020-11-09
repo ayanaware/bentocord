@@ -1,5 +1,5 @@
-/* Below is Bentocord's ArgumentParser this converts a raw input string into a series of tokens using the Tokenizer.	
- * These tokens are then passed through the Parser which builds them into larger pieces such as Phrases, Flags, and OptionFlags.
+/* Below is Bentocord's Parser this converts a raw input string into a series of tokens using the Tokenizer.	
+ * These tokens are then passed through the Parser which builds them into larger pieces such as Phrases, Flags, and Options.
  * The Parser is also responsible for verifying things look "sane". For Example verifying that Quotes are closed etc
  * 
  * This was heavily inspired from Akario: https://github.com/discord-akairo/discord-akairo
@@ -156,7 +156,6 @@ export class Parser {
 
 		// word
 		const wordToken = this.match([TokenType.WORD, TokenType.OPTION], true);
-		console.log(this.tokens[this.poistion]);
 		if (!wordToken) return;
 
 		const phrase: Parsed = { value: wordToken.value, raw: wordToken.value };
