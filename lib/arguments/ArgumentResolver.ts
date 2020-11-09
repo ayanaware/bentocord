@@ -160,7 +160,6 @@ export class ArgumentResolver implements Component {
 
 		return new Promise((resolve, reject) => {
 			const key = `${ctx.message.channel.id}.${ctx.message.author.id}`;
-			console.log(key);
 			const refreshTimeout = (pending: PendingPrompt) => {
 				if (pending.timeout) clearTimeout(pending.timeout);
 				pending.timeout = setTimeout(async () => {
