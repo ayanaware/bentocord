@@ -1,4 +1,4 @@
-import { AnyGuildChannel, Member, Role, User } from 'eris';
+import { AnyGuildChannel, Emoji, Member, Role, User } from 'eris';
 import { CommandContext } from '../commands';
 
 import { ArgumentType } from './constants';
@@ -7,10 +7,12 @@ import { Resolver, ResolverFn } from './interfaces';
 const resolvers: Array<Resolver<any>> = [];
 const add = (type: ArgumentType, fn: ResolverFn<any>) => resolvers.push({ type, fn });
 
+// STRING
 add(ArgumentType.STRING, (ctx: CommandContext, phrases: Array<string>) => {
 	return phrases.join(' ');
 });
 
+// NUMBER
 add(ArgumentType.NUMBER, (ctx: CommandContext, phrases: Array<string>) => {
 	const number = parseInt(phrases.join(' '));
 	if (Number.isNaN(number)) return null;
@@ -18,6 +20,7 @@ add(ArgumentType.NUMBER, (ctx: CommandContext, phrases: Array<string>) => {
 	return number;
 });
 
+// BOOLEAN
 add(ArgumentType.BOOLEAN, (ctx: CommandContext, phrases: Array<string>) => {
 	const phrase = phrases.join(' ');
 
@@ -30,6 +33,7 @@ add(ArgumentType.BOOLEAN, (ctx: CommandContext, phrases: Array<string>) => {
 	return null;
 });
 
+// USER & USERS
 add(ArgumentType.USER, (ctx: CommandContext, phrases: Array<string>) => {
 	const phrase = phrases.join(' ');
 	return ctx.discord.client.users.get(phrase) || ctx.discord.client.users.find(u => checkUser(phrase, u));
@@ -61,6 +65,7 @@ function checkUser(phrase: string, user: User | Member) {
 	return false;
 }
 
+// MEMBER & MEMBERS
 add(ArgumentType.MEMBER, (ctx: CommandContext, phrases: Array<string>) => {
 	if (!ctx.guild) return null;
 
@@ -84,6 +89,7 @@ function checkMember(phrase: string, member: Member) {
 	return false;
 }
 
+// RELEVANT & RELEVANTS
 add(ArgumentType.RELEVANT, (ctx: CommandContext, phrase: Array<string>) => {
 	const userResolver = resolvers.find(r => r.type === ArgumentType.USER);
 	const memberResolver = resolvers.find(r => r.type === ArgumentType.MEMBER);
@@ -102,6 +108,7 @@ add(ArgumentType.RELEVANTS, (ctx: CommandContext, phrases: Array<string>) => {
 	return usersResolver.fn(ctx, phrases);
 });
 
+// CHANNEL & CHANNELS
 add(ArgumentType.CHANNEL, (ctx: CommandContext, phrases: Array<string>) => {
 	if (!ctx.guild) return null;
 
@@ -129,6 +136,7 @@ function checkChannel(phrase: string, channel: AnyGuildChannel) {
 	return channel.name.toLowerCase().includes(phrase.toLowerCase());
 }
 
+// ROLE & ROLES
 add(ArgumentType.ROLE, (ctx: CommandContext, phrases: Array<string>) => {
 	if (!ctx.guild) return null;
 
@@ -154,6 +162,35 @@ function checkRole(phrase: string, role: Role) {
 	phrase = phrase.replace(/^@/, '');
 
 	return role.name.toLowerCase().includes(phrase.toLowerCase());
+}
+
+// EMOJI & EMOJIS
+add(ArgumentType.EMOJI, (ctx: CommandContext, phrases: Array<string>) => {
+	if (!ctx.guild) return null;
+
+	const phrase = phrases.join(' ');
+
+	return ctx.guild.emojis.find(e => checkEmoji(phrase, e));
+});
+
+add(ArgumentType.EMOJIS, (ctx: CommandContext, phrases: Array<string>) => {
+	if (!ctx.guild) return null;
+
+	return ctx.guild.emojis.filter(e => phrases.some(p => checkEmoji(p, e)));
+});
+
+function checkEmoji(phrase: string, emoji: Emoji) {
+	if (emoji.id === phrase) return true;
+
+	// handle usage
+	const match = phrase.match(/^<a?:([^\s]+):(\d{17,19})>$/)
+	if (match && emoji.name === match[1]) return true;
+	if (match && emoji.id === match[2]) return true;
+
+	// handle name
+	phrase = phrase.replace(/:/g, '');
+
+	return emoji.name.toLowerCase().includes(phrase.toLowerCase());
 }
 
 export default resolvers;

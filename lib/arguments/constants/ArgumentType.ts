@@ -19,4 +19,7 @@ export enum ArgumentType {
 
 	// Discord Guild
 	GUILD, GUILDS,
+
+	// Discord Emoji
+	EMOJI, EMOJIS,
 }
