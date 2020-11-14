@@ -9,16 +9,16 @@ export class ArgTest implements Command {
 	public definition: CommandDefinition = {
 		aliases: ['argtest'],
 		args: [{
-			type: ArgumentType.MEMBER, name: 'target', rest: true,
-			prompt: { startText: 'Please type the name of a Member:' },
-			unresolved: 'Failed to find a target user.'
+			type: ArgumentType.STRINGS, name: 'target', rest: true, phraseSeperators: [',', ';'],
+			prompt: { startText: 'Please type strings' },
+			unresolved: 'Failed to find valid strings'
 		}]
 	};
 
 	public async execute(ctx: CommandContext) {
 		const target = ctx.args.target;
-		if (!target) return ctx.messenger.createMessage(`Syntax: \`${ctx.alias} user\``);
+		if (!target) return ctx.messenger.createMessage(`Syntax: \`${ctx.alias} string1, string2, ...\``);
 
-		return ctx.messenger.createMessage(`You Targeted: ${target.username}`);
+		return ctx.messenger.createMessage(`Your strings: ${target.join(', ')}`);
 	}
 }

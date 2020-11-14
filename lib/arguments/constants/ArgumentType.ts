@@ -1,8 +1,8 @@
 export enum ArgumentType {
 	// Primitives
-	STRING,
-	NUMBER,
-	BOOLEAN,
+	STRING, STRINGS,
+	NUMBER, NUMBERS,
+	BOOLEAN, BOOLEANS,
 
 	// Discord User
 	USER, USERS,

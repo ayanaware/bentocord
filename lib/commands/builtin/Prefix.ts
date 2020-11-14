@@ -15,7 +15,7 @@ export class Prefix implements Command {
 	public definition: CommandDefinition = {
 		aliases: ['prefix', 'pfx'],
 		args: [
-			{ type: ArgumentType.STRING, name: 'prefix', rest: true }
+			{ type: ArgumentType.STRING, name: 'prefix', rest: true, optional: true }
 		]
 	};
 

@@ -7,12 +7,16 @@ import { Resolver, ResolverFn } from './interfaces';
 const resolvers: Array<Resolver<any>> = [];
 const add = (type: ArgumentType, fn: ResolverFn<any>) => resolvers.push({ type, fn });
 
-// STRING
+// STRING & STRINGS
 add(ArgumentType.STRING, (ctx: CommandContext, phrases: Array<string>) => {
 	return phrases.join(' ');
 });
 
-// NUMBER
+add(ArgumentType.STRINGS, (ctx: CommandContext, phrases: Array<string>) => {
+	return phrases;
+})
+
+// NUMBER & NUMBERS
 add(ArgumentType.NUMBER, (ctx: CommandContext, phrases: Array<string>) => {
 	const number = parseInt(phrases.join(' '));
 	if (Number.isNaN(number)) return null;
@@ -20,7 +24,13 @@ add(ArgumentType.NUMBER, (ctx: CommandContext, phrases: Array<string>) => {
 	return number;
 });
 
-// BOOLEAN
+add(ArgumentType.NUMBERS, (ctx: CommandContext, phrases: Array<string>) => {
+	const numberResolver = resolvers.find(r => r.type === ArgumentType.NUMBER);
+
+	return phrases.map(phrase => numberResolver.fn(ctx, [phrase]));
+});
+
+// BOOLEAN & BOOLEANS
 add(ArgumentType.BOOLEAN, (ctx: CommandContext, phrases: Array<string>) => {
 	const phrase = phrases.join(' ');
 
@@ -32,6 +42,12 @@ add(ArgumentType.BOOLEAN, (ctx: CommandContext, phrases: Array<string>) => {
 
 	return null;
 });
+
+add(ArgumentType.BOOLEANS, (ctx: CommandContext, phrases: Array<string>) => {
+	const booleanResolver = resolvers.find(r => r.type === ArgumentType.BOOLEAN);
+
+	return phrases.map(phrase => booleanResolver.fn(ctx, [phrase]));
+})
 
 // USER & USERS
 add(ArgumentType.USER, (ctx: CommandContext, phrases: Array<string>) => {

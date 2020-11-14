@@ -91,22 +91,25 @@ export class ArgumentResolver implements Component {
 		const state: FulfillState = { phraseIndex: 0 };
 
 		let collector = {};
+		let count = 0;
 		for (const arg of args) {
+			count++;
+
 			const fn = choices[arg.match || ArgumentMatch.PHRASE];
 			if (fn == null) throw new Error(`Unknown ArgumentMatch Type`);
 
-			const result = await fn.call(this, ctx, state, arg, output);
+			const result = await fn.call(this, ctx, state, arg, count, output);
 			collector = {...collector, [arg.name]: result};
 		}
 
 		return collector;
 	}
 
-	private async processPhrase(ctx: CommandContext, state: FulfillState, arg: Argument, output: ParserOutput) {
+	private async processPhrase(ctx: CommandContext, state: FulfillState, arg: Argument, count: number, output: ParserOutput) {
 		let phrases: Array<Parsed> = null;
 		if (arg.rest) phrases = output.phrases.slice(state.phraseIndex, arg.limit || Infinity);
 		else phrases = [output.phrases[state.phraseIndex]];
-		phrases = phrases.filter(i => i!!);
+		phrases = phrases.filter(i => !!i);
 
 		// consume
 		state.phraseIndex += phrases.length;
@@ -115,27 +118,27 @@ export class ArgumentResolver implements Component {
 		// phraseSeperators
 		if (Array.isArray(arg.phraseSeperators) && arg.phraseSeperators.length > 0) {
 			const regex = new RegExp(arg.phraseSeperators.join('|'), 'gi');
-			phraseValues = phraseValues.join(' ').split(regex).map(v => v.trim());
+			phraseValues = phraseValues.join(' ').split(regex).map(v => v.trim()).filter(i => !!i);
 		}
 
-		return this.resolveArgument(ctx, arg, phraseValues);
+		return this.resolveArgument(ctx, arg, count, phraseValues);
 	}
 
-	private async processFlag(ctx: CommandContext, state: FulfillState, arg: Argument, output: ParserOutput) {
+	private async processFlag(ctx: CommandContext, state: FulfillState, arg: Argument, count: number, output: ParserOutput) {
 		if (!Array.isArray(arg.flags)) return false;
 
 		return output.flags.some(f => arg.flags.some(i => i.toLowerCase() === f.value.toLowerCase()));
 	}
 
-	private async processOption(ctx: CommandContext, state: FulfillState, arg: Argument, output: ParserOutput) {
+	private async processOption(ctx: CommandContext, state: FulfillState, arg: Argument, count: number, output: ParserOutput) {
 		if (!arg.option) return null;
 
 		const option = output.options.find(o => o.key.toLowerCase() === arg.option.toLowerCase());
 
-		return this.resolveArgument(ctx, arg, [option.value]);
+		return this.resolveArgument(ctx, arg, count, [option.value]);
 	}
 
-	private async resolveArgument(ctx: CommandContext, arg: Argument, phrases: Array<string>) {
+	private async resolveArgument(ctx: CommandContext, arg: Argument, count: number, phrases: Array<string>) {
 		let result;
 		if (phrases.length > 0) result = await this.execute(arg.type, ctx, phrases);
 
@@ -157,7 +160,7 @@ export class ArgumentResolver implements Component {
 				throw new Error(arg.unresolved);
 			}
 
-			throw new Error(`Failed to fulfill non-optional argument: "${arg.name}"`);
+			throw new Error(`Could fulfill non-optional argument #${count}: "${arg.name}"`);
 		}
 
 		// call transform function
@@ -187,9 +190,9 @@ export class ArgumentResolver implements Component {
 				pending.timeout = setTimeout(async () => {
 					this.pendingPrompts.delete(key);
 					if (typeof options.timeoutText === 'function') options.timeoutText = options.timeoutText(ctx, arg);
-					const message = await ctx.messenger.createMessage(options.timeoutText || 'Prompt Timeout');
+					if (options.timeoutText) await ctx.messenger.createMessage(options.timeoutText);
 					return resolve(null);
-				}, options.timeout || 10 * 1000);
+				}, options.timeout || 30 * 1000);
 			};
 
 			const pending: PendingPrompt = {
@@ -242,7 +245,7 @@ export class ArgumentResolver implements Component {
 			if (pending.timeout) clearTimeout(pending.timeout);
 
 			if (typeof options.endedText === 'function') options.endedText = options.endedText(ctx, arg);
-			await ctx.messenger.createMessage(options.endedText || 'Prompt Ended');
+			if (options.endedText) await ctx.messenger.createMessage(options.endedText);
 
 			return pending.reject(new Error('Canceled per user request'));
 		}
@@ -255,7 +258,7 @@ export class ArgumentResolver implements Component {
 				if (pending.timeout) clearTimeout(pending.timeout);
 
 				if (typeof options.endedText === 'function') options.endedText = options.endedText(ctx, arg);
-				await ctx.messenger.createMessage(options.endedText || 'Prompt Ended');
+				if (options.endedText) await ctx.messenger.createMessage(options.endedText);
 
 				return pending.reject(new Error('Too many attempts'));
 			}
