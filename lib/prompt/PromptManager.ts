@@ -140,7 +140,7 @@ export class PromptManager implements Component {
 	public async createConfirmPrompt(channelId: string, userId: string, content?: MessageContent, time?: number) {
 		let result: string;
 		try {
-			result = await this.createPrompt(channelId, userId, content || 'Please confirm this action [yes/no]:', {
+			return this.createPrompt(channelId, userId, content || 'Please confirm this action [yes/no]:', {
 				async validate(content) {
 					const findTrue = content.match(/^(true|yes|y|1)$/);
 					if (findTrue) return true;
@@ -154,7 +154,5 @@ export class PromptManager implements Component {
 		} catch (e) {
 			return false;
 		}
-
-		return !!result.match(/^(true|yes|y|1)$/);
 	}
 }
