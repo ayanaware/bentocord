@@ -69,9 +69,31 @@ export class ArgumentResolver implements Component {
 
 		const state: FulfillState = { phraseIndex: 0 };
 
-		let collector = {};
+		let collector: { [key: string]: any } = {};
+
+		// option support
+		const handleOptionArg = [];
+		for (const option of output.options) {
+			const arg = args.filter(a => !!a.option).find(a => a.option === option.key);
+			if (!arg) continue;
+
+			let phraseValues = [option.value];
+			// phraseSeperators
+			if (Array.isArray(arg.phraseSeperators) && arg.phraseSeperators.length > 0) {
+				const regex = new RegExp(arg.phraseSeperators.join('|'), 'gi');
+				phraseValues = phraseValues.join(' ').split(regex).map(v => v.trim()).filter(i => !!i);
+			}
+
+			const result = await this.resolveArgument(ctx, arg, 0, phraseValues);
+			collector = {...collector, [arg.name]: result};
+
+			handleOptionArg.push(arg.name);
+		}
+
 		let count = 0;
 		for (const arg of args) {
+			if (handleOptionArg.includes(arg.name)) continue;
+
 			count++;
 
 			const fn = choices[arg.match || ArgumentMatch.PHRASE];
@@ -122,24 +144,24 @@ export class ArgumentResolver implements Component {
 		if (phrases.length > 0) result = await this.execute(ctx, arg, phrases);
 
 		// failed to resolve
-		if ((!result || result.length < 1) && phrases.length > 0) {
+		if ((result == null || result.length < 1) && phrases.length > 0) {
 			// maybe do something here later to inform user
 		}
 
 		// prompt
-		if ((!result || result.length < 1) && arg.prompt) result = await this.collect(ctx, arg);
+		if ((result == null || result.length < 1) && arg.prompt) result = await this.collect(ctx, arg);
 
 		// default
-		if (!result && arg.default) result = arg.default;
+		if (result == null && arg.default != undefined) result = arg.default;
 
 		// not optional
-		if (!result && !arg.optional) {
+		if (result == null && !arg.optional) {
 			if (arg.unresolved) {
 				if (typeof arg.unresolved === 'function') arg.unresolved = arg.unresolved(ctx, arg);
 				throw new Error(arg.unresolved);
 			}
 
-			throw new Error(`Could fulfill non-optional argument #${count}: "${arg.name}"`);
+			throw new Error(`Could not fulfill non-optional argument #${count}: "${arg.name}"`);
 		}
 
 		// call transform function
