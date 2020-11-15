@@ -14,7 +14,7 @@ add(ArgumentType.STRING, async (ctx: CommandContext, arg: Argument, phrases: Arr
 
 	const choices = await getChoices(ctx, arg);
 	if (choices.length > 0) {
-		if (choices.some(c => c === phrase)) return phrase;
+		if (choices.some(c => c.toLowerCase() === phrase.toLowerCase())) return phrase;
 
 		return null;
 	}
