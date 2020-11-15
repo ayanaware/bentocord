@@ -1,4 +1,5 @@
 import { Message, MessageContent, MessageFile } from 'eris';
+
 import { Discord } from '../Discord';
 
 export interface MessageOptions {

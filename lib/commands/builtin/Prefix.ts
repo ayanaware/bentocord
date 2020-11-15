@@ -1,11 +1,11 @@
-import { ComponentAPI, Inject } from "@ayanaware/bento";
 import { TextChannel } from 'eris';
 
-import { Command, CommandDefinition } from '../interfaces';
-import { CommandManager } from '../CommandManager';
-import { CommandContext } from '../CommandContext';
-import { ArgumentMatch, ArgumentType } from '../../arguments';
+import { ComponentAPI, Inject } from "@ayanaware/bento";
 
+import { ArgumentType } from '../../arguments';
+import { CommandContext } from '../CommandContext';
+import { CommandManager } from '../CommandManager';
+import { Command, CommandDefinition } from '../interfaces';
 
 export class Prefix implements Command {
 	public name = 'prefix';

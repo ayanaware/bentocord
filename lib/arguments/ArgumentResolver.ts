@@ -1,33 +1,16 @@
-import { Component, ComponentAPI, Subscribe } from '@ayanaware/bento';
-import { Console } from 'console';
-import { Message } from 'eris';
+import { Component, ComponentAPI, Inject } from '@ayanaware/bento';
 
 import { CommandContext } from '../commands';
-import { Discord, DiscordEvent } from '../discord';
+import { PromptManager, PromptRejectType } from '../prompt';
+import { isPromise } from '../util';
 import { ArgumentMatch, ArgumentType } from './constants';
-import { Argument, PromptOptions, Resolver, ResolverFn } from './interfaces';
-
+import { Argument, Resolver, ResolverFn } from './interfaces';
 import { Parsed, Parser, ParserOutput, Tokenizer } from './internal';
 
 import resolvers from './Resolvers';
 
 interface FulfillState {
 	phraseIndex: number;
-}
-
-interface PendingPrompt {
-	ctx: CommandContext;
-	arg: Argument;
-	channelId: string;
-	userId: string;
-	options: PromptOptions;
-	retryCount: number;
-	collector: Array<any>;
-	resolve: (value?: any) => void;
-	reject: (reason?: any) => void;
-	refreshTimeout: (pending: PendingPrompt) => void;
-	lastMessageId: string;
-	timeout?: NodeJS.Timeout;
 }
 
 /**
@@ -40,14 +23,10 @@ export class ArgumentResolver implements Component {
 	private resolvers: Map<ArgumentType, ResolverFn<any>> = new Map();
 	private transforms: Map<string, (value: any) => any> = new Map();
 
-	private pendingPrompts: Map<string, PendingPrompt> = new Map();
+	@Inject(PromptManager) private readonly promptManager: PromptManager;
 
 	public async onLoad() {
 		return this.addResolvers(resolvers);
-	}
-
-	private isPromise(fn: any) {
-		return fn && typeof fn.then == 'function' && typeof fn.catch == 'function';
 	}
 
 	public addResolvers(resolvers: Array<Resolver<any>>) {
@@ -62,12 +41,12 @@ export class ArgumentResolver implements Component {
 		this.resolvers.delete(type);
 	}
 
-	private async execute(type: ArgumentType, ctx: CommandContext, phrases: Array<string>) {
-		const fn = this.resolvers.get(type);
-		if (!fn) throw new Error(`Could not find resolver for type: ${type}`);
+	private async execute(ctx: CommandContext, arg: Argument, phrases: Array<string>) {
+		const fn = this.resolvers.get(arg.type);
+		if (!fn) throw new Error(`Could not find resolver for type: ${arg.type}`);
 
-		let result = fn.call(this, ctx, phrases);
-		if (this.isPromise(result)) result = await result;
+		let result = fn.call(this, ctx, arg, phrases);
+		if (isPromise(result)) result = await result;
 
 		return result;
 	}
@@ -140,7 +119,7 @@ export class ArgumentResolver implements Component {
 
 	private async resolveArgument(ctx: CommandContext, arg: Argument, count: number, phrases: Array<string>) {
 		let result;
-		if (phrases.length > 0) result = await this.execute(arg.type, ctx, phrases);
+		if (phrases.length > 0) result = await this.execute(ctx, arg, phrases);
 
 		// failed to resolve
 		if ((!result || result.length < 1) && phrases.length > 0) {
@@ -169,112 +148,62 @@ export class ArgumentResolver implements Component {
 		return result;
 	}
 
-	// Below is a FAST and crude Prompting System. Will be replaced in the future.
+	// Still not too happy with this, but better then before
 	// AKA: https://www.youtube.com/watch?v=SETnK2ny1R0
 
 	private async collect(ctx: CommandContext, arg: Argument) {
-		const options = arg.prompt;
-		if (!options.startText) return null;
+		const prompt = arg.prompt;
+		if (!prompt.startText) return null;
 
-		const key = `${ctx.message.channel.id}.${ctx.message.author.id}`;
+		if (typeof prompt.startText === 'function') prompt.startText = prompt.startText(ctx, arg);
+		if (typeof prompt.retryText === 'function') prompt.retryText = prompt.retryText(ctx, arg);
 
-		if (this.pendingPrompts.has(key)) throw new Error(`There is already a pending prompt. Please answer or cancel it.`);
+		try {
+			return await this.promptManager.createPrompt(ctx.channelId, ctx.authorId, prompt.startText, {
+				retries: prompt.retries,
+				retryText: prompt.retryText,
+				validate: async (content: string) => {
+					const tokens = new Tokenizer(content).tokenize();
+					const output = new Parser(tokens).parse();
+					const phrases = output.phrases;
 
-		// create initial message
-		if (typeof options.startText === 'function') options.startText = options.startText(ctx, arg);
-		const message = await ctx.messenger.createMessage(options.startText);
+					let phraseValues = phrases.length > 0 ? phrases.map(i => i.value) : [];
 
-		return new Promise((resolve, reject) => {
-			const refreshTimeout = (pending: PendingPrompt) => {
-				if (pending.timeout) clearTimeout(pending.timeout);
-				pending.timeout = setTimeout(async () => {
-					this.pendingPrompts.delete(key);
-					if (typeof options.timeoutText === 'function') options.timeoutText = options.timeoutText(ctx, arg);
-					if (options.timeoutText) await ctx.messenger.createMessage(options.timeoutText);
-					return resolve(null);
-				}, options.timeout || 30 * 1000);
-			};
+					// handle cancel
+					if (['cancel', 'exit'].some(i => i === phraseValues[0])) {
+						throw PromptRejectType.CANCEL;
+					}
 
-			const pending: PendingPrompt = {
-				ctx,
-				arg,
-				channelId: ctx.channelId,
-				userId: ctx.authorId,
-				options,
-				retryCount: 0,
-				collector: [],
-				resolve, reject,
-				refreshTimeout,
-				lastMessageId: message.id,
-			};
-			pending.refreshTimeout(pending);
+					// phraseSeperators
+					if (Array.isArray(arg.phraseSeperators) && arg.phraseSeperators.length > 0) {
+						const regex = new RegExp(arg.phraseSeperators.join('|'), 'gi');
+						phraseValues = phraseValues.join(' ').split(regex).map(v => v.trim()).filter(i => !!i);
+					}
 
-			this.pendingPrompts.set(key, pending);
-		});
-	}
+					return this.execute(ctx, arg, phraseValues);
+				},
+			}, prompt.timeout);
+		} catch (e) {
+			switch (e) {
+				case PromptRejectType.TIMEOUT: {
+					if (typeof prompt.timeoutText === 'function') prompt.timeoutText = prompt.timeoutText(ctx, arg);
+					if (prompt.timeoutText) return ctx.messenger.createMessage(prompt.timeoutText);
 
-	@Subscribe(Discord, DiscordEvent.MESSAGE_CREATE)
-	private async handleCreateMessage(message: Message) {
-		const key = `${message.channel.id}.${message.author.id}`;
-		const pending = this.pendingPrompts.get(key);
+					break;
+				};
 
-		if (!pending) return;
-		// prevent self consumption
-		if (pending.ctx.message.id === message.id) return;
+				case PromptRejectType.RETRY_LIMIT:
+				case PromptRejectType.CANCEL: {
+					console.log('asdfasdf');
+					if (typeof prompt.endedText === 'function') prompt.endedText = prompt.endedText(ctx, arg);
+					if (prompt.endedText) return ctx.messenger.createMessage(prompt.endedText);
 
-		const ctx = pending.ctx;
-		const arg = pending.arg;
-		const options = pending.options;
+					break;
+				}
 
-		// first delete old message
-		if (pending.lastMessageId) {
-			try {
-				await ctx.discord.client.deleteMessage(pending.channelId, pending.lastMessageId);
-			} catch (e) {
-				// Failed to delete last message
+				default:
+					throw e;
 			}
 		}
-
-		// slap through tokenizer and parser
-		const tokens = new Tokenizer(message.content).tokenize();
-		const output = new Parser(tokens).parse();
-
-		// Escape prompt
-		if (output.phrases.some(p => ['stop', 'cancel', 'exit'].some(i => p.value.includes(i)))) {
-			this.pendingPrompts.delete(key);
-			if (pending.timeout) clearTimeout(pending.timeout);
-
-			if (typeof options.endedText === 'function') options.endedText = options.endedText(ctx, arg);
-			if (options.endedText) await ctx.messenger.createMessage(options.endedText);
-
-			return pending.reject(new Error('Canceled per user request'));
-		}
-
-		let result = await this.execute(arg.type, ctx, output.phrases.map(i => i.value));
-		if (!result || result.length < 1) {
-			if (pending.retryCount++ > (options.retries || 3)) {
-				// too many attempts
-				this.pendingPrompts.delete(key);
-				if (pending.timeout) clearTimeout(pending.timeout);
-
-				if (typeof options.endedText === 'function') options.endedText = options.endedText(ctx, arg);
-				if (options.endedText) await ctx.messenger.createMessage(options.endedText);
-
-				return pending.reject(new Error('Too many attempts'));
-			}
-
-			if (typeof options.retryText === 'function') options.retryText = options.retryText(ctx, arg);
-			const message = await ctx.messenger.createMessage(options.retryText || 'Failed to resolve. Please retry your input:');
-			pending.lastMessageId = message.id;
-			pending.retryCount++;
-
-			return;
-		}
-
-		// success!!
-		this.pendingPrompts.delete(key);
-		if (pending.timeout) clearTimeout(pending.timeout);
-
-		return pending.resolve(result);
 	}
 }

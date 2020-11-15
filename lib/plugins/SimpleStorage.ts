@@ -1,4 +1,4 @@
-import { ComponentAPI } from "@ayanaware/bento";
+import { ComponentAPI } from '@ayanaware/bento';
 
 import { StorageLike } from "./interfaces";
 

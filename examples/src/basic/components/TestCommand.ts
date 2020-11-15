@@ -10,6 +10,7 @@ export class ArgTest implements Command {
 		aliases: ['argtest'],
 		args: [{
 			type: ArgumentType.STRINGS, name: 'target', rest: true, phraseSeperators: [',', ';'],
+			choices: ['a', 'b', 'c'],
 			prompt: { startText: 'Please type strings' },
 			unresolved: 'Failed to find valid strings'
 		}]

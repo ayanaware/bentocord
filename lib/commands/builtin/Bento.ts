@@ -1,6 +1,6 @@
 import { ComponentAPI } from '@ayanaware/bento';
 
-import { Bentocord } from "../../Bentocord";
+import { Bentocord } from '../../Bentocord';
 import { CodeblockBuilder } from '../../builders';
 import { Command, CommandDefinition } from '../interfaces';
 import { CommandManager } from '../CommandManager';

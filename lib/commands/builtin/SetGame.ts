@@ -1,11 +1,11 @@
 import { ComponentAPI, Inject } from '@ayanaware/bento';
 import { ActivityPartial, BotActivityType } from 'eris';
 
-import Discord from '../../discord';
-import { Command, CommandDefinition } from '../interfaces';
-import { CommandManager } from '../CommandManager';
+import { ArgumentType } from '../../arguments';
+import { Discord } from '../../discord';
 import { CommandContext } from '../CommandContext';
-import { ArgumentMatch, ArgumentType } from '../../arguments';
+import { CommandManager } from '../CommandManager';
+import { Command, CommandDefinition } from '../interfaces';
 
 export class SetGame implements Command {
 	public name = 'setgame';

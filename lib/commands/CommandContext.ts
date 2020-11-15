@@ -1,4 +1,4 @@
-import { Guild, Member, Message, TextableChannel, TextChannel, User } from "eris";
+import { Guild, Member, Message, TextableChannel, TextChannel, User } from 'eris';
 
 import { Bentocord } from '../Bentocord';
 import { Discord, Messenger } from '../discord';

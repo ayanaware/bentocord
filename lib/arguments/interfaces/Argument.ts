@@ -1,6 +1,6 @@
 import { CommandContext } from '../../commands';
 import { ArgumentMatch, ArgumentType } from '../constants';
-import { PromptOptions } from './PromptOptions';
+import { ArgumentPrompt } from './ArgumentPrompt';
 
 export interface Argument<T extends any = any> {
 	name: string;
@@ -8,8 +8,11 @@ export interface Argument<T extends any = any> {
 	/** ArgumentMatch method to use */
 	match?: ArgumentMatch;
 
-	/** Usable on FLAG ArgumentMatch method */
+	/** Available on FLAG ArgumentMatch method */
 	flags?: Array<string>;
+
+	/** Available on STRING and STRINGS ArgumentType */
+	choices?: Array<string> | ((ctx: CommandContext, arg: Argument) => Array<string> | Promise<Array<string>>);
 
 	/** Define option that argument is associated with */
 	option?: string;
@@ -27,7 +30,7 @@ export interface Argument<T extends any = any> {
 	/** Limit how many phrases "rest" will consume */
 	limit?: number;
 
-	prompt?: PromptOptions;
+	prompt?: ArgumentPrompt;
 
 	/** Define custom phrase seperators */
 	phraseSeperators?: Array<string>;

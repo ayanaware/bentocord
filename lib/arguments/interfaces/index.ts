@@ -1,4 +1,4 @@
 export * from './Argument';
-export * from './PromptOptions';
+export * from './ArgumentPrompt';
 
 export * from './Resolver';

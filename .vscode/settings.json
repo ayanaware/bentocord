@@ -1,0 +1,7 @@
+{
+    "javascript.preferences.quoteStyle": "single",
+    "typescript.preferences.quoteStyle": "single",
+    "editor.comments.insertSpace": false,
+    "editor.detectIndentation": false,
+    "editor.insertSpaces": false
+}

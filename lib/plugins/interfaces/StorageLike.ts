@@ -1,4 +1,4 @@
-import { Entity } from "@ayanaware/bento";
+import { Entity } from '@ayanaware/bento';
 
 /**
  * Describes the structure of a KeyValue Storage like Entity

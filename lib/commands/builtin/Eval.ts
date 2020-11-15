@@ -1,12 +1,11 @@
-import { ComponentAPI, Entity, Inject } from '@ayanaware/bento';
 import * as util from 'util';
+
+import { ComponentAPI, Entity, Inject } from '@ayanaware/bento';
 
 import { CodeblockBuilder } from '../../builders';
 import { Command, CommandDefinition } from '../interfaces';
 import { CommandManager } from '../CommandManager';
 import { CommandContext } from '../CommandContext';
-
-
 
 import Logger from '@ayanaware/logger-api';
 const log = Logger.get();

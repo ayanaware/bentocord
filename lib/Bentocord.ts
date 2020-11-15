@@ -9,6 +9,7 @@ import { PermissionLike, SimplePermissions, SimpleStorage, StorageLike } from '.
 import { ArgumentResolver } from './arguments';
 import { CommandManager } from './commands';
 import { Discord } from './discord';
+import { PromptManager } from './prompt';
 
 import { Logger } from '@ayanaware/logger-api';
 const log = Logger.get();
@@ -77,17 +78,19 @@ export class Bentocord implements Plugin {
 		const permissions = this.api.getEntity<PermissionLike>(this.permissions);
 		this.permissions = permissions;
 
-		// Load Discord, CommandManager, and ArgumentManager
+		// Load Discord, PromptManager, ArgumentManager, CommandManager
 
 		const discord: Discord = await (this.fsLoader as any).createInstance(path.resolve(__dirname, 'discord'));
 		await this.api.bento.addComponent(discord);
+
+		const promptManager: PromptManager = await (this.fsLoader as any).createInstance(path.resolve(__dirname, 'prompt'));
+		await this.api.bento.addComponent(promptManager);
 
 		const argumentManager: ArgumentResolver = await (this.fsLoader as any).createInstance(path.resolve(__dirname, 'arguments'));
 		await this.api.bento.addComponent(argumentManager);
 
 		const commandManager: CommandManager = await (this.fsLoader as any).createInstance(path.resolve(__dirname, 'commands'));
 		await this.api.bento.addComponent(commandManager);
-
 
 		// load built-in commands
 		const loadBuiltin = this.api.getVariable({ name: BentocordVariable.BENTOCORD_BUILTIN_COMMANDS, default: true });
