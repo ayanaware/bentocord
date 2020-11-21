@@ -1,13 +1,13 @@
 import * as util from 'util';
 
 import { BentoError, Component, ComponentAPI, Entity, Inject, Plugin, Subscribe, Variable } from '@ayanaware/bento';
-import { Message } from 'eris';
+import { GuildChannel, Message } from 'eris';
 
-import { ArgumentResolver } from '../arguments';
+import { ArgumentManager } from '../arguments';
 import { Bentocord } from '../Bentocord';
 import { BentocordVariable } from '../BentocordVariable';
 import { Discord, DiscordEvent } from '../discord';
-
+import { InhibitorManager } from '../inhibitors';
 import { Command } from './interfaces';
 import { CommandContext } from './CommandContext';
 
@@ -37,7 +37,9 @@ export class CommandManager implements Component {
 
 	@Inject(Bentocord) private readonly bentocord: Bentocord;
 	@Inject(Discord) private readonly discord: Discord;
-	@Inject(ArgumentResolver) private readonly argumentResolver: ArgumentResolver;
+
+	@Inject(ArgumentManager) private readonly argumentManager: ArgumentManager;
+	@Inject(InhibitorManager) private readonly inhibitorManager: InhibitorManager;
 
 	public async onChildLoad(entity: Command) {
 		try {
@@ -56,6 +58,8 @@ export class CommandManager implements Component {
 	}
 
 	public findCommandByAlias(alias: string): Command {
+		alias = alias.toLowerCase();
+
 		// check if know command
 		const name = this.aliases.get(alias);
 		if (name == null) return null;
@@ -164,7 +168,10 @@ export class CommandManager implements Component {
 		const command = this.findCommandByAlias(alias);
 		if (command === null) return; // command not found
 
-		// build CommandContext
+		// CommandDefinition
+		const definition = command.definition;
+
+		// CommandContext
 		const ctx = new CommandContext(
 			command,
 			message,
@@ -178,9 +185,45 @@ export class CommandManager implements Component {
 			return ctx.messenger.createMessage(`Sorry, You lack permission to execute this command.`);
 		}
 
+		// Inhibitors
+		if (Array.isArray(definition.inhibitors)) {
+			for (const inhibitor of definition.inhibitors) {
+				const result = await this.inhibitorManager.execute(ctx, inhibitor);
+
+				if (result !== false) {
+					let message = 'An Inhibitor';
+					if (typeof inhibitor === 'object' && typeof inhibitor.fn === 'string') message = `Inhibitor \`${inhibitor.fn}\``;
+					else if (typeof inhibitor === 'string') message = `Inhibitor \`${inhibitor}\``;
+
+					message = `${message} has halted execution`;
+
+					if (typeof result === 'string') message = `${message}: \`${result}\`.`;
+
+					return ctx.messenger.createMessage(message);
+				}
+			}
+		}
+
+
+		// selfPermissions
+		if (ctx.guild && Array.isArray(definition.selfPermissions) && definition.selfPermissions.length > 0) {
+			const channelPermissions = (ctx.channel as GuildChannel).permissionsOf(this.selfId);
+			const guildPermissions = ctx.guild.permissionsOf(this.selfId);
+		
+			const unfufilled = [];
+			for (const permission of definition.selfPermissions) {
+				if (!guildPermissions.has(permission) && !channelPermissions.has(permission)) unfufilled.push(permission);
+			}
+
+			if (unfufilled.length > 0) {
+				return ctx.messenger.createMessage(`Command \`${alias}\` cannot be executed. The following required permissions must be granted:\`\`\`${unfufilled.join(', ')}\`\`\``);
+			}
+		}
+
+		// Command Execution
 		try {
 			// Fulfill Command Arguments
-			if (command.definition.args) ctx.args = await this.argumentResolver.fulfill(ctx, command.definition.args);
+			if (definition.args) ctx.args = await this.argumentManager.fulfill(ctx, definition.args);
 
 			await command.execute(ctx);
 			log.debug(`Command "${command.name}" executed by "${ctx.author.id}"`);
@@ -188,7 +231,7 @@ export class CommandManager implements Component {
 			log.error(`Command ${command.name}.execute() error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
-				return ctx.messenger.createMessage(`There was an error executing this command:\`\`\`${e.message}\`\`\` `)
+				return ctx.messenger.createMessage(`There was an error executing this command:\`\`\`${e.message}\`\`\``);
 			}
 		}
 	}

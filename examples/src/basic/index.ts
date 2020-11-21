@@ -1,12 +1,16 @@
 import { Bento, FSComponentLoader, VariableFileLoader } from '@ayanaware/bento';
 import { Bentocord, BentocordVariable } from '@ayanaware/bentocord';
 
+import * as util from 'util';
+
 const bento = new Bento();
 
 (async () => {
 	const vfl = new VariableFileLoader();
 	vfl.addVariable(BentocordVariable.BENTOCORD_TOKEN);
 	await vfl.addFile([__dirname, '..', '..', 'env.json']);
+
+	vfl.parseFileContents
 
 	const bentocord = new Bentocord();
 
@@ -20,6 +24,6 @@ const bento = new Bento();
 
 	await bento.verify();
 })().catch(e => {
-	console.log(e);
+	console.log(util.inspect(e));
 	process.exit(1);
 });

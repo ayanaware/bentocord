@@ -6,12 +6,13 @@ import { ClientOptions } from 'eris';
 import { BentocordVariable } from './BentocordVariable';
 import { PermissionLike, SimplePermissions, SimpleStorage, StorageLike } from './plugins';
 
-import { ArgumentResolver } from './arguments';
+import { ArgumentManager } from './arguments';
 import { CommandManager } from './commands';
 import { Discord } from './discord';
 import { PromptManager } from './prompt';
 
 import { Logger } from '@ayanaware/logger-api';
+import InhibitorManager from './inhibitors';
 const log = Logger.get();
 
 export class Bentocord implements Plugin {
@@ -86,8 +87,11 @@ export class Bentocord implements Plugin {
 		const promptManager: PromptManager = await (this.fsLoader as any).createInstance(path.resolve(__dirname, 'prompt'));
 		await this.api.bento.addComponent(promptManager);
 
-		const argumentManager: ArgumentResolver = await (this.fsLoader as any).createInstance(path.resolve(__dirname, 'arguments'));
+		const argumentManager: ArgumentManager = await (this.fsLoader as any).createInstance(path.resolve(__dirname, 'arguments'));
 		await this.api.bento.addComponent(argumentManager);
+
+		const inhibitorManager: InhibitorManager = await (this.fsLoader as any).createInstance(path.resolve(__dirname, 'inhibitors'));
+		await this.api.bento.addComponent(inhibitorManager);
 
 		const commandManager: CommandManager = await (this.fsLoader as any).createInstance(path.resolve(__dirname, 'commands'));
 		await this.api.bento.addComponent(commandManager);

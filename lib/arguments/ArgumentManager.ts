@@ -16,8 +16,8 @@ interface FulfillState {
 /**
  * ArgumentResolve takes in Array<Argument> and attempts to fulfill them
  */
-export class ArgumentResolver implements Component {
-	public name = 'ArgumentResolver';
+export class ArgumentManager implements Component {
+	public name = 'ArgumentManager';
 	public api!: ComponentAPI;
 
 	private resolvers: Map<ArgumentType, ResolverFn<any>> = new Map();
@@ -45,7 +45,7 @@ export class ArgumentResolver implements Component {
 		const fn = this.resolvers.get(arg.type);
 		if (!fn) throw new Error(`Could not find resolver for type: ${arg.type}`);
 
-		let result = fn.call(this, ctx, arg, phrases);
+		let result = fn.call(ctx.command, ctx, arg, phrases);
 		if (isPromise(result)) result = await result;
 
 		return result;
@@ -165,7 +165,7 @@ export class ArgumentResolver implements Component {
 		}
 
 		// call transform function
-		if (typeof arg.transform === 'function') result = arg.transform.call(arg.transformContext ? arg.transformContext : this, result);
+		if (typeof arg.transform === 'function') result = arg.transform.call(ctx.command, result);
 
 		return result;
 	}
@@ -216,7 +216,6 @@ export class ArgumentResolver implements Component {
 
 				case PromptRejectType.RETRY_LIMIT:
 				case PromptRejectType.CANCEL: {
-					console.log('asdfasdf');
 					if (typeof prompt.endedText === 'function') prompt.endedText = prompt.endedText(ctx, arg);
 					if (prompt.endedText) return ctx.messenger.createMessage(prompt.endedText);
 

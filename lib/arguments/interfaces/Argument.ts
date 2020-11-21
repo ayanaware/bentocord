@@ -14,15 +14,14 @@ export interface Argument<T extends any = any> {
 	/** Available on STRING and STRINGS ArgumentType */
 	choices?: Array<string> | ((ctx: CommandContext, arg: Argument) => Array<string> | Promise<Array<string>>);
 
-	/** Define option that argument is associated with */
+	/** Define option argument is associated with */
 	option?: string;
 
 	/** Default value if none can be resolved */
 	default?: T;
-	optional?: boolean;
 
-	/** If we fail to resolve, then print this */
-	unresolved?: string | ((ctx: CommandContext, arg: Argument) => string);
+	/** If this argument optional? */
+	optional?: boolean;
 
 	/** Consume the "rest" of available phrases */
 	rest?: boolean;
@@ -38,6 +37,6 @@ export interface Argument<T extends any = any> {
 	/** Transform function. This is the last thing to run before argument is fully processed */
 	transform?: string | ((i: T) => T);
 
-	/** Optional `this` context for transform function */
-	transformContext?: any;
+	/** If we fail to resolve, then print this */
+	unresolved?: string | ((ctx: CommandContext, arg: Argument) => string);
 }

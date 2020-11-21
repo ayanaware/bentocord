@@ -1,6 +1,7 @@
 {
 	"extends": "@ayanaware/ts/config",
 	"compilerOptions": {
-		"emitDecoratorMetadata": true
+		"emitDecoratorMetadata": true,
+		"skipLibCheck": true
 	}
 }

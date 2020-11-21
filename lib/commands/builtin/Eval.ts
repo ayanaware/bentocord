@@ -102,7 +102,7 @@ export class Eval implements Command {
 		}
 
 		const __evalCode = __args.join(' ');
-		log.info(`Executing eval code:\n------[JAVASCRIPT CODE]------\n${__evalCode}\n------[JAVASCRIPT CODE]------`);
+		log.info(`Executing eval code:\n${__evalCode}`);
 		if (__evalOptions.async) {
 			try {
 				// tslint:disable-next-line no-eval
