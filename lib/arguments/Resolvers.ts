@@ -72,10 +72,10 @@ add(ArgumentType.NUMBERS, (ctx: CommandContext, arg: Argument, phrases: Array<st
 add(ArgumentType.BOOLEAN, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => {
 	const phrase = phrases.join(' ');
 
-	const findTrue = phrase.match(/^(true|yes|y|1)$/);
+	const findTrue = phrase.match(/^(true|yes|y|1)$/i);
 	if (findTrue) return true;
 
-	const findFalse = phrase.match(/^(false|no|n|0)$/);
+	const findFalse = phrase.match(/^(false|no|n|0)$/i);
 	if (findFalse) return false;
 
 	return null;
@@ -224,22 +224,47 @@ add(ArgumentType.EMOJI, (ctx: CommandContext, arg: Argument, phrases: Array<stri
 
 	const phrase = phrases.join(' ');
 
-	return ctx.guild.emojis.find(e => checkEmoji(phrase, e));
+	// guild emoji
+	const guildEmoji = ctx.guild.emojis.find(e => checkGuildEmoji(phrase, e));
+	if (guildEmoji) return guildEmoji;
+
+	// unicode & custom non-guild emoji
+	const emoji = extractEmoji(phrase);
+	if (emoji) return emoji;
+
+	return null;
 });
 
 add(ArgumentType.EMOJIS, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => {
 	if (!ctx.guild) return null;
 
-	return ctx.guild.emojis.filter(e => phrases.some(p => checkEmoji(p, e)));
+	// guild emojis
+	const emojis: Array<Emoji> = ctx.guild.emojis.filter(e => phrases.some(p => checkGuildEmoji(p, e)));
+	
+	// unicode & custom non-guild emoji
+	phrases.map(p => extractEmoji(p)).filter(p => !!p).forEach(p => emojis.push(p));
+
+	return emojis;
 });
 
-function checkEmoji(phrase: string, emoji: Emoji) {
+function extractEmoji(phrase: string): Emoji {
+	// unicode
+	const unicode = phrase.match(/(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/);
+	if (unicode) return { id: null, name: unicode[0], require_colons: false, animated: false } as Emoji;
+
+	// custom
+	const custom = phrase.match(/^<(?<a>a)?:(?<name>[a-zA-Z0-9_]+):(?<id>\d{17,19})>$/);
+	if (custom) return { id: custom.groups.id, name: custom.groups.name, animated: custom.groups.a === 'a', require_colons: true } as Emoji;
+
+	return null;
+}
+
+function checkGuildEmoji(phrase: string, emoji: Emoji) {
 	if (emoji.id === phrase) return true;
 
 	// handle usage
-	const match = phrase.match(/^<a?:([^\s]+):(\d{17,19})>$/)
-	if (match && emoji.name === match[1]) return true;
-	if (match && emoji.id === match[2]) return true;
+	const data = extractEmoji(phrase);
+	if (data && data.id === emoji.id) return true;
 
 	// handle name
 	phrase = phrase.replace(/:/g, '');

@@ -142,10 +142,10 @@ export class PromptManager implements Component {
 		try {
 			return this.createPrompt(channelId, userId, content || 'Please confirm this action [yes/no]:', {
 				async validate(content) {
-					const findTrue = content.match(/^(true|yes|y|1)$/);
+					const findTrue = content.match(/^(true|yes|y|1)$/i);
 					if (findTrue) return true;
 			
-					const findFalse = content.match(/^(false|no|n|0)$/);
+					const findFalse = content.match(/^(false|no|n|0)$/i);
 					if (findFalse) return false;
 
 					return null;
