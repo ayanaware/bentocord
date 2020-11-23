@@ -4,6 +4,9 @@ import { CommandContext } from "../CommandContext";
 
 import { CommandDefinition } from './CommandDefinition';
 
+/**
+ * @deprecated Use CommandEntity
+ */
 export interface Command extends Component {
 	parent: Entity;
 	definition: CommandDefinition;

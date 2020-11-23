@@ -1,59 +1,85 @@
 import { Component, ComponentAPI } from '@ayanaware/bento';
+
 import { CommandContext } from '../commands';
 import { InhibitorName } from './constants';
-import { Inhibitor, InhibitorDefinition, InhibitorFn } from './interfaces';
+import { Inhibitor, InhibitorDefinition, InhibitorEntity, InhibitorFn } from './interfaces';
 import { isPromise } from '../util';
 
-import inhibitos from './Inhibitors';
+import inhibitors from './Inhibitors';
+
+import { Logger } from '@ayanaware/logger-api';
+const log = Logger.get();
 
 export class InhibitorManager implements Component {
 	public name = 'InhibitorManager';
 	public api!: ComponentAPI;
 
-	private inhibitors: Map<InhibitorName, InhibitorFn> = new Map();
+	private inhibitors: Map<InhibitorName, Inhibitor> = new Map();
 
 	public async onLoad() {
-		return this.addInhibitors(inhibitos);
+		return this.addInhibitors(inhibitors);
+	}
+
+	public async onChildLoad(entity: InhibitorEntity) {
+		try {
+			if (typeof entity.inhibitor !== 'string') throw new Error(`Inhibitor Entity "${entity.name}".inhibitor must be defined`);
+			if (!entity.inhibitor) throw new Error(`Inhibitor Entity "${entity.name}".inhibitor must be a valid string`);
+
+			if (typeof entity.execute !== 'function') throw new Error(`$Inhibitor Entity "${entity.name}".execute() must be a function`);
+
+			this.addInhibitor({ inhibitor: entity.inhibitor, execute: entity.execute, context: entity });
+		} catch (e) {
+			log.warn(e);
+		}
+	}
+
+	public async onChildUnload(entity: InhibitorEntity) {
+		try {
+			if (typeof entity.inhibitor !== 'string') throw new Error(`Inhibitor Entity "${entity.name}".inhibitor must be defined`);
+			if (!entity.inhibitor) throw new Error(`Inhibitor Entity "${entity.name}".inhibitor must be a valid string`);
+
+			this.removeInhibitor(entity.inhibitor);
+		} catch (e) {
+			log.warn(e);
+		}
 	}
 
 	public addInhibitors(inhibitors: Array<Inhibitor>) {
-		for (const inhibitor of inhibitors) this.addInhibitor(inhibitor.type, inhibitor.fn);
+		for (const inhibitor of inhibitors) this.addInhibitor(inhibitor);
 	}
 
-	public addInhibitor(name: InhibitorName, fn: InhibitorFn) {
-		this.inhibitors.set(name, fn);
+	public addInhibitor(inhibitor: Inhibitor) {
+		this.inhibitors.set(inhibitor.inhibitor, inhibitor);
 	}
 
-	public removeInhibitor(name: InhibitorName) {
-		this.inhibitors.delete(name);
+	public removeInhibitor(inhibitor: InhibitorName) {
+		this.inhibitors.delete(inhibitor);
 	}	
 
-	public async execute(ctx: CommandContext, inhibitor: InhibitorDefinition) {
-		let fn: InhibitorFn;
+	public async execute(ctx: CommandContext, definition: InhibitorDefinition) {
 		let args: Array<any> = [];
 
-		const findFn = (name: string) => {
-			const fn = this.inhibitors.get(name);
-			if (!fn) throw new Error(`Could not find inhibitor for name: ${inhibitor}`);
+		const findInhibitor = (name: string) => {
+			const inhibitor = this.inhibitors.get(name);
+			if (!inhibitor) throw new Error(`Could not find inhibitor for name: ${inhibitor}`);
 
-			return fn;
+			return inhibitor;
 		}
 
-		if (typeof inhibitor === 'function') fn = inhibitor;
-		else if (typeof inhibitor === 'string') fn = findFn(inhibitor);
-		else if (typeof inhibitor === 'object') {
-			if (typeof inhibitor.fn === 'function') fn = inhibitor.fn;
-			else fn = findFn(inhibitor.fn);
+		let inhibitor: Inhibitor;
+		if (typeof definition === 'object') {
+			if (typeof definition.execute === 'string') {
+				const found = findInhibitor(definition.execute);
+				inhibitor = {inhibitor: definition.execute, execute: found.execute, args: definition.args, context: definition.context };
+			} else inhibitor = { execute: definition.execute, args: definition.args, context: definition.context };
+		} else if (typeof definition === 'function') inhibitor = { execute: definition };
+		else if (typeof definition === 'string') inhibitor = findInhibitor(definition);
 
-			if (Array.isArray(inhibitor.args)) args = inhibitor.args;
-		} 
-		
+		if (!inhibitor) throw new Error(`Could not find inhibitor`); 
 
-		if (!fn) throw new Error(`Could not find inhibitor function`); 
-
-		let result = fn.call(ctx.command, ctx, ...args);
+		let result = inhibitor.execute.call(inhibitor.context || ctx.command, ctx, ...args);
 		if (isPromise(result)) result = await result;
 
-		return result;
+		return { inhibitor: inhibitor.inhibitor, result };
 	}
 }

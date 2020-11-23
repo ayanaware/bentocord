@@ -1,8 +1,8 @@
-import { ComponentAPI } from '@ayanaware/bento';
-import { ArgumentType, Command, CommandContext, CommandDefinition, CommandManager, DiscordPermission, InhibitorType } from '@ayanaware/bentocord';
+import { ComponentAPI, Entity } from '@ayanaware/bento';
+import { ArgumentType, CommandContext, CommandDefinition, CommandEntity, CommandManager, DiscordPermission, InhibitorType } from '@ayanaware/bentocord';
 import { User } from 'eris';
 
-export class Boop implements Command {
+export class Boop implements CommandEntity {
 	public name = 'Boop';
 	public api!: ComponentAPI;
 	public parent = CommandManager;
@@ -10,7 +10,7 @@ export class Boop implements Command {
 	public definition: CommandDefinition = {
 		aliases: ['boop'],
 		inhibitors: [
-			{ fn: InhibitorType.BOT_OWNER },
+			{ execute: InhibitorType.BOT_OWNER },
 			() => 'Bad Inhibitor >:) I block everything!'
 		],
 		selfPermissions: [],

@@ -2,8 +2,8 @@ import { CommandContext } from '../commands';
 import { InhibitorType } from './constants';
 import { Inhibitor, InhibitorFn } from './interfaces';
 
-const inhibitos: Array<Inhibitor> = [];
-const add = (type: InhibitorType, fn: InhibitorFn) => inhibitos.push({ type, fn });
+const inhibitors: Array<Inhibitor> = [];
+const add = (inhibitor: InhibitorType, execute: InhibitorFn) => inhibitors.push({ inhibitor, execute });
 
 add(InhibitorType.BOT_OWNER, (ctx: CommandContext) => {
 	return ctx.isOwner() === true ? false : 'User is not a bot owner';
@@ -42,4 +42,4 @@ add(InhibitorType.GUILD_ROLE, (ctx: CommandContext, roleIds?: Array<string>, all
 });
 
 
-export default inhibitos;
+export default inhibitors;

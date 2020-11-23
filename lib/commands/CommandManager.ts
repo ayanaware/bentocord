@@ -1,6 +1,6 @@
 import * as util from 'util';
 
-import { BentoError, Component, ComponentAPI, Entity, Inject, Plugin, Subscribe, Variable } from '@ayanaware/bento';
+import { BentoError, Component, ComponentAPI, Inject, Plugin, Subscribe, Variable } from '@ayanaware/bento';
 import { GuildChannel, Message } from 'eris';
 
 import { ArgumentManager } from '../arguments';
@@ -8,7 +8,7 @@ import { Bentocord } from '../Bentocord';
 import { BentocordVariable } from '../BentocordVariable';
 import { Discord, DiscordEvent } from '../discord';
 import { InhibitorManager } from '../inhibitors';
-import { Command } from './interfaces';
+import { Command, CommandEntity } from './interfaces';
 import { CommandContext } from './CommandContext';
 
 import { Logger } from '@ayanaware/logger-api';
@@ -41,17 +41,17 @@ export class CommandManager implements Component {
 	@Inject(ArgumentManager) private readonly argumentManager: ArgumentManager;
 	@Inject(InhibitorManager) private readonly inhibitorManager: InhibitorManager;
 
-	public async onChildLoad(entity: Command) {
+	public async onChildLoad(entity: CommandEntity) {
 		try {
-			await this.addCommand(entity);
+			await this.addCommand(entity as Command);
 		} catch (e) {
 			log.warn(e);
 		}
 	}
 
-	public async onChildUnload(entity: Command) {
+	public async onChildUnload(entity: CommandEntity) {
 		try {
-			await this.removeCommand(entity);
+			await this.removeCommand(entity as Command);
 		} catch (e) {
 			log.warn(e);
 		}
@@ -190,14 +190,12 @@ export class CommandManager implements Component {
 			for (const inhibitor of definition.inhibitors) {
 				const result = await this.inhibitorManager.execute(ctx, inhibitor);
 
-				if (result !== false) {
+				if (result.result !== false) {
 					let message = 'An Inhibitor';
-					if (typeof inhibitor === 'object' && typeof inhibitor.fn === 'string') message = `Inhibitor \`${inhibitor.fn}\``;
-					else if (typeof inhibitor === 'string') message = `Inhibitor \`${inhibitor}\``;
-
+					if (result.inhibitor) message = `Inhibitor \`${result.inhibitor}\``;
 					message = `${message} has halted execution`;
 
-					if (typeof result === 'string') message = `${message}: \`${result}\`.`;
+					if (typeof result.result === 'string') message = `${message}: \`${result.result}\`.`;
 
 					return ctx.messenger.createMessage(message);
 				}
