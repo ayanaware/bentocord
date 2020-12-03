@@ -9,10 +9,10 @@ import { PermissionLike, SimplePermissions, SimpleStorage, StorageLike } from '.
 import { ArgumentManager } from './arguments';
 import { CommandManager } from './commands';
 import { Discord } from './discord';
+import { InhibitorManager } from './inhibitors';
 import { PromptManager } from './prompt';
 
 import { Logger } from '@ayanaware/logger-api';
-import InhibitorManager from './inhibitors';
 const log = Logger.get();
 
 export class Bentocord implements Plugin {
