@@ -31,6 +31,14 @@ add(InhibitorType.GUILD_OWNER, (ctx: CommandContext) => {
 	return ctx.guild.ownerID === ctx.authorId ? false : 'User is not guild owner';
 });
 
+add(InhibitorType.GUILD_ADMIN, (ctx: CommandContext) => {
+	if (!ctx.guild) return true;
+	if (!ctx.member) return true;
+	const member = ctx.member;
+
+	return member.permissions.has('administrator') ? false : 'User is not a guild Administrator';
+});
+
 add(InhibitorType.GUILD_ROLE, (ctx: CommandContext, roleIds?: Array<string>, all?: boolean) => {
 	if (!ctx.member) return true;
 	const member = ctx.member;

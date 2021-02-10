@@ -8,6 +8,7 @@ export enum InhibitorType {
 
 	GUILD = 'GUILD',
 	GUILD_OWNER = 'GUILD_OWNER',
+	GUILD_ADMIN = 'GUILD_ADMIN',
 
 	GUILD_ROLE = 'GUILD_ROLE', // roleIds: Array<string>, all: boolean
 }
