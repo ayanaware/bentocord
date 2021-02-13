@@ -1,16 +1,24 @@
 import { Component, ComponentAPI, Inject } from '@ayanaware/bento';
+import { CodeblockBuilder } from '../builders';
 
 import { CommandContext } from '../commands';
 import { PromptManager, PromptRejectType } from '../prompt';
 import { isPromise } from '../util';
 import { ArgumentMatch, ArgumentType } from './constants';
-import { Argument, Resolver, ResolverFn } from './interfaces';
+import { Argument, Resolver, ResolverFn, ResolverResult } from './interfaces';
 import { Parsed, Parser, ParserOutput, Tokenizer } from './internal';
 
 import resolvers from './Resolvers';
 
 interface FulfillState {
 	phraseIndex: number;
+}
+
+interface ReduceItem {
+	value: any;
+	display: string;
+	extra?: string;
+	position?: number;
 }
 
 /**
@@ -143,19 +151,50 @@ export class ArgumentManager implements Component {
 		let result;
 		if (phrases.length > 0) result = await this.execute(ctx, arg, phrases);
 
+		let values;
+		if (typeof result == 'object') values = result.value;
+
 		// failed to resolve
-		if ((result == null || result.length < 1) && phrases.length > 0) {
+		if ((values == null || result.value.length < 1) && phrases.length > 0) {
 			// maybe do something here later to inform user
 		}
 
 		// prompt
-		if ((result == null || result.length < 1) && arg.prompt) result = await this.collect(ctx, arg);
+		if (values == null || values.length == 0 && arg.prompt) {
+			// No phrases provided, and not optional, so collect
+			if (phrases.length == 0 && !arg.optional) {
+				result = await this.collect(ctx, arg);
+				values = result.value;
+			}
+
+			// Phrase provided, failed to parse, so collect
+			else if (phrases.length > 0 && (values == null || result.value.length == 0)) {
+				result = await this.collect(ctx, arg);
+				values = result.value;
+			}
+		}
+
+		// "Reduce" Functionality
+		if (Array.isArray(values) && values.length > 1 && result.reduce == true) {
+			// limit to 10 items
+			values = values.slice(0, 10);
+
+			const items: Array<ReduceItem> = [];
+			for (const value of values) {
+				const display = typeof result.reduceDisplay === 'function' ? result.reduceDisplay(value) : value.toString();
+				const extra = typeof result.reduceExtra === 'function' ? result.reduceExtra(value) : null;
+
+				items.push({ value, display, extra });
+			}
+
+			values = await this.reduce(ctx, arg, items);
+		}
 
 		// default
-		if (result == null && arg.default != undefined) result = arg.default;
+		if (values == null && arg.default != undefined) values = arg.default;
 
 		// not optional
-		if (result == null && !arg.optional) {
+		if (values == null && !arg.optional) {
 			if (arg.unresolved) {
 				if (typeof arg.unresolved === 'function') arg.unresolved = arg.unresolved(ctx, arg);
 				throw new Error(arg.unresolved);
@@ -165,15 +204,15 @@ export class ArgumentManager implements Component {
 		}
 
 		// call transform function
-		if (typeof arg.transform === 'function') result = arg.transform.call(ctx.command, result);
+		if (typeof arg.transform === 'function') values = arg.transform.call(ctx.command, values);
 
-		return result;
+		return values;
 	}
 
 	// Still not too happy with this, but better then before
 	// AKA: https://www.youtube.com/watch?v=SETnK2ny1R0
 
-	private async collect(ctx: CommandContext, arg: Argument) {
+	private async collect(ctx: CommandContext, arg: Argument): Promise<ResolverResult<any>> {
 		const prompt = arg.prompt;
 		if (!prompt.startText) return null;
 
@@ -181,7 +220,7 @@ export class ArgumentManager implements Component {
 		if (typeof prompt.retryText === 'function') prompt.retryText = prompt.retryText(ctx, arg);
 
 		try {
-			return await this.promptManager.createPrompt(ctx.channelId, ctx.authorId, prompt.startText, {
+			return this.promptManager.createPrompt(ctx.channelId, ctx.authorId, prompt.startText, {
 				retries: prompt.retries,
 				retryText: prompt.retryText,
 				validate: async (content: string) => {
@@ -209,21 +248,54 @@ export class ArgumentManager implements Component {
 			switch (e) {
 				case PromptRejectType.TIMEOUT: {
 					if (typeof prompt.timeoutText === 'function') prompt.timeoutText = prompt.timeoutText(ctx, arg);
-					if (prompt.timeoutText) return ctx.messenger.createMessage(prompt.timeoutText);
-
+					if (prompt.timeoutText) ctx.messenger.createMessage(prompt.timeoutText);
 					break;
 				};
 
 				case PromptRejectType.RETRY_LIMIT:
 				case PromptRejectType.CANCEL: {
 					if (typeof prompt.endedText === 'function') prompt.endedText = prompt.endedText(ctx, arg);
-					if (prompt.endedText) return ctx.messenger.createMessage(prompt.endedText);
-
+					if (prompt.endedText) ctx.messenger.createMessage(prompt.endedText);
 					break;
 				}
 
-				default:
-					throw e;
+				default: throw e;
+			}
+		}
+	}
+
+	private async reduce(ctx: CommandContext, arg: Argument, items: Array<ReduceItem>) {
+		for (let i = 0; i < items.length; i++) {
+			items[i] = { ...items[i], position: i + 1 };
+		}
+
+		try {
+			const cb = new CodeblockBuilder();
+			for (const item of items) cb.addLine(item.position, item.display);
+
+			return this.promptManager.createPrompt(ctx.channelId, ctx.authorId, await cb.render(), {
+				async validate(content: string) {
+					const extraMatch = items.filter(i => content === i.extra);
+					if (extraMatch.length == 1) return extraMatch[0].value;
+
+					const positions = items.filter(i => content === i.position.toString());
+					if (positions.length == 1) return positions[0].value;
+
+					const displays = items.filter(i => i.display.toLowerCase().includes(content.toLowerCase()));
+					if (displays.length == 1) return displays[0].value;
+
+					return null;
+				},
+			});
+		} catch (e) {
+			switch (e) {
+				case PromptRejectType.TIMEOUT:
+				case PromptRejectType.RETRY_LIMIT:
+				case PromptRejectType.CANCEL: {
+					break;
+				}
+
+				default: throw e;
 			}
 		}
 	}

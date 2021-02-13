@@ -3,6 +3,7 @@ import { Guild, Member, Message, TextableChannel, TextChannel, User } from 'eris
 import { Bentocord } from '../Bentocord';
 import { Discord, Messenger } from '../discord';
 import { PermissionLike, StorageLike } from '../plugins';
+import PromptManager from '../prompt';
 
 import { Command } from './interfaces';
 
@@ -25,6 +26,7 @@ export class CommandContext<T extends TextableChannel = TextableChannel> {
 	public readonly raw: string;
 
 	public readonly discord: Discord;
+	public readonly promptManager: PromptManager;
 	public readonly storage: StorageLike;
 	public readonly permissions: PermissionLike;
 
@@ -60,6 +62,7 @@ export class CommandContext<T extends TextableChannel = TextableChannel> {
 
 		// Entities
 		this.discord = this.command.api.getEntity(Discord);
+		this.promptManager = this.command.api.getEntity(PromptManager);
 		const bentocord = this.command.api.getEntity<Bentocord>(Bentocord);
 		this.storage = bentocord.storage;
 		this.permissions = bentocord.permissions;

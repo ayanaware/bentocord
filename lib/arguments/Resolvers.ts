@@ -1,4 +1,4 @@
-import { AnyGuildChannel, Emoji, Member, Role, User } from 'eris';
+import { AnyGuildChannel, Channel, Emoji, Member, Role, User } from 'eris';
 
 import { CommandContext } from '../commands';
 import { isPromise } from '../util';
@@ -14,12 +14,12 @@ add(ArgumentType.STRING, async (ctx: CommandContext, arg: Argument, phrases: Arr
 
 	const choices = await getChoices(ctx, arg);
 	if (choices.length > 0) {
-		if (choices.some(c => c.toLowerCase() === phrase.toLowerCase())) return phrase;
+		if (choices.some(c => c.toLowerCase() === phrase.toLowerCase())) return { value: phrase };
 
-		return null;
+		return { value: null };
 	}
 
-	return phrase;
+	return { value: phrase };
 });
 
 add(ArgumentType.STRINGS, async (ctx: CommandContext, arg: Argument, phrases: Array<string>) => {
@@ -32,12 +32,12 @@ add(ArgumentType.STRINGS, async (ctx: CommandContext, arg: Argument, phrases: Ar
 			}
 		}
 
-		if (choicePhrases.length > 0) return choicePhrases;
+		if (choicePhrases.length > 0) return { value: choicePhrases };
 
-		return null;
+		return { value: null };
 	}
 
-	return phrases;
+	return { value: phrases };
 })
 
 async function getChoices(ctx: CommandContext, arg: Argument) {
@@ -59,13 +59,13 @@ add(ArgumentType.NUMBER, (ctx: CommandContext, arg: Argument, phrases: Array<str
 	const number = parseInt(phrases.join(' '));
 	if (Number.isNaN(number)) return null;
 
-	return number;
+	return { value: number };
 });
 
 add(ArgumentType.NUMBERS, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => {
 	const numberResolver = resolvers.find(r => r.type === ArgumentType.NUMBER);
 
-	return phrases.map(phrase => numberResolver.fn(ctx, arg, [phrase]));
+	return { value: phrases.map(phrase => numberResolver.fn(ctx, arg, [phrase])) };
 });
 
 // BOOLEAN & BOOLEANS
@@ -73,10 +73,10 @@ add(ArgumentType.BOOLEAN, (ctx: CommandContext, arg: Argument, phrases: Array<st
 	const phrase = phrases.join(' ');
 
 	const findTrue = phrase.match(/^(true|yes|y|1)$/i);
-	if (findTrue) return true;
+	if (findTrue) return { value: true };
 
 	const findFalse = phrase.match(/^(false|no|n|0)$/i);
-	if (findFalse) return false;
+	if (findFalse) return { value: false };
 
 	return null;
 });
@@ -84,17 +84,23 @@ add(ArgumentType.BOOLEAN, (ctx: CommandContext, arg: Argument, phrases: Array<st
 add(ArgumentType.BOOLEANS, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => {
 	const booleanResolver = resolvers.find(r => r.type === ArgumentType.BOOLEAN);
 
-	return phrases.map(phrase => booleanResolver.fn(ctx, arg, [phrase]));
+	return { value: phrases.map(phrase => booleanResolver.fn(ctx, arg, [phrase])) };
 })
 
 // USER & USERS
 add(ArgumentType.USER, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => {
 	const phrase = phrases.join(' ');
-	return ctx.discord.client.users.get(phrase) || ctx.discord.client.users.find(u => checkUser(phrase, u));
+
+	const users = ctx.discord.client.users.filter(u => checkUser(phrase, u));
+
+	const reduceDisplay = (u: User) => `${u.username}#${u.discriminator}`;
+	const reduceExtra = (u: User) => u.id;
+
+	return { value: users, reduce: true, reduceDisplay, reduceExtra };
 });
 
 add(ArgumentType.USERS, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => {
-	return ctx.discord.client.users.filter(u => phrases.some(p => checkUser(p, u)));
+	return { value: ctx.discord.client.users.filter(u => phrases.some(p => checkUser(p, u))) };
 });
 
 function checkUser(phrase: string, user: User | Member) {
@@ -121,17 +127,27 @@ function checkUser(phrase: string, user: User | Member) {
 
 // MEMBER & MEMBERS
 add(ArgumentType.MEMBER, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => {
-	if (!ctx.guild) return null;
+	if (!ctx.guild) return { value: null };
 
 	const phrase = phrases.join(' ');
 
-	return ctx.guild.members.get(phrase) || ctx.guild.members.find(m => checkMember(phrase, m));
+	const members = ctx.guild.members.filter(m => checkMember(phrase, m));
+
+	const reduceDisplay = (m: Member) => {
+		let display = `${m.username}#${m.discriminator}`;
+		if (m.nick) display = `${m.nick} (${display})`;
+
+		return display;
+	};
+	const reduceExtra = (m: Member) => m.id;
+
+	return { value: members, reduce: true, reduceDisplay, reduceExtra };
 });
 
 add(ArgumentType.MEMBERS, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => {
-	if (!ctx.guild) return null;
+	if (!ctx.guild) return { value: null };
 
-	return ctx.guild.members.filter(m => phrases.some(p => checkMember(p, m)));
+	return { value: ctx.guild.members.filter(m => phrases.some(p => checkMember(p, m))) };
 });
 
 function checkMember(phrase: string, member: Member) {
@@ -164,17 +180,22 @@ add(ArgumentType.RELEVANTS, (ctx: CommandContext, arg: Argument, phrases: Array<
 
 // CHANNEL & CHANNELS
 add(ArgumentType.CHANNEL, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => {
-	if (!ctx.guild) return null;
+	if (!ctx.guild) return { value: null };
 
 	const phrase = phrases.join(' ');
 
-	return ctx.guild.channels.get(phrase) || ctx.guild.channels.find(c => checkChannel(phrase, c));
+	const channels = ctx.guild.channels.filter(c => checkChannel(phrase, c))
+
+	const reduceDisplay = (c: AnyGuildChannel) => `#${c.name}`;
+	const reduceExtra = (c: AnyGuildChannel) => c.id;
+
+	return { value: channels, reduce: true, reduceDisplay, reduceExtra };
 });
 
 add(ArgumentType.CHANNELS, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => {
-	if (!ctx.guild) return null;
+	if (!ctx.guild) return { value: null };
 
-	return ctx.guild.channels.filter(c => phrases.some(p => checkChannel(p, c)));
+	return { value: ctx.guild.channels.filter(c => phrases.some(p => checkChannel(p, c))) };
 });
 
 function checkChannel(phrase: string, channel: AnyGuildChannel) {
@@ -192,17 +213,22 @@ function checkChannel(phrase: string, channel: AnyGuildChannel) {
 
 // ROLE & ROLES
 add(ArgumentType.ROLE, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => {
-	if (!ctx.guild) return null;
+	if (!ctx.guild) return { value: null };
 
 	const phrase = phrases.join(' ');
 
-	return ctx.guild.roles.get(phrase) || ctx.guild.roles.find(r => checkRole(phrase, r));
+	const roles = ctx.guild.roles.filter(r => checkRole(phrase, r));
+
+	const reduceDisplay = (r: Role) => `@${r.name}`;
+	const reduceExtra = (r: Role) => r.id;
+
+	return { value: roles, reduce: true, reduceDisplay, reduceExtra };
 });
 
 add(ArgumentType.ROLES, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => {
-	if (!ctx.guild) return null;
+	if (!ctx.guild) return { value: null };
 
-	return ctx.guild.roles.filter(r => phrases.some(p => checkRole(p, r)));
+	return { value: ctx.guild.roles.filter(r => phrases.some(p => checkRole(p, r))) };
 });
 
 function checkRole(phrase: string, role: Role) {
@@ -220,23 +246,26 @@ function checkRole(phrase: string, role: Role) {
 
 // EMOJI & EMOJIS
 add(ArgumentType.EMOJI, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => {
-	if (!ctx.guild) return null;
+	if (!ctx.guild) return { value: null };
 
 	const phrase = phrases.join(' ');
 
 	// guild emoji
-	const guildEmoji = ctx.guild.emojis.find(e => checkGuildEmoji(phrase, e));
-	if (guildEmoji) return guildEmoji;
+	const reduceDisplay = (e: Emoji) => e.name;
+	const reduceExtra = (e: Emoji) => e.id;
+
+	const guildEmojis = ctx.guild.emojis.filter(e => checkGuildEmoji(phrase, e));
+	if (guildEmojis.length > 0) return { value: guildEmojis, reduce: true, reduceDisplay, reduceExtra };
 
 	// unicode & custom non-guild emoji
 	const emoji = extractEmoji(phrase);
-	if (emoji) return emoji;
+	if (emoji) return { value: emoji };
 
-	return null;
+	return { value: null };
 });
 
 add(ArgumentType.EMOJIS, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => {
-	if (!ctx.guild) return null;
+	if (!ctx.guild) return { value: null };
 
 	// guild emojis
 	const emojis: Array<Emoji> = ctx.guild.emojis.filter(e => phrases.some(p => checkGuildEmoji(p, e)));
@@ -244,7 +273,7 @@ add(ArgumentType.EMOJIS, (ctx: CommandContext, arg: Argument, phrases: Array<str
 	// unicode & custom non-guild emoji
 	phrases.map(p => extractEmoji(p)).filter(p => !!p).forEach(p => emojis.push(p));
 
-	return emojis;
+	return { value: emojis };
 });
 
 function extractEmoji(phrase: string): Emoji {

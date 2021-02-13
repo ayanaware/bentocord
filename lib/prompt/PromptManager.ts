@@ -21,18 +21,18 @@ export class PromptManager implements Component {
 		return `${channelId}.${userId}`;
 	}
 
-	private async cleanupPrompt(prompt: Prompt) {
+	private cleanupPrompt(prompt: Prompt) {
 		const key = this.getPromptKey(prompt.channelId, prompt.userId);
 		this.prompts.delete(key);
 
 		// clear pending timeouts
 		if (prompt.timeout) clearTimeout(prompt.timeout);
-
-		// purge messages
-		return this.cleanupMessages(prompt.channelId, prompt.messageIds);
 	}
 
-	private async cleanupMessages(channelId: string, messageIds: Array<string>) {
+	private async cleanupMessages(prompt: Prompt) {
+		const channelId = prompt.channelId;
+		const messageIds = prompt.messageIds;
+
 		for (const messageId of messageIds) {
 			try {
 				await this.discord.client.deleteMessage(channelId, messageId);
@@ -43,7 +43,7 @@ export class PromptManager implements Component {
 		}
 	}
 
-	public async createPrompt(channelId: string, userId: string, content: MessageContent, options: PromptOptions = {}, time: number = 30 * 1000): Promise<string> {
+	public async createPrompt(channelId: string, userId: string, content: MessageContent, options: PromptOptions = {}, time: number = 30 * 1000): Promise<any> {
 		const messenger = new Messenger(this.discord, channelId);
 		const message = await messenger.createMessage(content);
 
@@ -60,9 +60,10 @@ export class PromptManager implements Component {
 					if (prompt.timeout) clearTimeout(prompt.timeout);
 
 					prompt.timeout = setTimeout(() => {
+						this.cleanupPrompt(prompt);
 						reject(PromptRejectType.TIMEOUT);
 
-						this.cleanupPrompt(prompt).catch(e => log.warn(`cleanupPrompt(): Failed to cleanup: ${e}`));
+						this.cleanupMessages(prompt).catch(e => log.warn(`cleanupPrompt(): Failed to cleanup: ${e}`));
 					}, time);
 				},
 			};
@@ -77,9 +78,11 @@ export class PromptManager implements Component {
 		const prompt = this.prompts.get(key);
 		if (!prompt) return;
 
+		this.cleanupPrompt(prompt);
+
 		prompt.reject(PromptRejectType.CANCEL);
 
-		return this.cleanupPrompt(prompt);
+		return this.cleanupMessages(prompt);
 	}
 
 	@Subscribe(Discord, DiscordEvent.MESSAGE_CREATE)
@@ -96,9 +99,10 @@ export class PromptManager implements Component {
 
 		// no validate resolve
 		if (typeof options.validate !== 'function') {
+		 	this.cleanupPrompt(prompt);
 			prompt.resolve(content);
 
-			return this.cleanupPrompt(prompt);
+			return this.cleanupMessages(prompt);
 		}
 
 		// validate resolve
@@ -107,33 +111,37 @@ export class PromptManager implements Component {
 		try {
 			result = await options.validate(content);
 		} catch (e) {
+			this.cleanupPrompt(prompt);
 			prompt.reject(e);
 
-			return this.cleanupPrompt(prompt);
+			return this.cleanupMessages(prompt);
 		}
 
 		if (result === null) {
 			// attempt limit
 			prompt.attempt = (prompt.attempt || 0) + 1;
 			if (prompt.attempt >= (options.retries || 3)) {
+				this.cleanupPrompt(prompt);
 				prompt.reject(PromptRejectType.RETRY_LIMIT);
 
-				return this.cleanupPrompt(prompt);
+				return this.cleanupMessages(prompt);
 			}
 
 			prompt.refresh();
 
 			// validate message
 			const text = options.retryText ? options.retryText : 'Failed to validate, please try again.';
-			const message = await (new Messenger(this.discord, channelId)).createMessage(text);
-			prompt.messageIds.push(message.id);
+			const sentMessage = await (new Messenger(this.discord, channelId)).createMessage(text);
+			prompt.messageIds.push(sentMessage.id);
 
 			return;
 		}
 
+
+		this.cleanupPrompt(prompt);
 		prompt.resolve(result);
 
-		return this.cleanupPrompt(prompt);
+		return this.cleanupMessages(prompt);
 	}
 
 	// COMMON USE PROMPTS
