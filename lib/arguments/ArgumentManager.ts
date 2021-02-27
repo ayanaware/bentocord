@@ -174,6 +174,9 @@ export class ArgumentManager implements Component {
 			}
 		}
 
+		// Unwrap single element array
+		if (Array.isArray(values) && values.length === 1) values = values[0];
+
 		// "Reduce" Functionality
 		if (Array.isArray(values) && values.length > 1 && result.reduce == true) {
 			// limit to 10 items
