@@ -1,4 +1,5 @@
-import { Entity, Type } from '@ayanaware/bento';
+import { Entity } from '@ayanaware/bento';
+import { Type } from '../../Bentocord';
 
 import { CommandContext } from '../CommandContext';
 import { CommandManager } from '../CommandManager';

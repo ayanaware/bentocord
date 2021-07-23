@@ -1,4 +1,5 @@
-import { Entity, Type } from '@ayanaware/bento';
+import { Entity } from '@ayanaware/bento';
+import { Type } from '../../Bentocord';
 
 import { InhibitorManager } from '../InhibitorManager';
 import { InhibitorFn } from './Inhibitor';

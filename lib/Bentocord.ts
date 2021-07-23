@@ -8,6 +8,8 @@ import { BentocordVariable } from './BentocordVariable';
 import { Logger } from '@ayanaware/logger-api';
 const log = Logger.get();
 
+export type Type<T> = new(...args: Array<any>) => T;
+
 export class Bentocord implements Plugin {
 	public name = '@ayanaware/bentocord';
 	public version: string;
