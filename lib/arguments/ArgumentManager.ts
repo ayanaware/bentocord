@@ -31,7 +31,7 @@ export class ArgumentManager implements Component {
 	private resolvers: Map<ArgumentType, ResolverFn<any>> = new Map();
 	private transforms: Map<string, (value: any) => any> = new Map();
 
-	@Inject(PromptManager) private readonly promptManager: PromptManager;
+	@Inject() private readonly promptManager: PromptManager;
 
 	public async onLoad() {
 		return this.addResolvers(resolvers);

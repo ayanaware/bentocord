@@ -2,11 +2,12 @@ import { ComponentAPI } from '@ayanaware/bento';
 
 import { Bentocord } from '../../Bentocord';
 import { CodeblockBuilder } from '../../builders';
-import { Command, CommandDefinition } from '../interfaces';
+
+import { CommandDefinition, CommandEntity } from '../interfaces';
 import { CommandManager } from '../CommandManager';
 import { CommandContext } from '../CommandContext';
 
-export class BentocordBento implements Command {
+export class BentocordBento implements CommandEntity {
 	public name = 'bento';
 	public api!: ComponentAPI;
 	public parent = CommandManager;

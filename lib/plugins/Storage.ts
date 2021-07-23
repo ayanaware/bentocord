@@ -2,8 +2,8 @@ import { ComponentAPI } from '@ayanaware/bento';
 
 import { StorageLike } from "./interfaces";
 
-export class SimpleStorage implements StorageLike {
-	public name = 'SimpleStorage';
+export class Storage implements StorageLike {
+	public name = '@ayanaware/bentocord:Storage';
 	public api!: ComponentAPI;
 
 	private data: Map<string, any> = new Map();

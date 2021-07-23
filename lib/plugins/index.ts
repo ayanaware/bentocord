@@ -1,4 +1,4 @@
-export * from './SimplePermissions';
-export * from './SimpleStorage';
+export * from './Permissions';
+export * from './Storage';
 
 export * from './interfaces';

@@ -15,7 +15,7 @@ export class PromptManager implements Component {
 
 	private prompts: Map<string, Prompt> = new Map();
 
-	@Inject(Discord) private readonly discord: Discord;
+	@Inject() private readonly discord: Discord;
 
 	private getPromptKey(channelId: string, userId: string) {
 		return `${channelId}.${userId}`;

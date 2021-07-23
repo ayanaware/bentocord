@@ -1,4 +1,4 @@
-import { AnyGuildChannel, Channel, Emoji, Member, Role, User } from 'eris';
+import { AnyGuildChannel, Emoji, Member, Role, User } from 'eris';
 
 import { CommandContext } from '../commands';
 import { isPromise } from '../util';

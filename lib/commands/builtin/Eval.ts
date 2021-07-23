@@ -3,14 +3,15 @@ import * as util from 'util';
 import { ComponentAPI, Entity, Inject } from '@ayanaware/bento';
 
 import { CodeblockBuilder } from '../../builders';
-import { Command, CommandDefinition } from '../interfaces';
+
+import { CommandDefinition, CommandEntity } from '../interfaces';
 import { CommandManager } from '../CommandManager';
 import { CommandContext } from '../CommandContext';
 
 import Logger from '@ayanaware/logger-api';
 const log = Logger.get();
 
-export class Eval implements Command {
+export class Eval implements CommandEntity {
 	public name = 'eval';
 	public api!: ComponentAPI;
 	public parent = CommandManager;

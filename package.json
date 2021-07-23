@@ -11,7 +11,8 @@
 		"prepublishOnly": "ayc clean build"
 	},
 	"dependencies": {
-		"@ayanaware/logger-api": "^2.0.0"
+		"@ayanaware/logger-api": "^2.0.0",
+		"reflect-metadata": "^0.1.13"
 	},
 	"peerDependencies": {
 		"@ayanaware/bento": "^1.0.0-rc.14",

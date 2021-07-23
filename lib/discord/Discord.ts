@@ -16,10 +16,14 @@ export class Discord implements Component {
 
 	public client: Client;
 
-	@Inject(Bentocord) private bentocord: Bentocord;
+	@Inject() private bentocord: Bentocord;
 
 	public async onLoad() {
 		return this.connect();
+	}
+
+	public async onUnload() {
+		return this.disconnect();
 	}
 
 	public async connect(tokenOverride?: string, optionsOverride?: ClientOptions) {

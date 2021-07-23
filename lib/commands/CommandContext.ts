@@ -1,14 +1,13 @@
 import { Guild, Member, Message, TextableChannel, TextChannel, User } from 'eris';
 
-import { Bentocord } from '../Bentocord';
 import { Discord, Messenger } from '../discord';
-import { PermissionLike, StorageLike } from '../plugins';
+import { PermissionLike, Permissions, Storage, StorageLike } from '../plugins';
 import PromptManager from '../prompt';
 
-import { Command } from './interfaces';
+import { CommandEntity } from './interfaces';
 
 export class CommandContext<T extends TextableChannel = TextableChannel> {
-	public readonly command: Command;
+	public readonly command: CommandEntity;
 
 	public readonly message: Message<T>;
 	public readonly channel: T;
@@ -34,7 +33,7 @@ export class CommandContext<T extends TextableChannel = TextableChannel> {
 
 	public args: { [key: string]: any } = {};
 
-	public constructor(command: Command, message: Message<T>, prefix: string, alias: string, raw: string) {
+	public constructor(command: CommandEntity, message: Message<T>, prefix: string, alias: string, raw: string) {
 		this.command = command;
 		this.message = message;
 
@@ -63,9 +62,8 @@ export class CommandContext<T extends TextableChannel = TextableChannel> {
 		// Entities
 		this.discord = this.command.api.getEntity(Discord);
 		this.promptManager = this.command.api.getEntity(PromptManager);
-		const bentocord = this.command.api.getEntity<Bentocord>(Bentocord);
-		this.storage = bentocord.storage;
-		this.permissions = bentocord.permissions;
+		this.storage = this.command.api.getEntity(Storage);
+		this.permissions = this.command.api.getEntity(Permissions);
 
 		this.messenger = new Messenger(this.discord, this.channel.id);
 

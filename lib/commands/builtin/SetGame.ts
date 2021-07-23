@@ -3,11 +3,12 @@ import { ActivityPartial, BotActivityType } from 'eris';
 
 import { ArgumentType } from '../../arguments';
 import { Discord } from '../../discord';
-import { CommandContext } from '../CommandContext';
-import { CommandManager } from '../CommandManager';
-import { Command, CommandDefinition } from '../interfaces';
 
-export class SetGame implements Command {
+import { CommandDefinition, CommandEntity } from '../interfaces';
+import { CommandManager } from '../CommandManager';
+import { CommandContext } from '../CommandContext';
+
+export class SetGame implements CommandEntity {
 	public name = 'setgame';
 	public api!: ComponentAPI;
 	public parent = CommandManager;

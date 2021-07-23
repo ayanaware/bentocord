@@ -8,16 +8,18 @@ import { Bentocord } from '../Bentocord';
 import { BentocordVariable } from '../BentocordVariable';
 import { Discord, DiscordEvent } from '../discord';
 import { InhibitorManager } from '../inhibitors';
-import { Command, CommandEntity } from './interfaces';
+import { Storage } from '../plugins';
+
+import { CommandEntity } from './interfaces';
 import { CommandContext } from './CommandContext';
 
 import { Logger } from '@ayanaware/logger-api';
 const log = Logger.get(null);
 
 export class CommandManagerError extends BentoError {
-	public command: Command;
+	public command: CommandEntity;
 
-	public constructor(command: Command, msg: string) {
+	public constructor(command: CommandEntity, msg: string) {
 		super(`${command.name}(command): ${msg}`);
 		this.__define('command', command);
 	}
@@ -28,22 +30,23 @@ export class CommandManager implements Component {
 	public api!: ComponentAPI;
 	public parent: Plugin = Bentocord;
 
-	private readonly commands: Map<string, Command> = new Map();
+	private readonly commands: Map<string, CommandEntity> = new Map();
 	private readonly aliases: Map<string, string> = new Map();
 
 	@Variable({ name: BentocordVariable.BENTOCORD_COMMAND_PREFIX, default: 'bentocord' })
 	public defaultPrefix: string;
 	private selfId: string = null;
 
-	@Inject(Bentocord) private readonly bentocord: Bentocord;
-	@Inject(Discord) private readonly discord: Discord;
+	@Inject() private readonly discord: Discord;
 
-	@Inject(ArgumentManager) private readonly argumentManager: ArgumentManager;
-	@Inject(InhibitorManager) private readonly inhibitorManager: InhibitorManager;
+	@Inject() private readonly argumentManager: ArgumentManager;
+	@Inject() private readonly inhibitorManager: InhibitorManager;
+
+	@Inject() private readonly storage: Storage;
 
 	public async onChildLoad(entity: CommandEntity) {
 		try {
-			await this.addCommand(entity as Command);
+			await this.addCommand(entity as CommandEntity);
 		} catch (e) {
 			log.warn(e);
 		}
@@ -51,13 +54,13 @@ export class CommandManager implements Component {
 
 	public async onChildUnload(entity: CommandEntity) {
 		try {
-			await this.removeCommand(entity as Command);
+			await this.removeCommand(entity as CommandEntity);
 		} catch (e) {
 			log.warn(e);
 		}
 	}
 
-	public findCommandByAlias(alias: string): Command {
+	public findCommandByAlias(alias: string): CommandEntity {
 		alias = alias.toLowerCase();
 
 		// check if know command
@@ -71,11 +74,11 @@ export class CommandManager implements Component {
 		return command;
 	}
 
-	public async addCommand(command: Command) {
+	public async addCommand(command: CommandEntity) {
 		if (typeof command.execute !== 'function') throw new CommandManagerError(command, 'Execute must be function');
 		if (typeof command.definition !== 'object') {
 			// legacy support for .aliases
-			if (!Array.isArray(command.aliases)) command.definition = { aliases: command.aliases };
+			if (!Array.isArray((command as any).aliases)) command.definition = { aliases: (command as any).aliases };
 			else throw new CommandManagerError(command, 'Definition must be Object');
 		}
 		const definition = command.definition;
@@ -104,7 +107,7 @@ export class CommandManager implements Component {
 		}
 	}
 
-	public async removeCommand(command: Command | string) {
+	public async removeCommand(command: CommandEntity | string) {
 		if (typeof command === 'string') command = this.findCommandByAlias(command);
 		if (!command) throw new Error('Failed to find Command');
 
@@ -122,11 +125,11 @@ export class CommandManager implements Component {
 	}
 	
 	public async getPrefix(guildId: string) {
-		return (await this.bentocord.storage.get<string>('prefix', guildId)) || this.defaultPrefix;
+		return (await this.storage.get<string>('prefix', guildId)) || this.defaultPrefix;
 	}
 
 	public async setPrefix(guildId: string, prefix: string) {
-		await this.bentocord.storage.set<string>('prefix', prefix, guildId);
+		await this.storage.set<string>('prefix', prefix, guildId);
 		return prefix;
 	}
 
