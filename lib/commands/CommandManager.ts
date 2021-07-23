@@ -16,7 +16,7 @@ import { CommandContext } from './CommandContext';
 import { Logger } from '@ayanaware/logger-api';
 const log = Logger.get(null);
 
-export class CommandManagerError extends BentoError {
+class CommandManagerError extends BentoError {
 	public command: CommandEntity;
 
 	public constructor(command: CommandEntity, msg: string) {
