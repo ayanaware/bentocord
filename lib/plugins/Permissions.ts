@@ -8,6 +8,7 @@ import { Storage } from './Storage';
 export class Permissions implements PermissionLike {
 	public name = '@ayanaware/bentocord:Permissions';
 	public api!: ComponentAPI;
+	public replaceable = true;
 
 	private owners: Set<string> = new Set();
 

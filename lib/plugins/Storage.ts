@@ -5,6 +5,7 @@ import { StorageLike } from "./interfaces";
 export class Storage implements StorageLike {
 	public name = '@ayanaware/bentocord:Storage';
 	public api!: ComponentAPI;
+	public replaceable = true;
 
 	private data: Map<string, any> = new Map();
 

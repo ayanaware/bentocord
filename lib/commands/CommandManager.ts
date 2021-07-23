@@ -26,7 +26,7 @@ export class CommandManagerError extends BentoError {
 }
 
 export class CommandManager implements Component {
-	public name = 'CommandManager';
+	public name = '@ayanaware/bentocord:CommandManager';
 	public api!: ComponentAPI;
 	public parent: Plugin = Bentocord;
 

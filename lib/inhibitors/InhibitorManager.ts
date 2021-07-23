@@ -11,7 +11,7 @@ import { Logger } from '@ayanaware/logger-api';
 const log = Logger.get();
 
 export class InhibitorManager implements Component {
-	public name = 'InhibitorManager';
+	public name = '@ayanaware/bentocord:InhibitorManager';
 	public api!: ComponentAPI;
 
 	private inhibitors: Map<InhibitorName, Inhibitor> = new Map();

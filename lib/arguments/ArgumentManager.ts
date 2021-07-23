@@ -25,7 +25,7 @@ interface ReduceItem {
  * ArgumentResolve takes in Array<Argument> and attempts to fulfill them
  */
 export class ArgumentManager implements Component {
-	public name = 'ArgumentManager';
+	public name = '@ayanaware/bentocord:ArgumentManager';
 	public api!: ComponentAPI;
 
 	private resolvers: Map<ArgumentType, ResolverFn<any>> = new Map();

@@ -10,7 +10,7 @@ import Logger from '@ayanaware/logger-api';
 const log = Logger.get();
 
 export class PromptManager implements Component {
-	public name = 'PromptManager';
+	public name = '@ayanaware/bentocord:PromptManager';
 	public api!: ComponentAPI;
 
 	private prompts: Map<string, Prompt> = new Map();

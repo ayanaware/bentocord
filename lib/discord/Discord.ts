@@ -10,7 +10,7 @@ import { Logger } from '@ayanaware/logger-api';
 const log = Logger.get(null);
 
 export class Discord implements Component {
-	public name = 'Discord';
+	public name = '@ayanaware/bentocord:Discord';
 	public api!: ComponentAPI;
 	public parent: PluginReference = Bentocord;
 
