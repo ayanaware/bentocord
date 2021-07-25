@@ -4,8 +4,8 @@ import { CommandDefinition, CommandEntity } from '../interfaces';
 import { CommandManager } from '../CommandManager';
 import { CommandContext } from '../CommandContext';
 
-export class BentocordPing implements CommandEntity {
-	public name = 'ping';
+export class PingCommand implements CommandEntity {
+	public name = '@ayanaware/bentocord:PingCommand';
 	public api!: ComponentAPI;
 	public parent = CommandManager;
 

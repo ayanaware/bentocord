@@ -7,8 +7,8 @@ import { CommandDefinition, CommandEntity } from '../interfaces';
 import { CommandManager } from '../CommandManager';
 import { CommandContext } from '../CommandContext';
 
-export class BentocordBento implements CommandEntity {
-	public name = 'bento';
+export class BentoCommand implements CommandEntity {
+	public name = '@ayanaware/bentocord:BentoCommand';
 	public api!: ComponentAPI;
 	public parent = CommandManager;
 

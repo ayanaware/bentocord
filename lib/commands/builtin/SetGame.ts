@@ -8,8 +8,8 @@ import { CommandDefinition, CommandEntity } from '../interfaces';
 import { CommandManager } from '../CommandManager';
 import { CommandContext } from '../CommandContext';
 
-export class SetGame implements CommandEntity {
-	public name = 'setgame';
+export class SetGameCommand implements CommandEntity {
+	public name = '@ayanaware/bentocord:SetGameCommand';
 	public api!: ComponentAPI;
 	public parent = CommandManager;
 

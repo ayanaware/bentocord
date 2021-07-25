@@ -11,8 +11,8 @@ import { CommandContext } from '../CommandContext';
 import Logger from '@ayanaware/logger-api';
 const log = Logger.get();
 
-export class Eval implements CommandEntity {
-	public name = 'eval';
+export class EvalCommand implements CommandEntity {
+	public name = '@ayanaware/bentocord:EvalCommand';
 	public api!: ComponentAPI;
 	public parent = CommandManager;
 
@@ -20,7 +20,7 @@ export class Eval implements CommandEntity {
 		aliases: ['eval', 'hack'],
 	};
 
-	@Inject(CommandManager) private commandManager: CommandManager;
+	@Inject() private commandManager: CommandManager;
 
 	public async execute(ctx: CommandContext) {
 		// NOTE: __varname in this command is used to prevent clashes with eval code

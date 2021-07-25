@@ -8,8 +8,8 @@ import { CommandDefinition, CommandEntity } from '../interfaces';
 import { CommandManager } from '../CommandManager';
 import { CommandContext } from '../CommandContext';
 
-export class Prefix implements CommandEntity {
-	public name = 'prefix';
+export class PrefixCommand implements CommandEntity {
+	public name = '@ayanaware/bentocord:PrefixCommand';
 	public api!: ComponentAPI;
 	public parent = CommandManager;
 
