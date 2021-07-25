@@ -1,10 +1,9 @@
 import * as util from 'util';
 
-import { BentoError, Component, ComponentAPI, Inject, Plugin, Subscribe, Variable } from '@ayanaware/bento';
+import { BentoError, Component, ComponentAPI, Inject, Subscribe, Variable } from '@ayanaware/bento';
 import { GuildChannel, Message } from 'eris';
 
 import { ArgumentManager } from '../arguments';
-import { Bentocord } from '../Bentocord';
 import { BentocordVariable } from '../BentocordVariable';
 import { Discord, DiscordEvent } from '../discord';
 import { InhibitorManager } from '../inhibitors';
@@ -28,7 +27,6 @@ class CommandManagerError extends BentoError {
 export class CommandManager implements Component {
 	public name = '@ayanaware/bentocord:CommandManager';
 	public api!: ComponentAPI;
-	public parent: Plugin = Bentocord;
 
 	private readonly commands: Map<string, CommandEntity> = new Map();
 	private readonly aliases: Map<string, string> = new Map();

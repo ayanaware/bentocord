@@ -19,10 +19,11 @@
 		"eris": "^0.14.0"
 	},
 	"devDependencies": {
-		"@ayanaware/bento": "^1.0.0-rc.18",
+		"@ayanaware/bento": "^1.0.0-rc.19",
 		"@ayanaware/logger": "^2.2.1",
 		"@ayanaware/ts": "^1.1.3",
-		"@types/node": "^16.4.1",
+		"@types/node": "^16.4.2",
+		"@types/ws": "^7.4.7",
 		"eris": "^0.15.1",
 		"typescript": "^4.3.5"
 	},

@@ -1,4 +1,4 @@
-import { Component, ComponentAPI, Inject, PluginReference, Subscribe } from '@ayanaware/bento';
+import { Component, ComponentAPI, Inject, Subscribe } from '@ayanaware/bento';
 import { Client, ClientOptions } from 'eris';
 
 import { Bentocord } from '../Bentocord';
@@ -12,7 +12,6 @@ const log = Logger.get(null);
 export class Discord implements Component {
 	public name = '@ayanaware/bentocord:Discord';
 	public api!: ComponentAPI;
-	public parent: PluginReference = Bentocord;
 
 	public client: Client;
 

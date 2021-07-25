@@ -1,6 +1,5 @@
 import { ComponentAPI, Inject } from '@ayanaware/bento';
 
-import { Bentocord } from '../Bentocord';
 import { BentocordVariable } from '../BentocordVariable';
 import { PermissionLike } from './interfaces';
 import { Storage } from './Storage';
@@ -12,7 +11,6 @@ export class Permissions implements PermissionLike {
 
 	private owners: Set<string> = new Set();
 
-	@Inject() private bentocord: Bentocord;
 	@Inject() private storage: Storage;
 
 	public async onLoad() {
