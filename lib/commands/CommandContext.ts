@@ -1,7 +1,7 @@
 import { Guild, Member, Message, TextableChannel, TextChannel, User } from 'eris';
+import { BentocordInterface, MessageFlakes } from '../BentocordInterface';
 
 import { Discord, Messenger } from '../discord';
-import { PermissionLike, Permissions, Storage, StorageLike } from '../plugins';
 import PromptManager from '../prompt';
 
 import { CommandEntity } from './interfaces';
@@ -24,10 +24,9 @@ export class CommandContext<T extends TextableChannel = TextableChannel> {
 	public readonly alias: string;
 	public readonly raw: string;
 
+	public readonly interface: BentocordInterface;
 	public readonly discord: Discord;
 	public readonly promptManager: PromptManager;
-	public readonly storage: StorageLike;
-	public readonly permissions: PermissionLike;
 
 	public readonly messenger: Messenger;
 
@@ -49,7 +48,6 @@ export class CommandContext<T extends TextableChannel = TextableChannel> {
 		this.author = message.author;
 		this.authorId = this.author.id;
 
-
 		// God help us (Guild, If Available)
 		if ((message.channel as TextChannel).guild) {
 			this.guild = (message.channel as TextChannel).guild;
@@ -60,10 +58,9 @@ export class CommandContext<T extends TextableChannel = TextableChannel> {
 		if (message.member) this.member = message.member;
 
 		// Entities
+		this.interface = this.command.api.getEntity(BentocordInterface);
 		this.discord = this.command.api.getEntity(Discord);
 		this.promptManager = this.command.api.getEntity(PromptManager);
-		this.storage = this.command.api.getEntity(Storage);
-		this.permissions = this.command.api.getEntity(Permissions);
 
 		this.messenger = new Messenger(this.discord, this.channel.id);
 
@@ -77,8 +74,8 @@ export class CommandContext<T extends TextableChannel = TextableChannel> {
 	/**
 	 * Check if command author is a owner
 	 */
-	public isOwner() {
-		return this.permissions.isOwner(this.authorId);
+	public async isOwner() {
+		return this.interface.isOwner(this.authorId);
 	}
 
 	/**
@@ -86,12 +83,18 @@ export class CommandContext<T extends TextableChannel = TextableChannel> {
 	 * @param permission Permission
 	 */
 	public async hasPermission(permission: string) {
-		const scopes = [this.author.id];
+		const flakes: MessageFlakes = {
+			userId: this.authorId,
+			channelId: this.channelId,
+		};
+
+		if (this.guildId) flakes.guildId = this.guildId;
+
 		if (this.member) {
-			// TODO: Append roleIds in order of guild for overrides. And since this is expensive Cache it
+			// TODO: Append roleIds in order of guild for overrides. And since this is expensive cache it
 			// message.member.roles.forEach(i => scopes.push(i));
 		}
 
-		return this.permissions.hasPermission(permission, this.guildId, scopes);
+		return this.interface.resolvePermission(permission, flakes);
 	}
 }

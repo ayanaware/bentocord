@@ -3,6 +3,7 @@ import 'reflect-metadata';
 import { EntityType, FSEntityLoader, Plugin, PluginAPI } from '@ayanaware/bento';
 import { ClientOptions } from 'eris';
 
+import { BentocordInterface } from './BentocordInterface';
 import { BentocordVariable } from './BentocordVariable';
 
 import { Logger } from '@ayanaware/logger-api';
@@ -40,11 +41,11 @@ export class Bentocord implements Plugin {
 				name = '@ayanaware/bentocord:FSEntityLoader'
 			})();
 
-			this.api.getBento().addPlugin(this.fsel);
+			await this.api.getBento().addPlugin(this.fsel);
 		}
 
-		// Load Plugins
-		await this.fsel.addDirectory([__dirname, 'plugins'], EntityType.PLUGIN, false);
+		// Load BentocordInterface
+		await this.api.getBento().addPlugin(BentocordInterface);
 
 		// Load Components
 		await this.fsel.addDirectories([

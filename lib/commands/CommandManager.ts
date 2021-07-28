@@ -4,10 +4,10 @@ import { BentoError, Component, ComponentAPI, Inject, Subscribe, Variable } from
 import { GuildChannel, Message } from 'eris';
 
 import { ArgumentManager } from '../arguments';
+import { BentocordInterface } from '../BentocordInterface';
 import { BentocordVariable } from '../BentocordVariable';
 import { Discord, DiscordEvent } from '../discord';
 import { InhibitorManager } from '../inhibitors';
-import { Storage } from '../plugins';
 
 import { CommandEntity } from './interfaces';
 import { CommandContext } from './CommandContext';
@@ -35,12 +35,12 @@ export class CommandManager implements Component {
 	public defaultPrefix: string;
 	private selfId: string = null;
 
+	@Inject() private readonly interface: BentocordInterface;
+
 	@Inject() private readonly discord: Discord;
 
 	@Inject() private readonly argumentManager: ArgumentManager;
 	@Inject() private readonly inhibitorManager: InhibitorManager;
-
-	@Inject() private readonly storage: Storage;
 
 	public async onChildLoad(entity: CommandEntity) {
 		try {
@@ -122,15 +122,6 @@ export class CommandManager implements Component {
 		return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 	}
 	
-	public async getPrefix(guildId: string) {
-		return (await this.storage.get<string>('prefix', guildId)) || this.defaultPrefix;
-	}
-
-	public async setPrefix(guildId: string, prefix: string) {
-		await this.storage.set<string>('prefix', prefix, guildId);
-		return prefix;
-	}
-
 	@Subscribe(Discord, DiscordEvent.SHARD_READY)
 	@Subscribe(Discord, DiscordEvent.SHARD_RESUME)
 	private async refreshSelfId() {
@@ -147,7 +138,7 @@ export class CommandManager implements Component {
 		const raw = message.content;
 
 		let prefix = this.defaultPrefix;
-		if (message.guildID) prefix = await this.getPrefix(message.guildID);
+		if (message.guildID) prefix = await this.interface.getPrefix(message.guildID);
 
 		// escape prefix
 		prefix = this.escapePrefix(prefix);

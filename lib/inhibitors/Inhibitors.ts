@@ -5,8 +5,8 @@ import { Inhibitor, InhibitorFn } from './interfaces';
 const inhibitors: Array<Inhibitor> = [];
 const add = (inhibitor: InhibitorType, execute: InhibitorFn) => inhibitors.push({ inhibitor, execute });
 
-add(InhibitorType.BOT_OWNER, (ctx: CommandContext) => {
-	return ctx.isOwner() === true ? false : 'User is not a bot owner';
+add(InhibitorType.BOT_OWNER, async (ctx: CommandContext) => {
+	return (await ctx.isOwner()) === true ? false : 'User is not a bot owner';
 });
 
 add(InhibitorType.CHANNEL, (ctx: CommandContext, channelIds?: Array<string>) => {
