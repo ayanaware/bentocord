@@ -138,7 +138,10 @@ export class CommandManager implements Component {
 		const raw = message.content;
 
 		let prefix = this.defaultPrefix;
-		if (message.guildID) prefix = await this.interface.getPrefix(message.guildID);
+		if (message.guildID) {
+			const guildPrefix = await this.interface.getPrefix(message.guildID);
+			if (guildPrefix) prefix = guildPrefix;
+		}
 
 		// escape prefix
 		prefix = this.escapePrefix(prefix);
