@@ -7,8 +7,8 @@
 	"repository": "git@gitlab.com:ayanaware/bentocord.git",
 	"author": "HcgRandon <me@randon.moe>",
 	"scripts": {
-		"build": "ayc clean build",
-		"prepublishOnly": "ayc clean build"
+		"build": "rm -rf ./build && tsc",
+		"prepublishOnly": "rm -rf ./build && tsc"
 	},
 	"dependencies": {
 		"@ayanaware/logger-api": "^2.0.0",
@@ -21,7 +21,6 @@
 	"devDependencies": {
 		"@ayanaware/bento": "^1.0.0-rc.21",
 		"@ayanaware/logger": "^2.2.1",
-		"@ayanaware/ts": "^1.1.3",
 		"@types/node": "^16.4.10",
 		"@types/ws": "^7.4.7",
 		"eris": "^0.15.1",
