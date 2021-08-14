@@ -1,4 +1,5 @@
 import { PromptRejectType } from '../constants';
+
 import { PromptOptions } from './PromptOptions';
 
 export interface Prompt {

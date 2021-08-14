@@ -1,4 +1,4 @@
-import {Parsed} from './Parsed';
+import { Parsed } from './Parsed';
 
 export interface ParserOutput {
 	all: Array<Parsed>;

@@ -1,19 +1,20 @@
+import { Component, ComponentAPI, Inject, Subscribe } from '@ayanaware/bento';
+import Logger from '@ayanaware/logger-api';
+
 import { Message, MessageContent } from 'eris';
 
-import { Component, ComponentAPI, Inject, Subscribe } from '@ayanaware/bento';
-
 import { Discord, DiscordEvent, Messenger } from '../discord';
+
 import { PromptRejectType } from './constants';
 import { Prompt, PromptOptions } from './interfaces';
 
-import Logger from '@ayanaware/logger-api';
 const log = Logger.get();
 
 export class PromptManager implements Component {
 	public name = '@ayanaware/bentocord:PromptManager';
 	public api!: ComponentAPI;
 
-	private prompts: Map<string, Prompt> = new Map();
+	private readonly prompts: Map<string, Prompt> = new Map();
 
 	@Inject() private readonly discord: Discord;
 
@@ -137,7 +138,6 @@ export class PromptManager implements Component {
 			return;
 		}
 
-
 		this.cleanupPrompt(prompt);
 		prompt.resolve(result);
 
@@ -152,12 +152,12 @@ export class PromptManager implements Component {
 				async validate(content) {
 					const findTrue = content.match(/^(true|yes|y|1)$/i);
 					if (findTrue) return true;
-			
+
 					const findFalse = content.match(/^(false|no|n|0)$/i);
 					if (findFalse) return false;
 
 					return null;
-				}
+				},
 			}, time);
 		} catch (e) {
 			return false;

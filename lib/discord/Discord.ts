@@ -1,12 +1,12 @@
-import { Component, ComponentAPI, Inject, Subscribe } from '@ayanaware/bento';
-import { Client, ClientOptions } from 'eris';
+import { Component, ComponentAPI, Subscribe, Variable } from '@ayanaware/bento';
+import { Logger } from '@ayanaware/logger-api';
 
-import { Bentocord } from '../Bentocord';
+import { Client, ClientOptions, Guild } from 'eris';
+
 import { BentocordVariable } from '../BentocordVariable';
 
-import { DiscordEvent } from './constants';
+import { DiscordEvent } from './constants/DiscordEvent';
 
-import { Logger } from '@ayanaware/logger-api';
 const log = Logger.get(null);
 
 export class Discord implements Component {
@@ -15,17 +15,18 @@ export class Discord implements Component {
 
 	public client: Client;
 
-	@Inject() private bentocord: Bentocord;
+	@Variable({ name: BentocordVariable.BENTOCORD_CLIENT_OPTIONS, default: {} })
+	private readonly clientOptions: ClientOptions;
 
-	public async onLoad() {
+	public async onLoad(): Promise<void> {
 		return this.connect();
 	}
 
-	public async onUnload() {
+	public async onUnload(): Promise<void> {
 		return this.disconnect();
 	}
 
-	public async connect(tokenOverride?: string, optionsOverride?: ClientOptions) {
+	public async connect(tokenOverride?: string, optionsOverride?: ClientOptions): Promise<void> {
 		const token = tokenOverride || this.api.getVariable({ name: BentocordVariable.BENTOCORD_TOKEN, default: null });
 		if (!token) {
 			throw new Error(`Failed to find token: Variable "${BentocordVariable.BENTOCORD_TOKEN}" and param tokenOverride empty`);
@@ -34,7 +35,7 @@ export class Discord implements Component {
 		if (this.client) await this.disconnect();
 
 		// merge options & overrides
-		const clientOptions = {...this.bentocord.clientOptions, ...optionsOverride};
+		const clientOptions = { ...this.clientOptions, ...optionsOverride };
 		clientOptions.autoreconnect = true;
 
 		this.client = new Client(token, clientOptions);
@@ -43,7 +44,8 @@ export class Discord implements Component {
 		return this.client.connect();
 	}
 
-	public async disconnect() {
+	// eslint-disable-next-line @typescript-eslint/require-await
+	public async disconnect(): Promise<void> {
 		this.client.disconnect({ reconnect: false });
 		this.client.removeAllListeners();
 	}

@@ -1,11 +1,10 @@
-import { CommandContext } from '../../commands';
-import { Argument } from './Argument';
+import type { ArgumentCallable } from '../types/Callable';
 
 export interface ArgumentPrompt {
-	startText: string | ((ctx: CommandContext, arg: Argument) => string);
-	retryText?: string | ((ctx: CommandContext, arg: Argument) => string);
-	timeoutText?: string | ((ctx: CommandContext, arg: Argument) => string);
-	endedText?: string | ((ctx: CommandContext, arg: Argument) => string);
+	startText: ArgumentCallable;
+	retryText?: ArgumentCallable;
+	timeoutText?: ArgumentCallable;
+	endedText?: ArgumentCallable;
 	retries?: number;
 	timeout?: number;
 }

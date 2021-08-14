@@ -1,4 +1,4 @@
-import { TokenType } from '../constants';
+import { TokenType } from '../constants/TokenType';
 
 export interface Token {
 	type: TokenType;

@@ -1,6 +1,6 @@
-import { Argument } from '../../arguments';
-import { DiscordPermission } from '../../discord';
-import { InhibitorDefinition } from '../../inhibitors';
+import { Argument } from '../../arguments/interfaces/Argument';
+import { DiscordPermission } from '../../discord/constants/DiscordPermission';
+import { InhibitorDefinition } from '../../inhibitors/interfaces/Inhibitor';
 
 export interface CommandDefinition {
 	/** Command Aliases */

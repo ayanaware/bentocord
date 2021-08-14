@@ -1,29 +1,14 @@
-import { Bento, FSComponentLoader, VariableFileLoader } from '@ayanaware/bento';
-import { Bentocord, BentocordVariable } from '@ayanaware/bentocord';
-
-import * as util from 'util';
-
-const bento = new Bento();
+import { Application } from '@ayanaware/bento';
+import { Bentocord } from '@ayanaware/bentocord';
 
 (async () => {
-	const vfl = new VariableFileLoader();
-	vfl.addVariable(BentocordVariable.BENTOCORD_TOKEN);
-	await vfl.addFile([__dirname, '..', '..', 'env.json']);
+	const app = new Application({ variables: [[__dirname, '..', '..', 'env.json']] });
+	await app.start();
 
-	vfl.parseFileContents
+	await app.bento.addPlugin(new Bentocord());
 
-	const bentocord = new Bentocord();
-
-	const fsloader = new FSComponentLoader();
-	await fsloader.addDirectory(__dirname, 'components');
-
-	await bento.addPlugin(vfl);
-	if (!bento.hasVariable(BentocordVariable.BENTOCORD_TOKEN)) throw new Error(`Please append ${BentocordVariable.BENTOCORD_TOKEN}=xxx to the front of your command`);
-
-	await bento.addPlugins([bentocord, fsloader]);
-
-	await bento.verify();
+	await app.verify();
 })().catch(e => {
-	console.log(util.inspect(e));
+	console.log(e);
 	process.exit(1);
 });

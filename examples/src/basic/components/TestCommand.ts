@@ -12,8 +12,8 @@ export class ArgTest implements Command {
 			type: ArgumentType.STRINGS, name: 'target', rest: true, phraseSeperators: [',', ';'],
 			choices: ['a', 'b', 'c'],
 			prompt: { startText: 'Please type strings' },
-			unresolved: 'Failed to find valid strings'
-		}]
+			unresolved: 'Failed to find valid strings',
+		}],
 	};
 
 	public async execute(ctx: CommandContext) {

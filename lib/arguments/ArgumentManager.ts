@@ -1,14 +1,19 @@
-import { Component, ComponentAPI, Inject } from '@ayanaware/bento';
-import { CodeblockBuilder } from '../builders';
+import { isPromise } from 'util/types';
 
-import { CommandContext } from '../commands';
-import { PromptManager, PromptRejectType } from '../prompt';
-import { isPromise } from '../util';
-import { ArgumentMatch, ArgumentType } from './constants';
-import { Argument, Resolver, ResolverFn, ResolverResult } from './interfaces';
-import { Parsed, Parser, ParserOutput, Tokenizer } from './internal';
+import { Component, ComponentAPI, Inject } from '@ayanaware/bento';
+
+import { CommandContext } from '../commands/CommandContext';
+import { PromptManager } from '../prompt/PromptManager';
 
 import resolvers from './Resolvers';
+import { ArgumentMatch } from './constants/ArgumentMatch';
+import { ArgumentType } from './constants/ArgumentType';
+import { Argument } from './interfaces/Argument';
+import { Resolver, ResolverFn } from './interfaces/Resolver';
+import { Parser } from './internal/Parser';
+import { Tokenizer } from './internal/Tokenizer';
+import { Parsed } from './internal/interfaces/Parsed';
+import { ParserOutput } from './internal/interfaces/ParserOutput';
 
 interface FulfillState {
 	phraseIndex: number;
@@ -28,24 +33,25 @@ export class ArgumentManager implements Component {
 	public name = '@ayanaware/bentocord:ArgumentManager';
 	public api!: ComponentAPI;
 
-	private resolvers: Map<ArgumentType, ResolverFn<any>> = new Map();
-	private transforms: Map<string, (value: any) => any> = new Map();
+	private readonly resolvers: Map<ArgumentType, ResolverFn<unknown>> = new Map();
+	private readonly transforms: Map<string, (value: any) => any> = new Map();
 
 	@Inject() private readonly promptManager: PromptManager;
 
-	public async onLoad() {
+	// eslint-disable-next-line @typescript-eslint/require-await
+	public async onLoad(): Promise<void> {
 		return this.addResolvers(resolvers);
 	}
 
-	public addResolvers(resolvers: Array<Resolver<any>>) {
-		for (const resolver of resolvers) this.addResolver(resolver.type, resolver.fn);
+	public addResolvers(items: Array<Resolver<any>>): void {
+		for (const resolver of items) this.addResolver(resolver.type, resolver.fn);
 	}
 
-	public addResolver(type: ArgumentType, fn: ResolverFn<any>) {
+	public addResolver(type: ArgumentType, fn: ResolverFn<any>): void {
 		this.resolvers.set(type, fn);
 	}
 
-	public removeResolver(type: ArgumentType) {
+	public removeResolver(type: ArgumentType): void {
 		this.resolvers.delete(type);
 	}
 
@@ -59,7 +65,7 @@ export class ArgumentManager implements Component {
 		return result;
 	}
 
-	public async fulfill(ctx: CommandContext, args: Array<Argument>) {
+	public async fulfill(ctx: CommandContext, args: Array<Argument>): Promise<Record<string, unknown>> {
 		const tokens = new Tokenizer(ctx.raw).tokenize();
 
 		// build allowedOptions
@@ -67,11 +73,14 @@ export class ArgumentManager implements Component {
 		const output = new Parser(tokens, allowedOptions).parse();
 
 		// get rid of any empty phrases
-		output.phrases = output.phrases.filter(i => i.value && i.value != '')
+		output.phrases = output.phrases.filter(i => i.value && i.value !== '');
 
 		const choices = {
+			// eslint-disable-next-line @typescript-eslint/unbound-method
 			[ArgumentMatch.PHRASE]: this.processPhrase,
+			// eslint-disable-next-line @typescript-eslint/unbound-method
 			[ArgumentMatch.FLAG]: this.processFlag,
+			// eslint-disable-next-line @typescript-eslint/unbound-method
 			[ArgumentMatch.OPTION]: this.processOption,
 		};
 
@@ -93,7 +102,7 @@ export class ArgumentManager implements Component {
 			}
 
 			const result = await this.resolveArgument(ctx, arg, 0, phraseValues);
-			collector = {...collector, [arg.name]: result};
+			collector = { ...collector, [arg.name]: result };
 
 			handleOptionArg.push(arg.name);
 		}
@@ -105,10 +114,10 @@ export class ArgumentManager implements Component {
 			count++;
 
 			const fn = choices[arg.match || ArgumentMatch.PHRASE];
-			if (fn == null) throw new Error(`Unknown ArgumentMatch Type`);
+			if (fn == null) throw new Error('Unknown ArgumentMatch Type');
 
 			const result = await fn.call(this, ctx, state, arg, count, output);
-			collector = {...collector, [arg.name]: result};
+			collector = { ...collector, [arg.name]: result };
 		}
 
 		return collector;
@@ -133,7 +142,7 @@ export class ArgumentManager implements Component {
 		return this.resolveArgument(ctx, arg, count, phraseValues);
 	}
 
-	private async processFlag(ctx: CommandContext, state: FulfillState, arg: Argument, count: number, output: ParserOutput) {
+	private processFlag(ctx: CommandContext, state: FulfillState, arg: Argument, count: number, output: ParserOutput) {
 		if (!Array.isArray(arg.flags)) return false;
 
 		return output.flags.some(f => arg.flags.some(i => i.toLowerCase() === f.value.toLowerCase()));
@@ -147,12 +156,12 @@ export class ArgumentManager implements Component {
 		return this.resolveArgument(ctx, arg, count, [option.value]);
 	}
 
-	private async resolveArgument(ctx: CommandContext, arg: Argument, count: number, phrases: Array<string>) {
+	private async resolveArgument(ctx: CommandContext, arg: Argument, count: number, phrases: Array<string>): Promise<unknown> {
 		let result;
 		if (phrases.length > 0) result = await this.execute(ctx, arg, phrases);
 
 		let values;
-		if (typeof result == 'object') values = result.value;
+		if (typeof result === 'object') values = result.value;
 
 		// failed to resolve
 		if ((values == null || result.value.length < 1) && phrases.length > 0) {
@@ -160,15 +169,15 @@ export class ArgumentManager implements Component {
 		}
 
 		// prompt
-		if (values == null || values.length == 0 && arg.prompt) {
+		if (values == null || values.length === 0 && arg.prompt) {
 			// No phrases provided, and not optional, so collect
-			if (phrases.length == 0 && !arg.optional) {
+			if (phrases.length === 0 && !arg.optional) {
 				result = await this.collect(ctx, arg);
 				values = result.value;
 			}
 
 			// Phrase provided, failed to parse, so collect
-			else if (phrases.length > 0 && (values == null || result.value.length == 0)) {
+			else if (phrases.length > 0 && (values == null || result.value.length === 0)) {
 				result = await this.collect(ctx, arg);
 				values = result.value;
 			}
@@ -178,7 +187,7 @@ export class ArgumentManager implements Component {
 		if (Array.isArray(values) && values.length === 1) values = values[0];
 
 		// "Reduce" Functionality
-		if (Array.isArray(values) && values.length > 1 && result.reduce == true) {
+		if (Array.isArray(values) && values.length > 1 && result.reduce === true) {
 			// limit to 10 items
 			values = values.slice(0, 10);
 
@@ -253,7 +262,7 @@ export class ArgumentManager implements Component {
 					if (typeof prompt.timeoutText === 'function') prompt.timeoutText = prompt.timeoutText(ctx, arg);
 					if (prompt.timeoutText) ctx.messenger.createMessage(prompt.timeoutText);
 					break;
-				};
+				}
 
 				case PromptRejectType.RETRY_LIMIT:
 				case PromptRejectType.CANCEL: {

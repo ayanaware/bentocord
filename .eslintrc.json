@@ -1,0 +1,19 @@
+{
+    "extends": [
+        "plugin:@ayanaware/typescript"
+    ],
+    "env": {
+		"es2020": true
+	},
+	"ignorePatterns": [
+		"node_modules/",
+		"dist/",
+		"build/"
+	],
+	"rules": {
+		"padded-blocks": [
+			"error",
+			"never"
+		]
+	}
+}

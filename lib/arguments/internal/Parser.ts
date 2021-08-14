@@ -1,12 +1,14 @@
-/* Below is Bentocord's Parser this converts a raw input string into a series of tokens using the Tokenizer.	
+/* Below is Bentocord's Parser this converts a raw input string into a series of tokens using the Tokenizer.
  * These tokens are then passed through the Parser which builds them into larger pieces such as Phrases, Flags, and Options.
  * The Parser is also responsible for verifying things look "sane". For Example verifying that Quotes are closed etc
- * 
+ *
  * This was heavily inspired from Akario: https://github.com/discord-akairo/discord-akairo
  */
 
-import { TokenType } from './constants';
-import { Parsed, ParserOutput, Token } from './interfaces';
+import { TokenType } from './constants/TokenType';
+import { Parsed } from './interfaces/Parsed';
+import { ParserOutput } from './interfaces/ParserOutput';
+import { Token } from './interfaces/Token';
 
 export interface AllowedOption {
 	name: string;
@@ -26,7 +28,7 @@ export class Parser {
 		this.setTokens(tokens, allowedOptions);
 	}
 
-	public setTokens(tokens: Array<Token>, allowedOptions: Array<AllowedOption> = []) {
+	public setTokens(tokens: Array<Token>, allowedOptions: Array<AllowedOption> = []): void {
 		if (this.isParsing) throw new Error('setTokens() may not be called while parsing');
 
 		this.tokens = tokens;
@@ -36,7 +38,7 @@ export class Parser {
 		this.output = { all: [], phrases: [], flags: [], options: [] };
 	}
 
-	public parse() {
+	public parse(): ParserOutput {
 		this.isParsing = true;
 		while (this.poistion < this.tokens.length - 1) this.parseNext();
 
@@ -53,7 +55,7 @@ export class Parser {
 
 		const token = this.tokens[this.poistion + lookahead];
 		if (token == null) return false;
-		
+
 		return tokens.includes(token.type);
 	}
 
@@ -68,8 +70,9 @@ export class Parser {
 	}
 
 	private parseNext() {
+		// eslint-disable-next-line @typescript-eslint/unbound-method
 		const order = [this.parseWhitespace, this.parseOption, this.parseFlag, this.parsePhrase];
-	
+
 		for (const fn of order) fn.call(this);
 	}
 
@@ -82,7 +85,7 @@ export class Parser {
 		const optionToken = this.match([TokenType.OPTION]);
 		if (!optionToken) return;
 
-		let optionKey = optionToken.value.replace(/^--|=/g, '');
+		const optionKey = optionToken.value.replace(/^--|=/g, '');
 
 		// option must be allowed
 		const allowedOption = this.allowedOptions.find(i => i.name === optionKey);
@@ -130,11 +133,12 @@ export class Parser {
 			const collector = [];
 
 			let token = null;
-			while(token = this.match([TokenType.WORD, TokenType.WHITESPACE], true)) {
+			// eslint-disable-next-line no-cond-assign
+			while (token = this.match([TokenType.WORD, TokenType.WHITESPACE], true)) {
 				if (typeof token !== 'object') continue; // make typescript happy
 				raw = `${raw}${token.value}`;
 
-				if (token.type == TokenType.WORD) collector.push(token.value);
+				if (token.type === TokenType.WORD) collector.push(token.value);
 			}
 
 			let quoteCloseToken = this.match([TokenType.QUOTE_END], true);
@@ -145,6 +149,7 @@ export class Parser {
 			}
 			raw = `${raw}${quoteCloseToken.value}`;
 
+			// eslint-disable-next-line @typescript-eslint/no-shadow
 			const phrase: Parsed = { value: collector.join(' '), raw };
 			if (returnMode) return phrase;
 

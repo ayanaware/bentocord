@@ -1,28 +1,21 @@
 import * as util from 'util';
 
-import { BentoError, Component, ComponentAPI, Inject, Subscribe, Variable } from '@ayanaware/bento';
+import { Component, ComponentAPI, Inject, Subscribe, Variable } from '@ayanaware/bento';
+import { Logger } from '@ayanaware/logger-api';
+
 import { GuildChannel, Message } from 'eris';
 
-import { ArgumentManager } from '../arguments';
 import { BentocordInterface } from '../BentocordInterface';
 import { BentocordVariable } from '../BentocordVariable';
-import { Discord, DiscordEvent } from '../discord';
-import { InhibitorManager } from '../inhibitors';
+import { ArgumentManager } from '../arguments/ArgumentManager';
+import { Discord } from '../discord/Discord';
+import { DiscordEvent } from '../discord/constants/DiscordEvent';
+import { InhibitorManager } from '../inhibitors/InhibitorManager';
 
-import { CommandEntity } from './interfaces';
 import { CommandContext } from './CommandContext';
+import type { CommandEntity } from './interfaces/CommandEntity';
 
-import { Logger } from '@ayanaware/logger-api';
 const log = Logger.get(null);
-
-class CommandManagerError extends BentoError {
-	public command: CommandEntity;
-
-	public constructor(command: CommandEntity, msg: string) {
-		super(`${command.name}(command): ${msg}`);
-		this.__define('command', command);
-	}
-}
 
 export class CommandManager implements Component {
 	public name = '@ayanaware/bentocord:CommandManager';
@@ -33,6 +26,7 @@ export class CommandManager implements Component {
 
 	@Variable({ name: BentocordVariable.BENTOCORD_COMMAND_PREFIX, default: 'bentocord' })
 	public defaultPrefix: string;
+
 	private selfId: string = null;
 
 	@Inject() private readonly interface: BentocordInterface;
@@ -42,17 +36,19 @@ export class CommandManager implements Component {
 	@Inject() private readonly argumentManager: ArgumentManager;
 	@Inject() private readonly inhibitorManager: InhibitorManager;
 
-	public async onChildLoad(entity: CommandEntity) {
+	// eslint-disable-next-line @typescript-eslint/require-await
+	public async onChildLoad(entity: CommandEntity): Promise<void> {
 		try {
-			await this.addCommand(entity as CommandEntity);
+			this.addCommand(entity);
 		} catch (e) {
 			log.warn(e);
 		}
 	}
 
-	public async onChildUnload(entity: CommandEntity) {
+	// eslint-disable-next-line @typescript-eslint/require-await
+	public async onChildUnload(entity: CommandEntity): Promise<void> {
 		try {
-			await this.removeCommand(entity as CommandEntity);
+			this.removeCommand(entity);
 		} catch (e) {
 			log.warn(e);
 		}
@@ -72,29 +68,25 @@ export class CommandManager implements Component {
 		return command;
 	}
 
-	public async addCommand(command: CommandEntity) {
-		if (typeof command.execute !== 'function') throw new CommandManagerError(command, 'Execute must be function');
-		if (typeof command.definition !== 'object') {
-			// legacy support for .aliases
-			if (!Array.isArray((command as any).aliases)) command.definition = { aliases: (command as any).aliases };
-			else throw new CommandManagerError(command, 'Definition must be Object');
-		}
+	public addCommand(command: CommandEntity): void {
+		if (typeof command.execute !== 'function') throw new Error(`${command.name}: Execute must be function`);
+		if (typeof command.definition !== 'object') throw new Error(`${command.name}: Definition must be Object`);
 		const definition = command.definition;
-		
-		if (definition.aliases.length < 1) throw new CommandManagerError(command, 'At least one alias must be defined')
+
+		if (definition.aliases.length < 1) throw new Error(`${command.name}: At least one alias must be defined`);
 
 		// check if dupe
 		// TODO: build a system to replace commands etc
-		if (this.commands.has(command.name)) throw new CommandManagerError(command, `Command name "${command.name}" already exists`);
+		if (this.commands.has(command.name)) throw new Error(`${command.name}: Command name "${command.name}" already exists`);
 
 		// save command
 		this.commands.set(command.name, command);
-		
+
 		// TODO: ensure aliases is a unique array
 
 		// verify no clashing alises
 		const clashes = definition.aliases.filter(alias => this.aliases.has(alias));
-		if (clashes.length > 0) throw new CommandManagerError(command, `Attempted to register pre-existing aliases: "${clashes.join('", "')}"`);
+		if (clashes.length > 0) throw new Error(`${command.name}: Attempted to register pre-existing aliases: "${clashes.join('", "')}"`);
 
 		// regiser aliases
 		for (let alias of definition.aliases) {
@@ -105,13 +97,13 @@ export class CommandManager implements Component {
 		}
 	}
 
-	public async removeCommand(command: CommandEntity | string) {
+	public removeCommand(command: CommandEntity | string): void {
 		if (typeof command === 'string') command = this.findCommandByAlias(command);
 		if (!command) throw new Error('Failed to find Command');
 
 		// remove any aliases
 		for (const [alias, name] of this.aliases.entries()) {
-			if (command.name == name) this.aliases.delete(alias);
+			if (command.name === name) this.aliases.delete(alias);
 		}
 
 		// remove reference
@@ -121,7 +113,7 @@ export class CommandManager implements Component {
 	private escapePrefix(s: string) {
 		return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 	}
-	
+
 	@Subscribe(Discord, DiscordEvent.SHARD_READY)
 	@Subscribe(Discord, DiscordEvent.SHARD_RESUME)
 	private async refreshSelfId() {
@@ -151,11 +143,11 @@ export class CommandManager implements Component {
 		// if we have selfId allow mentions
 		if (this.selfId) build = `${build}|<(?:@|@!)${this.selfId}>`;
 		// find command and arguments
-		build = `${build})\\s?(?<alias>[\\w]+)\\s?(?<args>.+)?$`
+		build = `${build})\\s?(?<alias>[\\w]+)\\s?(?<args>.+)?$`;
 
 		// example of finished regex: `/^(?<prefix>=|<@!?185476724627210241>)\s?(?<command>[\w]+)\s?(?<args>.+)?$/si`
 		const matches = new RegExp(build, 'si').exec(raw);
-		
+
 		// message is not a command
 		if (!matches) return;
 		const alias = matches.groups.alias;
@@ -176,8 +168,8 @@ export class CommandManager implements Component {
 		);
 
 		// Permissions
-		if (await ctx.hasPermission(command.name) === false) {
-			return ctx.messenger.createMessage(`Sorry, You lack permission to execute this command.`);
+		if (!await ctx.hasPermission(command.name)) {
+			return ctx.messenger.createMessage('Sorry, You lack permission to execute this command.');
 		}
 
 		// Inhibitors
@@ -186,23 +178,22 @@ export class CommandManager implements Component {
 				const result = await this.inhibitorManager.execute(ctx, inhibitor);
 
 				if (result.result !== false) {
-					let message = 'An Inhibitor';
-					if (result.inhibitor) message = `Inhibitor \`${result.inhibitor}\``;
-					message = `${message} has halted execution`;
+					let inhibMessage = 'An Inhibitor';
+					if (result.inhibitor) inhibMessage = `Inhibitor \`${result.inhibitor}\``;
+					inhibMessage = `${inhibMessage} has halted execution`;
 
-					if (typeof result.result === 'string') message = `${message}: \`${result.result}\`.`;
+					if (typeof result.result === 'string') inhibMessage = `${inhibMessage}: \`${result.result}\`.`;
 
-					return ctx.messenger.createMessage(message);
+					return ctx.messenger.createMessage(inhibMessage);
 				}
 			}
 		}
-
 
 		// selfPermissions
 		if (ctx.guild && Array.isArray(definition.selfPermissions) && definition.selfPermissions.length > 0) {
 			const channelPermissions = (ctx.channel as GuildChannel).permissionsOf(this.selfId);
 			const guildPermissions = ctx.guild.permissionsOf(this.selfId);
-		
+
 			const unfufilled = [];
 			for (const permission of definition.selfPermissions) {
 				if (!guildPermissions.has(permission) && !channelPermissions.has(permission)) unfufilled.push(permission);

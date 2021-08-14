@@ -1,26 +1,28 @@
 import { Component, ComponentAPI } from '@ayanaware/bento';
-
-import { CommandContext } from '../commands';
-import { InhibitorName } from './constants';
-import { Inhibitor, InhibitorDefinition, InhibitorEntity, InhibitorFn } from './interfaces';
-import { isPromise } from '../util';
-
-import inhibitors from './Inhibitors';
-
 import { Logger } from '@ayanaware/logger-api';
+
+import { CommandContext } from '../commands/CommandContext';
+
+import Inhibitors from './Inhibitors';
+import { InhibitorName } from './constants/InhibitorType';
+import { Inhibitor, InhibitorDefinition } from './interfaces/Inhibitor';
+import type { InhibitorEntity } from './interfaces/InhibitorEntity';
+
 const log = Logger.get();
 
 export class InhibitorManager implements Component {
 	public name = '@ayanaware/bentocord:InhibitorManager';
 	public api!: ComponentAPI;
 
-	private inhibitors: Map<InhibitorName, Inhibitor> = new Map();
+	private readonly inhibitors: Map<InhibitorName, Inhibitor> = new Map();
 
-	public async onLoad() {
-		return this.addInhibitors(inhibitors);
+	// eslint-disable-next-line @typescript-eslint/require-await
+	public async onLoad(): Promise<void> {
+		return this.addInhibitors(Inhibitors);
 	}
 
-	public async onChildLoad(entity: InhibitorEntity) {
+	// eslint-disable-next-line @typescript-eslint/require-await
+	public async onChildLoad(entity: InhibitorEntity): Promise<void> {
 		try {
 			if (typeof entity.inhibitor !== 'string') throw new Error(`Inhibitor Entity "${entity.name}".inhibitor must be defined`);
 			if (!entity.inhibitor) throw new Error(`Inhibitor Entity "${entity.name}".inhibitor must be a valid string`);
@@ -33,7 +35,8 @@ export class InhibitorManager implements Component {
 		}
 	}
 
-	public async onChildUnload(entity: InhibitorEntity) {
+	// eslint-disable-next-line @typescript-eslint/require-await
+	public async onChildUnload(entity: InhibitorEntity): Promise<void> {
 		try {
 			if (typeof entity.inhibitor !== 'string') throw new Error(`Inhibitor Entity "${entity.name}".inhibitor must be defined`);
 			if (!entity.inhibitor) throw new Error(`Inhibitor Entity "${entity.name}".inhibitor must be a valid string`);
@@ -44,42 +47,48 @@ export class InhibitorManager implements Component {
 		}
 	}
 
-	public addInhibitors(inhibitors: Array<Inhibitor>) {
+	public addInhibitors(inhibitors: Array<Inhibitor>): void {
 		for (const inhibitor of inhibitors) this.addInhibitor(inhibitor);
 	}
 
-	public addInhibitor(inhibitor: Inhibitor) {
+	public addInhibitor(inhibitor: Inhibitor): void {
 		this.inhibitors.set(inhibitor.inhibitor, inhibitor);
 	}
 
-	public removeInhibitor(inhibitor: InhibitorName) {
+	public removeInhibitor(inhibitor: InhibitorName): void {
 		this.inhibitors.delete(inhibitor);
-	}	
+	}
 
+	// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 	public async execute(ctx: CommandContext, definition: InhibitorDefinition) {
-		let args: Array<any> = [];
+		const args: Array<any> = [];
 
 		const findInhibitor = (name: string) => {
-			const inhibitor = this.inhibitors.get(name);
-			if (!inhibitor) throw new Error(`Could not find inhibitor for name: ${inhibitor}`);
+			const inhib = this.inhibitors.get(name);
+			if (!inhib) throw new Error(`Could not find inhibitor for name: ${inhib}`);
 
-			return inhibitor;
-		}
+			return inhib;
+		};
 
 		let inhibitor: Inhibitor;
 		if (typeof definition === 'object') {
 			if (typeof definition.execute === 'string') {
 				const found = findInhibitor(definition.execute);
-				inhibitor = {inhibitor: definition.execute, execute: found.execute, args: definition.args, context: definition.context };
-			} else inhibitor = { execute: definition.execute, args: definition.args, context: definition.context };
-		} else if (typeof definition === 'function') inhibitor = { execute: definition };
-		else if (typeof definition === 'string') inhibitor = findInhibitor(definition);
+				inhibitor = { inhibitor: definition.execute, execute: found.execute, args: definition.args, context: definition.context };
+			} else {
+				inhibitor = { execute: definition.execute, args: definition.args, context: definition.context };
+			}
+		} else if (typeof definition === 'function') {
+			inhibitor = { execute: definition };
+		} else if (typeof definition === 'string') {
+			inhibitor = findInhibitor(definition);
+		}
 
-		if (!inhibitor) throw new Error(`Could not find inhibitor`); 
+		if (!inhibitor) throw new Error('Could not find inhibitor');
 
 		let result = inhibitor.execute.call(inhibitor.context || ctx.command, ctx, ...args);
 		if (isPromise(result)) result = await result;
 
-		return { inhibitor: inhibitor.inhibitor, result };
+		return { inhibitor: inhibitor.ainhibitor, result };
 	}
 }

@@ -1,10 +1,11 @@
 import { Guild, Member, Message, TextableChannel, TextChannel, User } from 'eris';
-import { BentocordInterface, MessageFlakes } from '../BentocordInterface';
 
-import { Discord, Messenger } from '../discord';
-import PromptManager from '../prompt';
+import { BentocordInterface, MessageSnowflakes } from '../BentocordInterface';
+import { Discord } from '../discord/Discord';
+import { Messenger } from '../discord/abstractions/Messenger';
+import { PromptManager } from '../prompt/PromptManager';
 
-import { CommandEntity } from './interfaces';
+import type { CommandEntity } from './interfaces/CommandEntity';
 
 export class CommandContext<T extends TextableChannel = TextableChannel> {
 	public readonly command: CommandEntity;
@@ -30,7 +31,7 @@ export class CommandContext<T extends TextableChannel = TextableChannel> {
 
 	public readonly messenger: Messenger;
 
-	public args: { [key: string]: any } = {};
+	public args: Record<string, unknown> = {};
 
 	public constructor(command: CommandEntity, message: Message<T>, prefix: string, alias: string, raw: string) {
 		this.command = command;
@@ -67,14 +68,14 @@ export class CommandContext<T extends TextableChannel = TextableChannel> {
 		// this.args = this.parser.results.all.filter(i => i.type == ParsedType.PHRASE).map(i => i.value);
 	}
 
-	get isMention() {
+	get isMention(): boolean {
 		return /^<@!?[0-9]+>$/.test(this.prefix);
 	}
 
 	/**
 	 * Check if command author is a owner
 	 */
-	public async isOwner() {
+	public async isOwner(): Promise<boolean> {
 		return this.interface.isOwner(this.authorId);
 	}
 
@@ -82,8 +83,8 @@ export class CommandContext<T extends TextableChannel = TextableChannel> {
 	 * Check if permission is granted
 	 * @param permission Permission
 	 */
-	public async hasPermission(permission: string) {
-		const flakes: MessageFlakes = {
+	public async hasPermission(permission: string): Promise<boolean> {
+		const flakes: MessageSnowflakes = {
 			userId: this.authorId,
 			channelId: this.channelId,
 		};

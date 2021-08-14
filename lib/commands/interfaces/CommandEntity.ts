@@ -1,13 +1,13 @@
-import { Entity } from '@ayanaware/bento';
-import { Type } from '../../types/Type';
+import { Entity, InstanceType } from '@ayanaware/bento';
 
 import { CommandContext } from '../CommandContext';
 import { CommandManager } from '../CommandManager';
+
 import { CommandDefinition } from './CommandDefinition';
 
 export interface CommandEntity extends Entity {
-	parent: Type<CommandManager>;
+	parent: InstanceType<CommandManager>;
 
-	definition: CommandDefinition;	
+	definition: CommandDefinition;
 	execute(ctx?: CommandContext): Promise<any>;
 }

@@ -14,8 +14,8 @@ export class OptionTest implements Command {
 			{
 				type: ArgumentType.STRINGS, name: 'strings', option: 'mystrings', rest: true, phraseSeperators: [',', ';', ' '],
 				prompt: { startText: 'Please type strings' },
-			}
-		]
+			},
+		],
 	};
 
 	public async execute(ctx: CommandContext) {

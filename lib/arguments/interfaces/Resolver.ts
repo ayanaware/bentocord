@@ -1,8 +1,13 @@
-import { CommandContext } from '../../commands';
-import { ArgumentType } from '../constants';
+import { CommandContext } from '../../commands/CommandContext';
+import { ArgumentType } from '../constants/ArgumentType';
+
 import { Argument } from './Argument';
 
-export type ResolverFn<T> = (ctx: CommandContext, arg: Argument, phrases: Array<string>, ...args: any) => ResolverResult<T> | Promise<ResolverResult<T>>;
+export type ResolverFn<T> = (
+	ctx: CommandContext,
+	arg: Argument,
+	phrases: Array<string>,
+	...args: any) => ResolverResult<T> | Promise<ResolverResult<T>>;
 
 export interface ResolverResult<T> {
 	value: T;

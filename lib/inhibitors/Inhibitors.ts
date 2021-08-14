@@ -1,13 +1,12 @@
-import { CommandContext } from '../commands';
-import { InhibitorType } from './constants';
-import { Inhibitor, InhibitorFn } from './interfaces';
+import { CommandContext } from '../commands/CommandContext';
 
-const inhibitors: Array<Inhibitor> = [];
-const add = (inhibitor: InhibitorType, execute: InhibitorFn) => inhibitors.push({ inhibitor, execute });
+import { InhibitorType } from './constants/InhibitorType';
+import { Inhibitor, InhibitorFn } from './interfaces/Inhibitor';
 
-add(InhibitorType.BOT_OWNER, async (ctx: CommandContext) => {
-	return (await ctx.isOwner()) === true ? false : 'User is not a bot owner';
-});
+const Inhibitors: Array<Inhibitor> = [];
+const add = (inhibitor: InhibitorType, execute: InhibitorFn) => Inhibitors.push({ inhibitor, execute });
+
+add(InhibitorType.BOT_OWNER, async (ctx: CommandContext) => (await ctx.isOwner() ? false : 'User is not a bot owner'));
 
 add(InhibitorType.CHANNEL, (ctx: CommandContext, channelIds?: Array<string>) => {
 	if (!Array.isArray(channelIds)) return false;
@@ -21,9 +20,7 @@ add(InhibitorType.USER, (ctx: CommandContext, userIds?: Array<string>) => {
 	return userIds.includes(ctx.authorId) ? false : 'User not in list';
 });
 
-add(InhibitorType.GUILD, (ctx: CommandContext) => {
-	return ctx.guild !== null ? false : 'No guild found';
-});
+add(InhibitorType.GUILD, (ctx: CommandContext) => ctx.guild !== null ? false : 'No guild found');
 
 add(InhibitorType.GUILD_OWNER, (ctx: CommandContext) => {
 	if (!ctx.guild) return true;
@@ -49,5 +46,4 @@ add(InhibitorType.GUILD_ROLE, (ctx: CommandContext, roleIds?: Array<string>, all
 	return roleIds.some(roleId => member.roles.includes(roleId)) ? false : 'User does not have any roles in the list';
 });
 
-
-export default inhibitors;
+export default Inhibitors;

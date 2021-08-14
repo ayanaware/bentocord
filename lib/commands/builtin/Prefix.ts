@@ -1,13 +1,13 @@
+import { ComponentAPI, Inject } from '@ayanaware/bento';
+
 import { TextChannel } from 'eris';
 
-import { ComponentAPI, Inject } from "@ayanaware/bento";
-
-import { ArgumentType } from '../../arguments';
 import { BentocordInterface } from '../../BentocordInterface';
-
-import { CommandDefinition, CommandEntity } from '../interfaces';
-import { CommandManager } from '../CommandManager';
+import { ArgumentType } from '../../arguments/constants/ArgumentType';
 import { CommandContext } from '../CommandContext';
+import { CommandManager } from '../CommandManager';
+import { CommandDefinition } from '../interfaces/CommandDefinition';
+import { CommandEntity } from '../interfaces/CommandEntity';
 
 export class PrefixCommand implements CommandEntity {
 	public name = '@ayanaware/bentocord:PrefixCommand';
@@ -17,14 +17,14 @@ export class PrefixCommand implements CommandEntity {
 	public definition: CommandDefinition = {
 		aliases: ['prefix', 'pfx'],
 		args: [
-			{ type: ArgumentType.STRING, name: 'prefix', rest: true, optional: true }
-		]
+			{ type: ArgumentType.STRING, name: 'prefix', rest: true, optional: true },
+		],
 	};
 
 	@Inject() private readonly interface: BentocordInterface;
 
-	public async execute(ctx: CommandContext<TextChannel>) {
-		if (!ctx.guild) return ctx.messenger.createMessage(`This command can only be run in a Guild`);
+	public async execute(ctx: CommandContext<TextChannel>): Promise<unknown> {
+		if (!ctx.guild) return ctx.messenger.createMessage('This command can only be run in a Guild');
 
 		// handle `prefix set`
 		if (ctx.args.prefix) return this.set(ctx);
@@ -35,7 +35,7 @@ export class PrefixCommand implements CommandEntity {
 
 	private async set(ctx: CommandContext<TextChannel>) {
 		// TODO: add permission check
-		const newPrefix = ctx.args.prefix;
+		const newPrefix = ctx.args.prefix as string;
 		await this.interface.setPrefix(ctx.guild.id, newPrefix);
 
 		return ctx.messenger.createMessage(`This Guild's prefix has been set to \`${newPrefix}\``);

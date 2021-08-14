@@ -1,7 +1,18 @@
 {
-	"extends": "@ayanaware/ts/config",
+	"compileOnSave": false,
+	"include": ["lib/**/*.ts"],
 	"compilerOptions": {
-		"emitDecoratorMetadata": true,
-		"skipLibCheck": true
+		"target": "ES2020",
+		"moduleResolution": "Node",
+		"module": "CommonJS",
+		"outDir": "build/",
+		"newLine": "lf",
+		"declaration": true,
+		"sourceMap": true,
+		"strict": true,
+		"strictNullChecks": false,
+		"forceConsistentCasingInFileNames": true,
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true
 	}
 }

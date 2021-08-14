@@ -1,5 +1,5 @@
-import { Token } from './interfaces';
-import { TokenType } from './constants';
+import { TokenType } from './constants/TokenType';
+import { Token } from './interfaces/Token';
 
 export class Tokenizer {
 	public tokens: Array<Token>;
@@ -15,7 +15,7 @@ export class Tokenizer {
 		this.setContent(content);
 	}
 
-	public setContent(content: string) {
+	public setContent(content: string): void {
 		if (this.isTokenizing) throw new Error('setContent() may not be called while tokenizing');
 
 		this.content = content;
@@ -26,7 +26,7 @@ export class Tokenizer {
 		this.quoteState = false;
 	}
 
-	public tokenize() {
+	public tokenize(): Array<Token> {
 		this.isTokenizing = true;
 		while (this.content && this.position < this.content.length) this.nextToken();
 
@@ -46,10 +46,11 @@ export class Tokenizer {
 	}
 
 	private match(r: RegExp) {
-		return this.content.slice(this.position).match(r);
+		return r.exec(this.content.slice(this.position));
 	}
 
 	private nextToken() {
+		// eslint-disable-next-line @typescript-eslint/unbound-method
 		const order = [this.findWhitespace, this.findOption, this.findFlag, this.findQuote, this.findWord];
 
 		for (const fn of order) {

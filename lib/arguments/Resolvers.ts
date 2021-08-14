@@ -2,6 +2,7 @@ import { AnyGuildChannel, Emoji, Member, Role, User } from 'eris';
 
 import { CommandContext } from '../commands';
 import { isPromise } from '../util';
+
 import { ArgumentType } from './constants';
 import { Argument, Resolver, ResolverFn } from './interfaces';
 
@@ -38,18 +39,20 @@ add(ArgumentType.STRINGS, async (ctx: CommandContext, arg: Argument, phrases: Ar
 	}
 
 	return { value: phrases };
-})
+});
 
 async function getChoices(ctx: CommandContext, arg: Argument) {
 	if (!arg.choices) return [];
 
-	let choices: Array<string>
+	let choices: Array<string>;
 	if (typeof arg.choices === 'function') {
 		let result = arg.choices(ctx, arg);
 		if (isPromise(result)) result = await result;
 
 		choices = result as Array<string>;
-	} else if (Array.isArray(arg.choices)) choices = arg.choices;
+	} else if (Array.isArray(arg.choices)) {
+		choices = arg.choices;
+	}
 
 	return choices;
 }
@@ -72,10 +75,10 @@ add(ArgumentType.NUMBERS, (ctx: CommandContext, arg: Argument, phrases: Array<st
 add(ArgumentType.BOOLEAN, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => {
 	const phrase = phrases.join(' ');
 
-	const findTrue = phrase.match(/^(true|yes|y|1)$/i);
+	const findTrue = /^(true|yes|y|1)$/i.exec(phrase);
 	if (findTrue) return { value: true };
 
-	const findFalse = phrase.match(/^(false|no|n|0)$/i);
+	const findFalse = /^(false|no|n|0)$/i.exec(phrase);
 	if (findFalse) return { value: false };
 
 	return null;
@@ -85,7 +88,7 @@ add(ArgumentType.BOOLEANS, (ctx: CommandContext, arg: Argument, phrases: Array<s
 	const booleanResolver = resolvers.find(r => r.type === ArgumentType.BOOLEAN);
 
 	return { value: phrases.map(phrase => booleanResolver.fn(ctx, arg, [phrase])) };
-})
+});
 
 // USER & USERS
 add(ArgumentType.USER, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => {
@@ -99,19 +102,17 @@ add(ArgumentType.USER, (ctx: CommandContext, arg: Argument, phrases: Array<strin
 	return { value: users, reduce: true, reduceDisplay, reduceExtra };
 });
 
-add(ArgumentType.USERS, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => {
-	return { value: ctx.discord.client.users.filter(u => phrases.some(p => checkUser(p, u))) };
-});
+add(ArgumentType.USERS, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => ({ value: ctx.discord.client.users.filter(u => phrases.some(p => checkUser(p, u))) }));
 
 function checkUser(phrase: string, user: User | Member) {
 	if (user.id === phrase) return true;
 
 	// handle mention
-	const id = phrase.match(/^<@!?(\d{17,19})>$/i);
+	const id = /^<@!?(\d{17,19})>$/i.exec(phrase);
 	if (id && user.id === id[1]) return true;
 
 	// handle username
-	const match = phrase.match(/([^#]+)#?(\d{4})?/i);
+	const match = /([^#]+)#?(\d{4})?/i.exec(phrase);
 	if (!match) return false;
 
 	const username = match[1];
@@ -184,7 +185,7 @@ add(ArgumentType.CHANNEL, (ctx: CommandContext, arg: Argument, phrases: Array<st
 
 	const phrase = phrases.join(' ');
 
-	const channels = ctx.guild.channels.filter(c => checkChannel(phrase, c))
+	const channels = ctx.guild.channels.filter(c => checkChannel(phrase, c));
 
 	const reduceDisplay = (c: AnyGuildChannel) => `#${c.name}`;
 	const reduceExtra = (c: AnyGuildChannel) => c.id;
@@ -201,8 +202,8 @@ add(ArgumentType.CHANNELS, (ctx: CommandContext, arg: Argument, phrases: Array<s
 function checkChannel(phrase: string, channel: AnyGuildChannel) {
 	if (channel.id === phrase) return true;
 
-	// handle mention	
-	const id = phrase.match(/^<#(\d{17,19})>$/i);
+	// handle mention
+	const id = /^<#(\d{17,19})>$/i.exec(phrase);
 	if (id && channel.id === id[1]) return true;
 
 	// handle name
@@ -234,8 +235,8 @@ add(ArgumentType.ROLES, (ctx: CommandContext, arg: Argument, phrases: Array<stri
 function checkRole(phrase: string, role: Role) {
 	if (role.id === phrase) return true;
 
-	// handle mention	
-	const id = phrase.match(/^<@&(\d{17,19})>$/i);
+	// handle mention
+	const id = /^<@&(\d{17,19})>$/i.exec(phrase);
 	if (id && role.id === id[1]) return true;
 
 	// handle name
@@ -269,7 +270,7 @@ add(ArgumentType.EMOJIS, (ctx: CommandContext, arg: Argument, phrases: Array<str
 
 	// guild emojis
 	const emojis: Array<Emoji> = ctx.guild.emojis.filter(e => phrases.some(p => checkGuildEmoji(p, e)));
-	
+
 	// unicode & custom non-guild emoji
 	phrases.map(p => extractEmoji(p)).filter(p => !!p).forEach(p => emojis.push(p));
 
@@ -278,11 +279,11 @@ add(ArgumentType.EMOJIS, (ctx: CommandContext, arg: Argument, phrases: Array<str
 
 function extractEmoji(phrase: string): Emoji {
 	// unicode
-	const unicode = phrase.match(/(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/);
+	const unicode = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/.exec(phrase);
 	if (unicode) return { id: null, name: unicode[0], require_colons: false, animated: false } as Emoji;
 
 	// custom
-	const custom = phrase.match(/^<(?<a>a)?:(?<name>[a-zA-Z0-9_]+):(?<id>\d{17,19})>$/);
+	const custom = /^<(?<a>a)?:(?<name>[a-zA-Z0-9_]+):(?<id>\d{17,19})>$/.exec(phrase);
 	if (custom) return { id: custom.groups.id, name: custom.groups.name, animated: custom.groups.a === 'a', require_colons: true } as Emoji;
 
 	return null;
