@@ -1,10 +1,12 @@
+import { isPromise } from 'util/types';
+
 import { AnyGuildChannel, Emoji, Member, Role, User } from 'eris';
 
-import { CommandContext } from '../commands';
-import { isPromise } from '../util';
+import { CommandContext } from '../commands/CommandContext';
 
-import { ArgumentType } from './constants';
-import { Argument, Resolver, ResolverFn } from './interfaces';
+import { ArgumentType } from './constants/ArgumentType';
+import { Argument } from './interfaces/Argument';
+import { Resolver, ResolverFn } from './interfaces/Resolver';
 
 const resolvers: Array<Resolver<any>> = [];
 const add = (type: ArgumentType, fn: ResolverFn<any>) => resolvers.push({ type, fn });
@@ -47,9 +49,9 @@ async function getChoices(ctx: CommandContext, arg: Argument) {
 	let choices: Array<string>;
 	if (typeof arg.choices === 'function') {
 		let result = arg.choices(ctx, arg);
-		if (isPromise(result)) result = await result;
+		if (isPromise(result)) result = await result as Array<string>;
 
-		choices = result as Array<string>;
+		choices = result;
 	} else if (Array.isArray(arg.choices)) {
 		choices = arg.choices;
 	}
@@ -59,10 +61,10 @@ async function getChoices(ctx: CommandContext, arg: Argument) {
 
 // NUMBER & NUMBERS
 add(ArgumentType.NUMBER, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => {
-	const number = parseInt(phrases.join(' '));
-	if (Number.isNaN(number)) return null;
+	const value = parseInt(phrases.join(' '), 10);
+	if (Number.isNaN(value)) return null;
 
-	return { value: number };
+	return { value };
 });
 
 add(ArgumentType.NUMBERS, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => {
@@ -102,7 +104,9 @@ add(ArgumentType.USER, (ctx: CommandContext, arg: Argument, phrases: Array<strin
 	return { value: users, reduce: true, reduceDisplay, reduceExtra };
 });
 
-add(ArgumentType.USERS, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => ({ value: ctx.discord.client.users.filter(u => phrases.some(p => checkUser(p, u))) }));
+add(ArgumentType.USERS, (ctx: CommandContext, arg: Argument, phrases: Array<string>) => (
+	{ value: ctx.discord.client.users.filter(u => phrases.some(p => checkUser(p, u))) }
+));
 
 function checkUser(phrase: string, user: User | Member) {
 	if (user.id === phrase) return true;
@@ -280,10 +284,12 @@ add(ArgumentType.EMOJIS, (ctx: CommandContext, arg: Argument, phrases: Array<str
 function extractEmoji(phrase: string): Emoji {
 	// unicode
 	const unicode = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/.exec(phrase);
+	// eslint-disable-next-line @typescript-eslint/naming-convention
 	if (unicode) return { id: null, name: unicode[0], require_colons: false, animated: false } as Emoji;
 
 	// custom
 	const custom = /^<(?<a>a)?:(?<name>[a-zA-Z0-9_]+):(?<id>\d{17,19})>$/.exec(phrase);
+	// eslint-disable-next-line @typescript-eslint/naming-convention
 	if (custom) return { id: custom.groups.id, name: custom.groups.name, animated: custom.groups.a === 'a', require_colons: true } as Emoji;
 
 	return null;

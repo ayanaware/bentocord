@@ -3,10 +3,13 @@ import Logger from '@ayanaware/logger-api';
 
 import { Message, MessageContent } from 'eris';
 
-import { Discord, DiscordEvent, Messenger } from '../discord';
+import { Discord } from '../discord/Discord';
+import { Messenger } from '../discord/abstractions/Messenger';
+import { DiscordEvent } from '../discord/constants/DiscordEvent';
 
-import { PromptRejectType } from './constants';
-import { Prompt, PromptOptions } from './interfaces';
+import { PromptRejectType } from './constants/PromptRejectType';
+import { Prompt } from './interfaces/Prompt';
+import { PromptOptions } from './interfaces/PromptOptions';
 
 const log = Logger.get();
 
@@ -44,7 +47,7 @@ export class PromptManager implements Component {
 		}
 	}
 
-	public async createPrompt(channelId: string, userId: string, content: MessageContent, options: PromptOptions = {}, time: number = 30 * 1000): Promise<any> {
+	public async createPrompt(channelId: string, userId: string, content: MessageContent, options: PromptOptions = {}, time = 30 * 1000): Promise<any> {
 		const messenger = new Messenger(this.discord, channelId);
 		const message = await messenger.createMessage(content);
 
@@ -74,7 +77,7 @@ export class PromptManager implements Component {
 		});
 	}
 
-	public async cancelPrompt(channelId: string, userId: string) {
+	public async cancelPrompt(channelId: string, userId: string): Promise<void> {
 		const key = this.getPromptKey(channelId, userId);
 		const prompt = this.prompts.get(key);
 		if (!prompt) return;
@@ -100,7 +103,7 @@ export class PromptManager implements Component {
 
 		// no validate resolve
 		if (typeof options.validate !== 'function') {
-		 	this.cleanupPrompt(prompt);
+			this.cleanupPrompt(prompt);
 			prompt.resolve(content);
 
 			return this.cleanupMessages(prompt);
@@ -108,7 +111,7 @@ export class PromptManager implements Component {
 
 		// validate resolve
 
-		let result: any;
+		let result;
 		try {
 			result = await options.validate(content);
 		} catch (e) {
@@ -145,18 +148,14 @@ export class PromptManager implements Component {
 	}
 
 	// COMMON USE PROMPTS
-	public async createConfirmPrompt(channelId: string, userId: string, content?: MessageContent, time?: number) {
-		let result: string;
+	public async createConfirmPrompt(channelId: string, userId: string, content?: MessageContent, time?: number): Promise<any> {
 		try {
 			return this.createPrompt(channelId, userId, content || 'Please confirm this action [yes/no]:', {
-				async validate(content) {
-					const findTrue = content.match(/^(true|yes|y|1)$/i);
-					if (findTrue) return true;
+				validate(c) {
+					if (/^(true|yes|y|1)$/i.exec(c)) return true;
+					if (/^(false|no|n|0)$/i.exec(c)) return false;
 
-					const findFalse = content.match(/^(false|no|n|0)$/i);
-					if (findFalse) return false;
-
-					return null;
+					return false;
 				},
 			}, time);
 		} catch (e) {

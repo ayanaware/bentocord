@@ -21,10 +21,10 @@
 		"eris": "^0.14.0"
 	},
 	"devDependencies": {
-		"@ayanaware/bento": "^1.0.0-rc.21",
+		"@ayanaware/bento": "^1.0.0-rc.22",
 		"@ayanaware/eslint-plugin": "^1.0.2",
 		"@ayanaware/logger": "^2.2.1",
-		"@types/node": "^16.4.10",
+		"@types/node": "^16.6.1",
 		"@types/ws": "^7.4.7",
 		"eris": "^0.15.1",
 		"eslint": "^7.32.0",

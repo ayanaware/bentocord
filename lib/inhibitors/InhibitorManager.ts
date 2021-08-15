@@ -1,3 +1,5 @@
+import { isPromise } from 'util/types';
+
 import { Component, ComponentAPI } from '@ayanaware/bento';
 import { Logger } from '@ayanaware/logger-api';
 
@@ -7,6 +9,7 @@ import Inhibitors from './Inhibitors';
 import { InhibitorName } from './constants/InhibitorType';
 import { Inhibitor, InhibitorDefinition } from './interfaces/Inhibitor';
 import type { InhibitorEntity } from './interfaces/InhibitorEntity';
+
 
 const log = Logger.get();
 
@@ -89,6 +92,6 @@ export class InhibitorManager implements Component {
 		let result = inhibitor.execute.call(inhibitor.context || ctx.command, ctx, ...args);
 		if (isPromise(result)) result = await result;
 
-		return { inhibitor: inhibitor.ainhibitor, result };
+		return { inhibitor: inhibitor.inhibitor, result };
 	}
 }

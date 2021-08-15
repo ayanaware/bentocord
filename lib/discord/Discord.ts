@@ -1,7 +1,7 @@
 import { Component, ComponentAPI, Subscribe, Variable } from '@ayanaware/bento';
 import { Logger } from '@ayanaware/logger-api';
 
-import { Client, ClientOptions, Guild } from 'eris';
+import { Client, ClientOptions } from 'eris';
 
 import { BentocordVariable } from '../BentocordVariable';
 

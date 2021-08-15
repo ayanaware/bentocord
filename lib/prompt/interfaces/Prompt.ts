@@ -1,4 +1,4 @@
-import { PromptRejectType } from '../constants';
+import { PromptRejectType } from '../constants/PromptRejectType';
 
 import { PromptOptions } from './PromptOptions';
 

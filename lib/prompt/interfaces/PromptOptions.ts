@@ -1,5 +1,5 @@
 export interface PromptOptions {
-	validate?: (content: string) => Promise<any>;
+	validate?: (content: string) => any | Promise<any>;
 	retries?: number;
 	retryText?: string;
 }
