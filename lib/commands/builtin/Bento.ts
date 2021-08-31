@@ -14,15 +14,16 @@ export class BentoCommand implements CommandEntity {
 
 	public definition: CommandDefinition = {
 		aliases: ['bento', 'bentocord'],
+		description: 'Display Bentocord details',
+
+		registerSlash: false,
 	};
 
-	public async execute(ctx: CommandContext): Promise<void> {
+	public async execute(ctx: CommandContext): Promise<any> {
 		const builder = new CodeblockBuilder();
 		builder.addLine('Bento Version', this.api.getBentoVersion());
 		builder.addLine('Bentocord Version', this.api.getEntity(Bentocord).version);
 
-		await ctx.messenger.createMessage(await builder.render());
-
-		return;
+		return ctx.createResponse(await builder.render());
 	}
 }

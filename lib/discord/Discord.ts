@@ -1,7 +1,7 @@
 import { Component, ComponentAPI, Subscribe, Variable } from '@ayanaware/bento';
 import { Logger } from '@ayanaware/logger-api';
 
-import { Client, ClientOptions } from 'eris';
+import { Client, ClientOptions, OAuthApplicationInfo } from 'eris';
 
 import { BentocordVariable } from '../BentocordVariable';
 
@@ -14,6 +14,8 @@ export class Discord implements Component {
 	public api!: ComponentAPI;
 
 	public client: Client;
+
+	public application: OAuthApplicationInfo;
 
 	@Variable({ name: BentocordVariable.BENTOCORD_CLIENT_OPTIONS, default: {} })
 	private readonly clientOptions: ClientOptions;
@@ -38,10 +40,15 @@ export class Discord implements Component {
 		const clientOptions = { ...this.clientOptions, ...optionsOverride };
 		clientOptions.autoreconnect = true;
 
-		this.client = new Client(token, clientOptions);
+		this.client = new Client(`Bot ${token}`, clientOptions);
 		this.api.forwardEvents(this.client, Object.values(DiscordEvent));
 
-		return this.client.connect();
+		// refresh application object
+		// https://discord.com/developers/docs/resources/application#application-object
+		this.application = await this.client.getOAuthApplication();
+		log.info(`Discord Application: ${this.application.name} (${this.application.id}).`);
+
+		await this.client.connect();
 	}
 
 	// eslint-disable-next-line @typescript-eslint/require-await

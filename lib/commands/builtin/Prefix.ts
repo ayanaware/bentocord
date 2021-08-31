@@ -3,9 +3,9 @@ import { ComponentAPI, Inject } from '@ayanaware/bento';
 import { TextChannel } from 'eris';
 
 import { BentocordInterface } from '../../BentocordInterface';
-import { ArgumentType } from '../../arguments/constants/ArgumentType';
 import { CommandContext } from '../CommandContext';
 import { CommandManager } from '../CommandManager';
+import { OptionType } from '../constants/OptionType';
 import { CommandDefinition } from '../interfaces/CommandDefinition';
 import { CommandEntity } from '../interfaces/CommandEntity';
 
@@ -15,29 +15,31 @@ export class PrefixCommand implements CommandEntity {
 	public parent = CommandManager;
 
 	public definition: CommandDefinition = {
-		aliases: ['prefix', 'pfx'],
-		args: [
-			{ type: ArgumentType.STRING, name: 'prefix', rest: true, optional: true },
+		aliases: ['prefix'],
+		description: 'Set bot prefix',
+		options: [
+			{ type: OptionType.STRING, name: 'prefix', description: 'New Prefix', required: false },
 		],
+
+		registerSlash: false,
 	};
 
 	@Inject() private readonly interface: BentocordInterface;
 
-	public async execute(ctx: CommandContext<TextChannel>): Promise<unknown> {
-		if (!ctx.guild) return ctx.messenger.createMessage('This command can only be run in a Guild');
+	public async execute(ctx: CommandContext, options: { prefix?: string }): Promise<unknown> {
+		if (!ctx.guild) return ctx.createResponse('This command can only be run in a Guild');
 
 		// handle `prefix set`
-		if (ctx.args.prefix) return this.set(ctx);
+		if (options.prefix) return this.set(ctx, options.prefix);
 
 		const prefix = await this.interface.getPrefix(ctx.guild.id);
-		return ctx.messenger.createMessage(`This Guild's prefix is \`${prefix}\`.`);
+		return ctx.createResponse(`This Guild's prefix is \`${prefix}\`.`);
 	}
 
-	private async set(ctx: CommandContext<TextChannel>) {
+	private async set(ctx: CommandContext, newPrefix: string) {
 		// TODO: add permission check
-		const newPrefix = ctx.args.prefix as string;
 		await this.interface.setPrefix(ctx.guild.id, newPrefix);
 
-		return ctx.messenger.createMessage(`This Guild's prefix has been set to \`${newPrefix}\``);
+		return ctx.createResponse(`This Guild's prefix has been set to \`${newPrefix}\``);
 	}
 }

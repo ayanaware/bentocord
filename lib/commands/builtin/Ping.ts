@@ -12,16 +12,17 @@ export class PingCommand implements CommandEntity {
 
 	public definition: CommandDefinition = {
 		aliases: ['ping', 'pong'],
+		description: 'Check if bot alive',
 	};
 
 	public async execute(ctx: CommandContext): Promise<unknown> {
 		const start = process.hrtime();
-		const message = await ctx.messenger.createMessage('Pong!');
+		await ctx.createResponse('Pong!');
 		const end = process.hrtime(start);
 
 		const s = end[0];
 		const ms = end[1] / 1000000;
 
-		return ctx.messenger.updateMessage(message, `Pong! \`${s}s ${ms}ms\``);
+		return ctx.editResponse(`Pong! \`${s}s ${ms}ms\``);
 	}
 }

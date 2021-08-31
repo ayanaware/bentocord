@@ -9,5 +9,5 @@ export interface CommandEntity extends Entity {
 	parent: InstanceType<CommandManager>;
 
 	definition: CommandDefinition;
-	execute(ctx?: CommandContext): Promise<any>;
+	execute(ctx?: CommandContext, options?: Record<string, unknown>): Promise<any>;
 }

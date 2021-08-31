@@ -9,6 +9,11 @@ export interface MessageSnowflakes {
 	roleIds?: Array<string>;
 }
 
+export interface ShardData {
+	shardIds: Array<number>;
+	shardCount: number;
+}
+
 // TODO: Add documentation
 export class BentocordInterface implements Plugin {
 	public name = '@ayanaware/bentocord:Interface';
@@ -22,19 +27,20 @@ export class BentocordInterface implements Plugin {
 	private readonly prefixes: Map<string, string> = new Map();
 	private readonly permissions: Map<string, boolean> = new Map();
 
-	// eslint-disable-next-line @typescript-eslint/require-await
+	public async getShardData(): Promise<ShardData> {
+		return { shardIds: [0], shardCount: 1 };
+	}
+
 	public async isOwner(userId: string): Promise<boolean> {
 		const owners = this.owners.split(',').map(o => o.trim());
 
 		return owners.includes(userId);
 	}
 
-	// eslint-disable-next-line @typescript-eslint/require-await
 	public async getPrefix(snowflake: string): Promise<string> {
 		return this.prefixes.get(snowflake);
 	}
 
-	// eslint-disable-next-line @typescript-eslint/require-await
 	public async setPrefix(prefix: string, snowflake: string): Promise<void> {
 		if (prefix == null) {
 			this.prefixes.delete(snowflake);
@@ -45,7 +51,6 @@ export class BentocordInterface implements Plugin {
 		this.prefixes.set(snowflake, prefix);
 	}
 
-	// eslint-disable-next-line @typescript-eslint/require-await
 	public async getPermission(permission: string, snowflake?: string, guildId?: string): Promise<boolean> {
 		let key = `${permission}`;
 		if (snowflake) key = `${snowflake}.${key}`;
@@ -54,7 +59,6 @@ export class BentocordInterface implements Plugin {
 		return this.permissions.get(key) || null;
 	}
 
-	// eslint-disable-next-line @typescript-eslint/require-await
 	public async setPermission(permission: string, value: boolean, snowflake?: string, guildId?: string): Promise<void> {
 		let key = `${permission}`;
 		if (snowflake) key = `${snowflake}.${key}`;

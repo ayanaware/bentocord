@@ -1,5 +1,3 @@
-import { isPromise } from 'util/types';
-
 import { Component, ComponentAPI } from '@ayanaware/bento';
 import { Logger } from '@ayanaware/logger-api';
 
@@ -10,9 +8,7 @@ import { InhibitorName } from './constants/InhibitorType';
 import { Inhibitor, InhibitorDefinition } from './interfaces/Inhibitor';
 import type { InhibitorEntity } from './interfaces/InhibitorEntity';
 
-
 const log = Logger.get();
-
 export class InhibitorManager implements Component {
 	public name = '@ayanaware/bentocord:InhibitorManager';
 	public api!: ComponentAPI;
@@ -89,9 +85,7 @@ export class InhibitorManager implements Component {
 
 		if (!inhibitor) throw new Error('Could not find inhibitor');
 
-		let result = inhibitor.execute.call(inhibitor.context || ctx.command, ctx, ...args);
-		if (isPromise(result)) result = await result;
-
+		const result = await inhibitor.execute.call(inhibitor.context || ctx.command, ctx, ...args);
 		return { inhibitor: inhibitor.inhibitor, result };
 	}
 }

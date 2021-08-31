@@ -4,7 +4,6 @@ import { FSEntityLoader, Plugin, PluginAPI } from '@ayanaware/bento';
 
 import { BentocordInterface } from './BentocordInterface';
 import { BentocordVariable } from './BentocordVariable';
-import { ArgumentManager } from './arguments/ArgumentManager';
 import { CommandManager } from './commands/CommandManager';
 import { Discord } from './discord/Discord';
 import { InhibitorManager } from './inhibitors/InhibitorManager';
@@ -18,10 +17,14 @@ export class Bentocord implements Plugin {
 	public fsel: FSEntityLoader;
 
 	public constructor() {
-		// ESLint Hates him, check out this one weird trick
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-var-requires, import/extensions
-		const { version } = require('../package.json');
-		this.version = version as string || 'Error';
+		try {
+			// ESLint Hates him, check out this one weird trick
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-var-requires, import/extensions
+			const { version } = require('../package.json');
+			this.version = version as string || 'Error';
+		} catch (e) {
+			this.version = 'Error';
+		}
 	}
 
 	public async onLoad(): Promise<void> {
@@ -32,7 +35,6 @@ export class Bentocord implements Plugin {
 		await entityManager.addComponents([
 			Discord,
 			CommandManager,
-			ArgumentManager,
 			PromptManager,
 			InhibitorManager,
 		]);
