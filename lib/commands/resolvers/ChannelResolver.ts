@@ -7,8 +7,8 @@ import { CommandOption } from '../interfaces/CommandOption';
 import { OptionResolver } from '../interfaces/OptionResolver';
 
 export class ChannelResolver implements OptionResolver<AnyGuildChannel> {
-	public type: OptionType.CHANNEL;
-	public convert: ApplicationCommandOptionType.Channel;
+	public type = OptionType.CHANNEL;
+	public convert = ApplicationCommandOptionType.Channel;
 
 	public async reduce(ctx: CommandContext, option: CommandOption<AnyGuildChannel>, channel: AnyGuildChannel): Promise<{ display: string, extra?: string }> {
 		return { display: `#${channel.name}`, extra: channel.id };

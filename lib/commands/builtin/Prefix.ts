@@ -1,7 +1,5 @@
 import { ComponentAPI, Inject } from '@ayanaware/bento';
 
-import { TextChannel } from 'eris';
-
 import { BentocordInterface } from '../../BentocordInterface';
 import { CommandContext } from '../CommandContext';
 import { CommandManager } from '../CommandManager';

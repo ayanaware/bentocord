@@ -7,8 +7,8 @@ import { CommandOption } from '../interfaces/CommandOption';
 import { OptionResolver } from '../interfaces/OptionResolver';
 
 export class GuildResolver implements OptionResolver<Guild> {
-	public type: OptionType.GUILD;
-	public convert: ApplicationCommandOptionType.String;
+	public type = OptionType.GUILD;
+	public convert = ApplicationCommandOptionType.String;
 
 	public async reduce?(ctx: CommandContext, option: CommandOption<Guild>, guild: Guild): Promise<{ display: string, extra?: string }> {
 		return { display: guild.name, extra: guild.id };

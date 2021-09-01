@@ -26,9 +26,6 @@ export interface CommandOption<T = unknown> {
 	/** Nested Options */
 	options?: Array<SubCommandGroupOption | SubCommandOption>;
 
-	/** Seperator used for phrase */
-	seperators?: Array<string>;
-
 	/** Consume the "rest" of available phrases */
 	rest?: boolean;
 

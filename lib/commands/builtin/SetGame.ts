@@ -18,17 +18,17 @@ export class SetGameCommand implements CommandEntity {
 		aliases: ['setgame'],
 		description: 'Set Discord Activity',
 		options: [
+			{ type: OptionType.STRING, name: 'message', description: 'Activity Name' },
 			{ type: OptionType.NUMBER, name: 'type', description: 'Activity Type', choices: [
 				{ name: 'playing', value: 0 },
 				{ name: 'streaming', value: 1 },
 				{ name: 'listening', value: 2 },
 				{ name: 'watching', value: 3 },
 				{ name: 'competing', value: 5 },
-			], default: 0 },
-			{ type: OptionType.STRING, name: 'message', description: 'Activity Name' },
+			], default: 0, required: false },
 		],
 
-		//registerSlash: false,
+		registerSlash: false,
 	};
 
 	@Inject(Discord) private readonly discord: Discord;

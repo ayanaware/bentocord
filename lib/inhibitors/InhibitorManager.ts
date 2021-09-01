@@ -30,7 +30,7 @@ export class InhibitorManager implements Component {
 
 			this.addInhibitor({ inhibitor: entity.inhibitor, execute: entity.execute, context: entity });
 		} catch (e) {
-			log.warn(e);
+			log.warn(e.toString());
 		}
 	}
 
@@ -42,7 +42,7 @@ export class InhibitorManager implements Component {
 
 			this.removeInhibitor(entity.inhibitor);
 		} catch (e) {
-			log.warn(e);
+			log.warn(e.toString());
 		}
 	}
 

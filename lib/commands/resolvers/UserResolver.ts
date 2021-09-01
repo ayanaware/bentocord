@@ -7,8 +7,8 @@ import { CommandOption } from '../interfaces/CommandOption';
 import { OptionResolver } from '../interfaces/OptionResolver';
 
 export class UserResolver implements OptionResolver<User|Member> {
-	public type: OptionType.USER;
-	public convert: ApplicationCommandOptionType.User;
+	public type = OptionType.USER;
+	public convert = ApplicationCommandOptionType.User;
 
 	public async reduce(ctx: CommandContext, option: CommandOption, user: User | Member): Promise<{ display: string, extra?: string }> {
 		let display = `${user.username}#${user.discriminator}`;

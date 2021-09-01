@@ -11,7 +11,7 @@ export interface Prompt {
 	attempt?: number;
 
 	resolve: (value?: string) => void;
-	reject: (reason?: PromptRejectType) => void;
+	reject: (reason?: PromptRejectType | any) => void;
 
 	refresh: () => void;
 	timeout?: NodeJS.Timeout;

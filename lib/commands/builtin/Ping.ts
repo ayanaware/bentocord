@@ -13,6 +13,8 @@ export class PingCommand implements CommandEntity {
 	public definition: CommandDefinition = {
 		aliases: ['ping', 'pong'],
 		description: 'Check if bot alive',
+
+		registerSlash: false,
 	};
 
 	public async execute(ctx: CommandContext): Promise<unknown> {

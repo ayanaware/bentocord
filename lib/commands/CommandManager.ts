@@ -1,14 +1,14 @@
-import { notDeepStrictEqual } from 'assert';
 import * as util from 'util';
 
 import { Component, ComponentAPI, Inject, Subscribe, Variable } from '@ayanaware/bento';
 import { Logger } from '@ayanaware/logger-api';
 
 import {
-	APIApplicationCommand,
 	APIApplicationCommandInteraction,
+	APIApplicationCommandInteractionData,
 	APIApplicationCommandOption,
 	ApplicationCommandOptionType,
+	InteractionType,
 } from 'discord-api-types';
 import { GuildChannel, Message } from 'eris';
 
@@ -20,13 +20,23 @@ import { DiscordEvent } from '../discord/constants/DiscordEvent';
 import { CommandContext, InteractionCommandContext, MessageCommandContext } from './CommandContext';
 import { APPLICATION_COMMANDS, APPLICATION_GUILD_COMMANDS } from './constants/API';
 import { OptionType } from './constants/OptionType';
-import {	ApplicationCommand,	ApplicationCommandOption } from './interfaces/ApplicationCommand';
+import { ApplicationCommand, ApplicationCommandOption } from './interfaces/ApplicationCommand';
 import type { CommandEntity } from './interfaces/CommandEntity';
-import { AnyCommandOption, CommandOption, SubCommandGroupOption, SubCommandOption } from './interfaces/CommandOption';
+import { AnyCommandOption, CommandOption } from './interfaces/CommandOption';
+import { InteractionDataOption } from './interfaces/Interaction';
 import { OptionResolver } from './interfaces/OptionResolver';
 import { ParsedItem, Parser, ParserOutput } from './internal/Parser';
 import { Tokenizer } from './internal/Tokenizer';
 import { Resolvers } from './resolvers';
+
+export interface SyncOptions {
+	/** Should unspecified commands be removed */
+	delete?: boolean | 'prefix';
+	/** Prefix all command names with this string */
+	prefix?: string;
+	/** Register in this guild or globally */
+	guildId?: string;
+}
 
 const log = Logger.get(null);
 export class CommandManager implements Component {
@@ -35,9 +45,6 @@ export class CommandManager implements Component {
 
 	@Variable({ name: BentocordVariable.BENTOCORD_COMMAND_PREFIX, default: 'bentocord' })
 	public defaultPrefix: string;
-
-	@Variable({ name: BentocordVariable.BENTOCORD_APPLICATION_ID, default: null })
-	public applicationId: string;
 
 	@Inject() private readonly interface: BentocordInterface;
 	@Inject() private readonly discord: Discord;
@@ -58,7 +65,7 @@ export class CommandManager implements Component {
 		try {
 			this.addCommand(entity);
 		} catch (e) {
-			log.warn(e);
+			log.warn(e.toString());
 		}
 	}
 
@@ -66,7 +73,7 @@ export class CommandManager implements Component {
 		try {
 			this.removeCommand(entity);
 		} catch (e) {
-			log.warn(e);
+			log.warn(e.toString());
 		}
 	}
 
@@ -78,9 +85,9 @@ export class CommandManager implements Component {
 		this.resolvers.delete(type);
 	}
 
-	private async executeResolver(ctx: CommandContext, option: CommandOption, input: string) {
-		const resolver = this.resolvers.get(option.type);
-		if (!resolver) return input;
+	private async executeResolver<T = unknown>(ctx: CommandContext, option: CommandOption<T>, input: string) {
+		const resolver = this.resolvers.get(option.type) as OptionResolver<T>;
+		if (!resolver) return null;
 
 		return resolver.resolve(ctx, option, input);
 	}
@@ -118,7 +125,7 @@ export class CommandManager implements Component {
 	}
 
 	public findCommand(alias: string): CommandEntity {
-		alias = alias.toLowerCase();
+		if (alias) alias = alias.toLowerCase();
 
 		// convert alias to primary alias
 		const primary = this.aliases.get(alias);
@@ -164,36 +171,55 @@ export class CommandManager implements Component {
 		}
 	}
 
-	public async syncCommands(commands: Array<ApplicationCommand>, guildId?: string): Promise<unknown> {
+	public async syncCommands(commandsIn: Array<ApplicationCommand>, opts?: SyncOptions): Promise<unknown> {
+		opts = Object.assign({ delete: true, prefix: null }, opts);
+
+		// want to avoid reference weirdness so we preform a deep copy of commands
+		// has the added benifit of yeeting any properties / functions we dont care about
+		const commands: Array<ApplicationCommand> = JSON.parse(JSON.stringify(commandsIn)) as Array<ApplicationCommand>;
+
 		const applicationId = this.discord.application.id;
 		if (!applicationId) throw new Error('Failed to infer application_id');
 
-		const discordCommands = await this.discord.client.requestHandler.request('GET', guildId ? APPLICATION_GUILD_COMMANDS(applicationId, guildId) : APPLICATION_COMMANDS(applicationId), true) as Array<APIApplicationCommand>;
-		const commandIds: Set<string> = new Set(discordCommands.map(c => c.id));
+		// Determine route
+		let apiRoute = APPLICATION_COMMANDS(applicationId);
+		if (opts.guildId) apiRoute = APPLICATION_GUILD_COMMANDS(applicationId, opts.guildId);
 
-		const bulkUpdate: Array<ApplicationCommand> = [];
+		const discordCommands = await this.discord.client.requestHandler.request('GET', apiRoute, true) as Array<ApplicationCommand>;
+		const commandIds: Set<string> = new Set();
+
+		const bulkOverwrite: Array<ApplicationCommand> = [];
 		for (const command of commands) {
-			if (guildId) command.guild_id = guildId;
+			if (opts.prefix) command.name = `${opts.prefix}${command.name}`;
+			if (opts.guildId) command.guild_id = opts.guildId;
 
+			// Update command if it already exists
 			const discordCommand = discordCommands.find(c => c.name === command.name);
-			if (discordCommand) {
+			if (discordCommand && discordCommand.id) {
 				command.id = discordCommand.id;
-				commandIds.delete(discordCommand.id); // consumed
-
-				try {
-					notDeepStrictEqual(command, discordCommand);
-					bulkUpdate.push(command);
-				} catch (e) { /* NO-OP */ }
-
-				continue;
+				commandIds.add(discordCommand.id); // consumed
 			}
 
-			bulkUpdate.push(command);
+			bulkOverwrite.push(command);
 		}
 
-		// TODO: unconsumed commandIds should be deleted
+		// Delete prefix enabled and prefix exists... Only delete other commands with same prefix
+		if (opts.delete === 'prefix' && opts.prefix) {
+			for (const discordCommand of discordCommands) {
+				if (!discordCommand.name.startsWith(opts.prefix)) bulkOverwrite.push(discordCommand);
+			}
+		} else if ((typeof opts.delete === 'boolean' && !opts.delete) || typeof opts.delete !== 'boolean') {
+			for (const discordCommand of discordCommands) {
+				if (!Array.from(commandIds).includes(discordCommand.id)) {
+					bulkOverwrite.push(discordCommand);
+					commandIds.add(discordCommand.id);
+				}
+			}
+		}
 
-		return this.discord.client.requestHandler.request('PUT', guildId ? APPLICATION_GUILD_COMMANDS(applicationId, guildId) : APPLICATION_COMMANDS(applicationId), true, bulkUpdate as any);
+		console.log(bulkOverwrite);
+
+		return this.discord.client.requestHandler.request('PUT', apiRoute, true, bulkOverwrite as any);
 	}
 
 	public convertCommands(): Array<ApplicationCommand> {
@@ -262,7 +288,21 @@ export class CommandManager implements Component {
 
 			// Convert to Discord ApplicationCommandOptionType
 			const resolver = this.resolvers.get(option.type);
-			appOption.type = resolver.convert || ApplicationCommandOptionType.String;
+			appOption.type = resolver ? resolver.convert : ApplicationCommandOptionType.String;
+
+			// Prepend type information to description
+			let typeBuild = '[';
+			if (typeof option.type === 'number') typeBuild += OptionType[option.type];
+			else typeBuild += option.type;
+
+			// handle array
+			if (option.array) typeBuild += ', ...';
+			typeBuild += ']';
+
+			appOption.description = `${typeBuild} ${appOption.description}`;
+
+			// Bentocord Array support
+			if (option.array) appOption.type = ApplicationCommandOptionType.String;
 
 			// choices support
 			if (option.choices) appOption.choices = option.choices;
@@ -279,40 +319,31 @@ export class CommandManager implements Component {
 		return collector;
 	}
 
-	public async fufillInteractionOptions(ctx: CommandContext, options: Array<SubCommandGroupOption | SubCommandOption | CommandOption>, data: APIApplicationCommandInteraction): Promise<Record<string, unknown>> {
+	public async fufillInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, data: APIApplicationCommandInteractionData): Promise<Record<string, unknown>> {
 		return this.processInteractionOptions(ctx, options, data.options);
 	}
 
-	private async processInteractionOptions(ctx: CommandContext, options: Array<SubCommandGroupOption | SubCommandOption | CommandOption>, interactionOption: Array<InteractionDataOption>) {
+	private async processInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, optionData: Array<InteractionDataOption>) {
 		let collector: Record<string, unknown> = {};
 
 		if (!options) options = [];
-		if (!interactionOption) interactionOption = [];
+		if (!optionData) optionData = [];
 
 		for (const option of options) {
-			const data = interactionOption.find(d => d.name === option.name);
+			const data = optionData.find(d => d.name === option.name);
 
+			// Handle SubCommand & SubCommandGroup
 			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {
-				const subOptions = option.options;
-				if (typeof subOptions !== 'object') throw new Error('Subcommand or Group options must be defined');
-
-				collector = { ...collector, [option.name]: await this.processInteractionOptions(ctx, subOptions, data ? data.options : null) };
+				let subInteractionOptions: Array<InteractionDataOption>;
+				if (data) subInteractionOptions = data.options;
+				collector = { ...collector, [option.name]: await this.processInteractionOptions(ctx, option.options, subInteractionOptions) };
 
 				continue;
 			}
 
-			// seperators
-			let values: Array<unknown> = [];
-			if (data && typeof data.value === 'string' && Array.isArray(option.seperators) && option.seperators.length > 0) {
-				const regex = new RegExp(option.seperators.join('|'), 'gi');
-				values = data.value.split(regex).map(v => v.trim());
-			} else if (data && data.value) {
-				values = [data.value];
-			}
+			const value: string = data?.value.toString();
 
-			values = values.filter(i => !!i);
-
-			collector = { ...collector, [option.name]: await this.resolveOption(ctx, option, values) };
+			collector = { ...collector, [option.name]: await this.resolveOption(ctx, option, value) };
 		}
 
 		return collector;
@@ -323,7 +354,7 @@ export class CommandManager implements Component {
 	 * @param options Array of CommandOption
 	 * @param input User input
 	 */
-	public async fufillTextOptions(ctx: CommandContext, options: Array<SubCommandGroupOption | SubCommandOption | CommandOption>, input: string): Promise<Record<string, unknown>> {
+	public async fufillTextOptions(ctx: CommandContext, options: Array<AnyCommandOption>, input: string): Promise<Record<string, unknown>> {
 		const tokens = new Tokenizer(input).tokenize();
 
 		// TODO: Build allowedOptions
@@ -332,7 +363,7 @@ export class CommandManager implements Component {
 		return this.processTextOptions(ctx, options, output);
 	}
 
-	private async processTextOptions(ctx: CommandContext, options: Array<SubCommandGroupOption | SubCommandOption | CommandOption>, output: ParserOutput, index = 0): Promise<Record<string, unknown>> {
+	private async processTextOptions(ctx: CommandContext, options: Array<AnyCommandOption>, output: ParserOutput, index = 0): Promise<Record<string, unknown>> {
 		let collector: Record<string, unknown> = {};
 
 		if (!options) options = [];
@@ -341,78 +372,93 @@ export class CommandManager implements Component {
 			if (option.type === OptionType.SUB_COMMAND_GROUP || option.type === OptionType.SUB_COMMAND) {
 				// phrase is a single element
 				const phrase = output.phrases[index];
-				const subOptions = option.options;
-				if (typeof subOptions !== 'object') throw new Error('Subcommand or Group options must be defined');
-
 				// validate arg matches subcommand or group name
 				if (option.name !== phrase.value) continue;
 
 				index++;
 
 				// process nested option
-				collector = { ...collector, [option.name]: await this.processTextOptions(ctx, subOptions, output, index) };
-
+				collector = { ...collector, [option.name]: await this.processTextOptions(ctx, option.options, output, index) };
 				continue;
 			}
 
-			// option support
+			let value: string;
 			const textOption = output.options.find(o => o.key.toLowerCase() === option.name.toLowerCase());
 			if (textOption) {
-				// seperators
-				let optionValues: Array<string> = [textOption.value];
-				if (Array.isArray(option.seperators) && option.seperators.length > 0) {
-					const regex = new RegExp(option.seperators.join('|'), 'gi');
-					optionValues = textOption.value.split(regex).map(v => v.trim());
-				}
-				optionValues = optionValues.filter(i => !!i);
+				value = textOption.value;
+			} else {
+				// phrase
+				let phrases: Array<ParsedItem> = [];
+				if (option.rest) phrases = output.phrases.slice(index, option.limit || Infinity);
+				else if (output.phrases.length > index) phrases = [output.phrases[index]];
 
-				collector = { ...collector, [option.name]: await this.resolveOption(ctx, option, optionValues) };
+				// consume
+				index += phrases.length;
 
-				continue;
+				value = phrases.join(' ');
 			}
 
-			// phrase
-			let phrases: Array<ParsedItem> = [];
-			if (option.rest) phrases = output.phrases.slice(index, option.limit || Infinity);
-			else if (output.phrases.length > index) phrases = [output.phrases[index]];
-
-			// consume
-			index += phrases.length;
-
-			// seperators
-			let values: Array<string> = phrases.map(p => p.value);
-			if (Array.isArray(option.seperators) && option.seperators.length > 0) {
-				const regex = new RegExp(option.seperators.join('|'), 'gi');
-				values = phrases.join(' ').split(regex).map(v => v.trim());
-			}
-			options = options.filter(i => !!i);
-
-			collector = { ...collector, [option.name]: await this.resolveOption(ctx, option, values) };
+			collector = { ...collector, [option.name]: await this.resolveOption(ctx, option, value) };
 		}
 
 		return collector;
 	}
 
-	private async resolveOption(ctx: CommandContext, option: CommandOption, values: Array<unknown>): Promise<unknown> {
-		let value = null;
-		if (values.length > 0) value = await this.executeResolver(ctx, option, values);
+	private async resolveOption<T = unknown>(ctx: CommandContext, option: CommandOption<T>, raw: string): Promise<T | Array<T>> {
+		// array support
+		let inputs: Array<string> = option.array ? raw.split(/,\s?/gi) : [raw];
+		inputs = inputs.filter(i => !!i);
 
-		// failed to resolve
-		if (value == null) {
-			// maybe do something here
+		const value: Array<T> = [];
+		for (const item of inputs) {
+			let result = await this.executeResolver(ctx, option, item);
+			if (result == null) {
+				// Resolve failed, prompt!
+			}
+
+			// Multiple matches, TODO: reduce
+			if (Array.isArray(result)) result = result[0];
+
+			if (result !== undefined) value.push(result);
 		}
 
-		// TODO: Prompting
+		let out: T | Array<T> = value;
+
+		// unwrap array if need be
+		if (!option.array && Array.isArray(out)) out = out[0];
 
 		// default value
-		if (value == null && option.default !== undefined) value = option.default;
+		if ((out == null || (Array.isArray(out) && out.length === 0)) && option.default !== undefined) out = option.default;
 
-		// required
-		if (value == null && (typeof option.required !== 'boolean' || option.required)) throw new Error(`Failed to resolve required option "${option.name}"`);
+		// required value
+		if ((out == null || (Array.isArray(out) && out.length === 0)) && (typeof option.required !== 'boolean' || option.required)) throw new Error(`Failed to resolve required option "${option.name}"`);
 
 		// TODO: Transform function
+		return out;
+	}
 
-		return value;
+	// eslint-disable-next-line @typescript-eslint/member-ordering
+	private alreadySynced = false;
+	@Subscribe(Discord, DiscordEvent.SHARD_READY)
+	private async syncTestGuildsSlashCommands() {
+		if (this.alreadySynced) return;
+
+		// get test guild list
+		const testGuilds = this.api.getVariable<string>({ name: BentocordVariable.BENTOCORD_TEST_GUILDS, default: '' }).split(',').map(g => g.trim());
+		if (testGuilds.length < 1) return;
+
+		const commands = this.convertCommands();
+		for (const guildId of testGuilds) {
+			await this.syncCommands(commands, {
+				delete: 'prefix',
+				prefix: 'test-',
+				guildId,
+			});
+		}
+
+		log.info(`Successfully synced "${commands.length}" slash commnads in: "${testGuilds.join(', ')}"`);
+
+		this.alreadySynced = true;
 	}
 
 	@Subscribe(Discord, DiscordEvent.SHARD_READY)
@@ -427,19 +473,21 @@ export class CommandManager implements Component {
 		if (pkt.op !== 0 || pkt.t !== 'INTERACTION_CREATE') return; // Limit to Interaction Create
 
 		// Only handle APPLICATION_COMMAND interactions
-		const interaction = pkt.d as unknown as Interaction;
-		if (interaction.type !== InteractionType.APPLICATION_COMMAND) return;
+		const interaction = pkt.d as unknown as APIApplicationCommandInteraction;
+		if (interaction.type !== InteractionType.ApplicationCommand) return;
 
 		const data = interaction.data;
 
-		const command = this.findCommand(data.name);
-		if (!command) return; // command not found
+		let command = this.findCommand(data.name);
+		if (!command) {
+			if (data.name.startsWith('test-')) command = this.findCommand(data.name.replace(/^test-/i, ''));
+			if (!command) return; // command not found
+		}
 
 		const definition = command.definition;
-		if (!definition.registerSlash) return; // slash disabled
+		if (typeof definition.registerSlash === 'boolean' && !definition.registerSlash) return; // slash disabled
 
 		const ctx = new InteractionCommandContext(command, interaction);
-
 		try {
 			const options = await this.fufillInteractionOptions(ctx, definition.options, data);
 			return this.executeCommand(command, ctx, options);
@@ -494,7 +542,6 @@ export class CommandManager implements Component {
 
 		// CommandContext
 		const ctx = new MessageCommandContext(command, message);
-
 		try {
 			const options = await this.fufillTextOptions(ctx, definition.options, args);
 			return this.executeCommand(command, ctx, options);
