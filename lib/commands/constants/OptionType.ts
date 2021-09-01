@@ -4,22 +4,24 @@ export enum OptionType {
 	SUB_COMMAND_GROUP,
 
 	// PRIMITIVES
+	/** boolean */
 	BOOLEAN,
+	/** number */
 	NUMBER,
+	/** string */
 	STRING,
 
-	// Discord User
+	// DISCORD
+	/** User, Member if in guild */
 	USER,
-	MEMBER,
 
-	// Discord Channel
+	/** Guild Channel */
 	CHANNEL,
-	TEXT_CHANNEL,
-	VOICE_CHANNEL,
 
-	// Discord Guild
-	GUILD,
-
-	// Discord Roles
+	/** Guild Role */
 	ROLE,
+
+	// DISCORD SPECIAL
+	/** Guild */
+	GUILD,
 }

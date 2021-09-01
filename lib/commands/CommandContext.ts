@@ -1,3 +1,4 @@
+import { APIApplicationCommandInteraction, APIApplicationCommandInteractionDataOptionWithValues, APIApplicationCommandOption } from 'discord-api-types';
 import { Guild, GuildTextableChannel, Member, Message, MessageContent, MessageFile, TextableChannel, TextChannel, User } from 'eris';
 
 import { BentocordInterface, MessageSnowflakes } from '../BentocordInterface';
@@ -6,7 +7,6 @@ import { PromptManager } from '../prompt/PromptManager';
 
 import { INTERACTION_MESSAGE, INTERACTION_RESPONSE } from './constants/API';
 import type { CommandEntity } from './interfaces/CommandEntity';
-import { Interaction, InteractionResponse, InteractionResponseType } from './structures/Interaction';
 
 export abstract class CommandContext {
 	public command: CommandEntity;
@@ -51,13 +51,13 @@ export abstract class CommandContext {
 export class InteractionCommandContext extends CommandContext {
 	public type: 'interaction' = 'interaction';
 
-	public interaction: Interaction;
+	public interaction: APIApplicationCommandInteraction;
 
 	public channel?: GuildTextableChannel;
 
 	private hasResponded = false;
 
-	public constructor(command: CommandEntity, interaction: Interaction) {
+	public constructor(command: CommandEntity, interaction: APIApplicationCommandInteraction) {
 		super(command);
 
 		this.interaction = interaction;
@@ -91,7 +91,7 @@ export class InteractionCommandContext extends CommandContext {
 		if (typeof content === 'string') content = { content };
 		// TODO: handle allowed_mentions
 
-		const response: InteractionResponse = {
+		const response:  = {
 			type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
 			data: content,
 		};

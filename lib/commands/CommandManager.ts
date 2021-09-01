@@ -4,6 +4,12 @@ import * as util from 'util';
 import { Component, ComponentAPI, Inject, Subscribe, Variable } from '@ayanaware/bento';
 import { Logger } from '@ayanaware/logger-api';
 
+import {
+	APIApplicationCommand,
+	APIApplicationCommandInteraction,
+	APIApplicationCommandOption,
+	ApplicationCommandOptionType,
+} from 'discord-api-types';
 import { GuildChannel, Message } from 'eris';
 
 import { BentocordInterface } from '../BentocordInterface';
@@ -12,21 +18,15 @@ import { Discord } from '../discord/Discord';
 import { DiscordEvent } from '../discord/constants/DiscordEvent';
 
 import { CommandContext, InteractionCommandContext, MessageCommandContext } from './CommandContext';
-import resolvers from './OptionResolvers';
 import { APPLICATION_COMMANDS, APPLICATION_GUILD_COMMANDS } from './constants/API';
 import { OptionType } from './constants/OptionType';
+import {	ApplicationCommand,	ApplicationCommandOption } from './interfaces/ApplicationCommand';
 import type { CommandEntity } from './interfaces/CommandEntity';
-import { CommandOption, SubCommandGroupOption, SubCommandOption } from './interfaces/CommandOption';
-import { OptionResolverFn } from './interfaces/OptionResolver';
+import { AnyCommandOption, CommandOption, SubCommandGroupOption, SubCommandOption } from './interfaces/CommandOption';
+import { OptionResolver } from './interfaces/OptionResolver';
 import { ParsedItem, Parser, ParserOutput } from './internal/Parser';
 import { Tokenizer } from './internal/Tokenizer';
-import {
-	ApplicationCommand,
-	ApplicationCommandOption,
-	ApplicationCommandOptionType,
-	ApplicationCommandType,
-} from './structures/ApplicationCommand';
-import { Interaction, InteractionData, InteractionDataOption, InteractionType } from './structures/Interaction';
+import { Resolvers } from './resolvers';
 
 const log = Logger.get(null);
 export class CommandManager implements Component {
@@ -42,7 +42,7 @@ export class CommandManager implements Component {
 	@Inject() private readonly interface: BentocordInterface;
 	@Inject() private readonly discord: Discord;
 
-	private readonly resolvers: Map<string | OptionType, OptionResolverFn<unknown>> = new Map();
+	private readonly resolvers: Map<OptionType | string, OptionResolver<unknown>> = new Map();
 
 	private readonly commands: Map<string, CommandEntity> = new Map();
 	private readonly aliases: Map<string, string> = new Map();
@@ -50,7 +50,8 @@ export class CommandManager implements Component {
 	private selfId: string = null;
 
 	public async onLoad(): Promise<void> {
-		for (const resolver of resolvers) this.addResolver(resolver.type, resolver.fn);
+		// Load built-in resolvers
+		Resolvers.forEach(resolver => this.addResolver(resolver));
 	}
 
 	public async onChildLoad(entity: CommandEntity): Promise<void> {
@@ -69,19 +70,19 @@ export class CommandManager implements Component {
 		}
 	}
 
-	public addResolver(type: string | OptionType, fn: OptionResolverFn<unknown>): void {
-		this.resolvers.set(type, fn);
+	public addResolver(resolver: OptionResolver<unknown>): void {
+		this.resolvers.set(resolver.type, resolver);
 	}
 
-	public removeResolver(type: string | OptionType): void {
+	public removeResolver(type: OptionType | string): void {
 		this.resolvers.delete(type);
 	}
 
-	private async executeResolver(ctx: CommandContext, option: CommandOption, phrases: Array<unknown>) {
-		const fn = this.resolvers.get(option.type);
-		if (!fn) return phrases;
+	private async executeResolver(ctx: CommandContext, option: CommandOption, input: string) {
+		const resolver = this.resolvers.get(option.type);
+		if (!resolver) return input;
 
-		return fn.call(ctx.command, ctx, option, phrases);
+		return resolver.resolve(ctx, option, input);
 	}
 
 	public addCommand(entity: CommandEntity): void {
@@ -167,7 +168,7 @@ export class CommandManager implements Component {
 		const applicationId = this.discord.application.id;
 		if (!applicationId) throw new Error('Failed to infer application_id');
 
-		const discordCommands = await this.discord.client.requestHandler.request('GET', guildId ? APPLICATION_GUILD_COMMANDS(applicationId, guildId) : APPLICATION_COMMANDS(applicationId), true) as Array<ApplicationCommand>;
+		const discordCommands = await this.discord.client.requestHandler.request('GET', guildId ? APPLICATION_GUILD_COMMANDS(applicationId, guildId) : APPLICATION_COMMANDS(applicationId), true) as Array<APIApplicationCommand>;
 		const commandIds: Set<string> = new Set(discordCommands.map(c => c.id));
 
 		const bulkUpdate: Array<ApplicationCommand> = [];
@@ -196,7 +197,7 @@ export class CommandManager implements Component {
 	}
 
 	public convertCommands(): Array<ApplicationCommand> {
-		const collector = [];
+		const collector: Array<ApplicationCommand> = [];
 
 		for (const command of this.commands.values()) {
 			const definition = command.definition;
@@ -222,14 +223,14 @@ export class CommandManager implements Component {
 		if (typeof definition.registerSlash === 'boolean' && !definition.registerSlash) throw new Error(`${command.name}: Command "${definition.aliases[0]}" has disabled slash conversion`);
 
 		// infer application_id
-		if (!this.discord.application.id) throw new Error('Failed to find application_id');
+		const applicationId = this.discord.application.id;
+		if (!applicationId) throw new Error('Failed to find application_id');
 
 		const appCommand: ApplicationCommand = {
-			type: ApplicationCommandType.CHAT_INPUT,
 			name: definition.aliases[0],
 			description: definition.description,
 
-			application_id: this.discord.application.id,
+			application_id: applicationId,
 			default_permission: true,
 		};
 
@@ -244,59 +245,30 @@ export class CommandManager implements Component {
 	 * @param options Array of CommandOptions
 	 * @returns ApplicationCommandOption Structure
 	 */
-	private convertOptions(options: Array<SubCommandGroupOption | SubCommandOption | CommandOption>) {
-		const collector: Array<ApplicationCommandOption> = [];
+	private convertOptions(options: Array<AnyCommandOption>) {
+		const collector: Array<APIApplicationCommandOption> = [];
 
 		// drop SubCommandGroupOption & SubCommandOption special types
 		for (const option of options as Array<CommandOption>) {
 			const appOption: ApplicationCommandOption = { type: null, name: option.name, description: option.description };
 
-			// choices support
-			if (option.choices) {
-				appOption.choices = [];
-				for (const choice of option.choices) {
-					appOption.choices.push({ name: choice.name, value: choice.value.toString() });
-				}
+			// Handle Special Subcommand & SubcommandGroup OptionTypes
+			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {
+				appOption.type = option.type === OptionType.SUB_COMMAND ? ApplicationCommandOptionType.Subcommand : ApplicationCommandOptionType.SubcommandGroup;
+				appOption.options = this.convertOptions(option.options);
+
+				continue;
 			}
+
+			// Convert to Discord ApplicationCommandOptionType
+			const resolver = this.resolvers.get(option.type);
+			appOption.type = resolver.convert || ApplicationCommandOptionType.String;
+
+			// choices support
+			if (option.choices) appOption.choices = option.choices;
 
 			// required support
-			appOption.required = !!option.required;
-
-			switch (option.type) {
-				case OptionType.SUB_COMMAND:
-				case OptionType.SUB_COMMAND_GROUP: {
-					appOption.type = option.type === OptionType.SUB_COMMAND ? ApplicationCommandOptionType.SUB_COMMAND : ApplicationCommandOptionType.SUB_COMMAND_GROUP;
-					appOption.options = this.convertOptions(option.options);
-				}
-
-				case OptionType.NUMBER: {
-					appOption.type = ApplicationCommandOptionType.NUMBER;
-				}
-
-				case OptionType.BOOLEAN: {
-					appOption.type = ApplicationCommandOptionType.BOOLEAN;
-				}
-
-				case OptionType.USER:
-				case OptionType.MEMBER: {
-					appOption.type = ApplicationCommandOptionType.USER;
-				}
-
-				case OptionType.CHANNEL:
-				case OptionType.TEXT_CHANNEL:
-				case OptionType.VOICE_CHANNEL: {
-					appOption.type = ApplicationCommandOptionType.CHANNEL;
-				}
-
-				case OptionType.ROLE: {
-					appOption.type = ApplicationCommandOptionType.ROLE;
-				}
-
-				default: {
-					// default & unresolved types are strings
-					appOption.type = ApplicationCommandOptionType.STRING;
-				}
-			}
+			appOption.required = typeof option.required === 'boolean' ? option.required : true;
 
 			// failed to convert option
 			if (option.type === null) continue;
@@ -307,7 +279,7 @@ export class CommandManager implements Component {
 		return collector;
 	}
 
-	public async fufillInteractionOptions(ctx: CommandContext, options: Array<SubCommandGroupOption | SubCommandOption | CommandOption>, data: InteractionData): Promise<Record<string, unknown>> {
+	public async fufillInteractionOptions(ctx: CommandContext, options: Array<SubCommandGroupOption | SubCommandOption | CommandOption>, data: APIApplicationCommandInteraction): Promise<Record<string, unknown>> {
 		return this.processInteractionOptions(ctx, options, data.options);
 	}
 
@@ -470,7 +442,6 @@ export class CommandManager implements Component {
 
 		try {
 			const options = await this.fufillInteractionOptions(ctx, definition.options, data);
-			console.log(ctx, options);
 			return this.executeCommand(command, ctx, options);
 		} catch (e) {
 			log.error(`Command "${command.name}" option error:\n${util.inspect(e)}`);

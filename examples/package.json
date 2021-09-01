@@ -8,7 +8,7 @@
 		"@ayanaware/bento": "^1.0.0-rc.23",
 		"@ayanaware/bentocord": "../build",
 		"@ayanaware/logger": "^2.0.0-beta.3",
-		"@types/node": "^16.7.8",
+		"@types/node": "^16.7.9",
 		"eris": "^0.15.1",
 		"typescript": "^4.4.2"
 	},

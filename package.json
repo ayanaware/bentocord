@@ -19,13 +19,13 @@
 	},
 	"peerDependencies": {
 		"@ayanaware/bento": "^1.0.0-rc.14",
-		"eris": "^0.14.0"
+		"eris": "DonovanDMC/eris#everything"
 	},
 	"devDependencies": {
 		"@ayanaware/bento": "^1.0.0-rc.23",
 		"@ayanaware/eslint-plugin": "^1.0.2",
 		"@ayanaware/logger": "^2.2.1",
-		"@types/node": "^16.7.1",
+		"@types/node": "^16.7.10",
 		"@types/ws": "^7.4.7",
 		"eris": "^0.15.1",
 		"eslint": "^7.32.0",

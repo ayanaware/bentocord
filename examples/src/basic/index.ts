@@ -12,9 +12,9 @@ import { Bentocord, CommandManager } from '@ayanaware/bentocord';
 	const cm = app.bento.getComponent(CommandManager);
 
 	const slashCommands = cm.convertCommands();
+	console.log(JSON.stringify(slashCommands, null, 2));
 
-	const result = await cm.syncCommands(slashCommands, '508903834853310474');
-
+	const result = await cm.syncCommands(slashCommands);
 	console.log(JSON.stringify(result, null, 2));
 })().catch(e => {
 	console.log(e);
