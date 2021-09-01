@@ -217,8 +217,6 @@ export class CommandManager implements Component {
 			}
 		}
 
-		console.log(bulkOverwrite);
-
 		return this.discord.client.requestHandler.request('PUT', apiRoute, true, bulkOverwrite as any);
 	}
 
