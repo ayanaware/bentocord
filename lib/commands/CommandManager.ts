@@ -31,9 +31,7 @@ import { Resolvers } from './resolvers';
 
 export interface SyncOptions {
 	/** Should unspecified commands be removed */
-	delete?: boolean | 'prefix';
-	/** Prefix all command names with this string */
-	prefix?: string;
+	delete?: boolean | string;
 	/** Register in this guild or globally */
 	guildId?: string;
 }
@@ -55,6 +53,8 @@ export class CommandManager implements Component {
 	private readonly aliases: Map<string, string> = new Map();
 
 	private selfId: string = null;
+
+	private readonly testPrefix = 'test-';
 
 	public async onLoad(): Promise<void> {
 		// Load built-in resolvers
@@ -190,7 +190,6 @@ export class CommandManager implements Component {
 
 		const bulkOverwrite: Array<ApplicationCommand> = [];
 		for (const command of commands) {
-			if (opts.prefix) command.name = `${opts.prefix}${command.name}`;
 			if (opts.guildId) command.guild_id = opts.guildId;
 
 			// Update command if it already exists
@@ -203,10 +202,10 @@ export class CommandManager implements Component {
 			bulkOverwrite.push(command);
 		}
 
-		// Delete prefix enabled and prefix exists... Only delete other commands with same prefix
-		if (opts.delete === 'prefix' && opts.prefix) {
+		// Delete is string... Only delete other commands starting with this string
+		if (typeof opts.delete === 'string') {
 			for (const discordCommand of discordCommands) {
-				if (!discordCommand.name.startsWith(opts.prefix)) bulkOverwrite.push(discordCommand);
+				if (!discordCommand.name.startsWith(opts.delete)) bulkOverwrite.push(discordCommand);
 			}
 		} else if ((typeof opts.delete === 'boolean' && !opts.delete) || typeof opts.delete !== 'boolean') {
 			for (const discordCommand of discordCommands) {
@@ -274,7 +273,7 @@ export class CommandManager implements Component {
 
 		// drop SubCommandGroupOption & SubCommandOption special types
 		for (const option of options as Array<CommandOption>) {
-			const appOption: ApplicationCommandOption = { type: null, name: option.name, description: option.description };
+			const appOption: ApplicationCommandOption = { type: null, name: option.name.toLowerCase(), description: option.description };
 
 			// Handle Special Subcommand & SubcommandGroup OptionTypes
 			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {
@@ -328,7 +327,7 @@ export class CommandManager implements Component {
 		if (!optionData) optionData = [];
 
 		for (const option of options) {
-			const data = optionData.find(d => d.name === option.name);
+			const data = optionData.find(d => d.name.toLowerCase() === option.name.toLowerCase());
 
 			// Handle SubCommand & SubCommandGroup
 			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {
@@ -392,8 +391,7 @@ export class CommandManager implements Component {
 
 				// consume
 				index += phrases.length;
-
-				value = phrases.join(' ');
+				value = phrases.map(p => p.value).join(' ');
 			}
 
 			collector = { ...collector, [option.name]: await this.resolveOption(ctx, option, value) };
@@ -445,13 +443,10 @@ export class CommandManager implements Component {
 		const testGuilds = this.api.getVariable<string>({ name: BentocordVariable.BENTOCORD_TEST_GUILDS, default: '' }).split(',').map(g => g.trim());
 		if (testGuilds.length < 1) return;
 
-		const commands = this.convertCommands();
+		// prefix commands with test-
+		const commands = this.convertCommands().map(c => ({ ...c, name: `${this.testPrefix}${c.name}` }));
 		for (const guildId of testGuilds) {
-			await this.syncCommands(commands, {
-				delete: 'prefix',
-				prefix: 'test-',
-				guildId,
-			});
+			await this.syncCommands(commands, { delete: this.testPrefix, guildId });
 		}
 
 		log.info(`Successfully synced "${commands.length}" slash commnads in: "${testGuilds.join(', ')}"`);
@@ -478,8 +473,8 @@ export class CommandManager implements Component {
 
 		let command = this.findCommand(data.name);
 		if (!command) {
-			if (data.name.startsWith('test-')) command = this.findCommand(data.name.replace(/^test-/i, ''));
-			if (!command) return; // command not found
+			if (data.name.startsWith(this.testPrefix)) command = this.findCommand(data.name.replace(new RegExp(`^${this.testPrefix}`, 'i'), ''));
+			if (!command) return; // command or test-command not found
 		}
 
 		const definition = command.definition;
