@@ -22,10 +22,10 @@ export class BentocordInterface implements Plugin {
 	public replaceable = true;
 
 	@Variable({ name: BentocordVariable.BENTOCORD_BOT_OWNERS, default: '' })
-	private readonly owners: string;
+	protected readonly owners: string;
 
-	private readonly prefixes: Map<string, string> = new Map();
-	private readonly permissions: Map<string, boolean> = new Map();
+	protected readonly prefixes: Map<string, string> = new Map();
+	protected readonly permissions: Map<string, boolean> = new Map();
 
 	public async getShardData(): Promise<ShardData> {
 		return { shardIds: [0], shardCount: 1 };
