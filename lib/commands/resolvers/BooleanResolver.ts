@@ -10,8 +10,8 @@ export class BooleanResolver implements OptionResolver<boolean> {
 	public convert = ApplicationCommandOptionType.Boolean;
 
 	public async resolve(ctx: CommandContext, option: CommandOption<unknown>, input: string): Promise<boolean> {
-		if (/^true|yes|y|1$/i.exec(input)) return true;
-		if (/^false|no|n|0$/i.exec(input)) return false;
+		if (/^true|t|yes|y|1$/i.exec(input)) return true;
+		if (/^false|f|no|n|0$/i.exec(input)) return false;
 
 		return null;
 	}

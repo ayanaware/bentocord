@@ -1,7 +1,10 @@
 import { Application, EntityType } from '@ayanaware/bento';
 import { Bentocord, CommandContext, CommandEntity, CommandManager } from '@ayanaware/bentocord';
 import { CommandOption } from '@ayanaware/bentocord/commands/interfaces/CommandOption';
+import Logger, { LogLevel } from '@ayanaware/logger';
 import { ApplicationCommandOptionType } from 'discord-api-types';
+
+Logger.getDefaultTransport().setLevel(LogLevel.DEBUG);
 
 (async () => {
 	const app = new Application({ variables: [[__dirname, '..', '..', 'env.json']] });

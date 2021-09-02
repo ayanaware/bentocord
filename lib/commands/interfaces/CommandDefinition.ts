@@ -2,6 +2,7 @@ import { DiscordPermission } from '../../discord/constants/DiscordPermission';
 import { CommandContext } from '../CommandContext';
 
 import { AnyCommandOption } from './CommandOption';
+import type { SuppressorDefinition } from './Suppressor';
 
 export interface CommandDefinition {
 	/** Command Aliases; First will be used for slash command name */
@@ -20,6 +21,9 @@ export interface CommandDefinition {
 
 	/** Disable execution via message w/ prefix */
 	disablePrefix?: boolean;
+
+	/** Suppressors */
+	suppressors?: Array<SuppressorDefinition>;
 
 	/** Function name or implementation to execute */
 	execute?: string | ((ctx?: CommandContext) => Promise<any>);

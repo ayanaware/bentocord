@@ -1,6 +1,7 @@
 import { ComponentAPI } from '@ayanaware/bento';
 import { CommandContext, CommandDefinition, CommandEntity, CommandManager } from '@ayanaware/bentocord';
 import { OptionType } from '@ayanaware/bentocord/commands/constants/OptionType';
+import { SuppressorType } from '@ayanaware/bentocord/commands/constants/SuppressorType';
 
 export class SubCommandTest implements CommandEntity {
 	public name = 'subcommandtest';
@@ -22,7 +23,7 @@ export class SubCommandTest implements CommandEntity {
 				] },
 				{ type: OptionType.SUB_COMMAND, name: 'baz', description: 'subcommand baz', options: [
 					{ type: OptionType.BOOLEAN, array: true, name: 'test', description: 'value test' }
-				] }
+				], suppressors: [ SuppressorType.BOT_OWNER ] }
 			] },
 		],
 	};

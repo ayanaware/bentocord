@@ -11,7 +11,7 @@ export class SayCommand implements CommandEntity {
 		aliases: ['say', 'echo'],
 		description: 'Simon says repeat after me',
 		options: [
-			{ type: OptionType.STRING, name: 'text', description: 'text to repeat', rest: true, required: true },
+			{ type: OptionType.STRING, name: 'text', description: 'text to repeat', rest: true, required: true, },
 		],
 	};
 

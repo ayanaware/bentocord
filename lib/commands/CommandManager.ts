@@ -20,16 +20,20 @@ import { DiscordEvent } from '../discord/constants/DiscordEvent';
 import { CommandContext, InteractionCommandContext, MessageCommandContext } from './CommandContext';
 import { APPLICATION_COMMANDS, APPLICATION_GUILD_COMMANDS } from './constants/API';
 import { OptionType } from './constants/OptionType';
+import { SuppressorType } from './constants/SuppressorType';
 import { ApplicationCommand, ApplicationCommandOption } from './interfaces/ApplicationCommand';
 import { Command } from './interfaces/Command';
-import { AnyCommandOption, CommandOption } from './interfaces/CommandOption';
+import { AnyCommandOption, AnySubCommandOption, CommandOption } from './interfaces/CommandOption';
 import { InteractionDataOption } from './interfaces/Interaction';
 import { OptionResolver } from './interfaces/OptionResolver';
+import { Suppressor, SuppressorOption } from './interfaces/Suppressor';
 import type { CommandEntity } from './interfaces/entity/CommandEntity';
 import type { OptionResolverEntity } from './interfaces/entity/OptionResolverEntity';
+import type { SuppressorEntity } from './interfaces/entity/SuppressorEntity';
 import { ParsedItem, Parser, ParserOutput } from './internal/Parser';
 import { Tokenizer } from './internal/Tokenizer';
 import { Resolvers } from './resolvers';
+import { Suppressors } from './supressors';
 
 export interface SyncOptions {
 	/** Should unspecified commands be removed */
@@ -49,10 +53,11 @@ export class CommandManager implements Component {
 	@Inject() private readonly interface: BentocordInterface;
 	@Inject() private readonly discord: Discord;
 
-	private readonly resolvers: Map<OptionType | string, OptionResolver<unknown>> = new Map();
-
 	private readonly commands: Map<string, Command> = new Map();
 	private readonly aliases: Map<string, string> = new Map();
+
+	private readonly resolvers: Map<OptionType | string, OptionResolver<unknown>> = new Map();
+	private readonly suppressors: Map<SuppressorType | string, Suppressor> = new Map();
 
 	private selfId: string = null;
 
@@ -61,26 +66,33 @@ export class CommandManager implements Component {
 	public async onLoad(): Promise<void> {
 		// Load built-in resolvers
 		Resolvers.forEach(resolver => this.addResolver(resolver));
+
+		// Load built-in suppressors
+		Suppressors.forEach(suppressor => this.addSuppressor(suppressor));
 	}
 
-	public async onChildLoad(entity: CommandEntity | OptionResolverEntity): Promise<void> {
+	public async onChildLoad(entity: CommandEntity | OptionResolverEntity | SuppressorEntity): Promise<void> {
 		try {
 			if (typeof (entity as CommandEntity).definition === 'object') {
 				this.addCommand(entity as CommandEntity);
 			} else if (typeof (entity as OptionResolverEntity).option !== 'undefined') {
 				this.addResolver(entity as OptionResolverEntity);
+			} else if (typeof (entity as SuppressorEntity).suppressor !== 'undefined') {
+				this.addSuppressor((entity as SuppressorEntity));
 			}
 		} catch (e) {
 			log.warn(e.toString());
 		}
 	}
 
-	public async onChildUnload(entity: CommandEntity | OptionResolverEntity): Promise<void> {
+	public async onChildUnload(entity: CommandEntity | OptionResolverEntity | SuppressorEntity): Promise<void> {
 		try {
 			if (typeof (entity as CommandEntity).definition === 'object') {
 				this.removeCommand(entity as CommandEntity);
 			} else if (typeof (entity as OptionResolverEntity).option !== 'undefined') {
 				this.removeResolver((entity as OptionResolverEntity).option);
+			} else if (typeof (entity as SuppressorEntity).suppressor !== 'undefined') {
+				this.removeSuppressor((entity as SuppressorEntity).suppressor);
 			}
 		} catch (e) {
 			log.warn(e.toString());
@@ -108,6 +120,46 @@ export class CommandManager implements Component {
 		if (!resolver) return null;
 
 		return resolver.resolve(ctx, option, input);
+	}
+
+	/**
+	 * Add Suppressor
+	 * @param suppressor Suppressor
+	 */
+	public addSuppressor(suppressor: Suppressor): void {
+		this.suppressors.set(suppressor.suppressor, suppressor);
+	}
+
+	/**
+	 * Remove Suppressors
+	 * @param type SuppressorType or string
+	 */
+	public removeSuppressor(type: SuppressorType | string): void {
+		this.suppressors.delete(type);
+	}
+
+	private async executeSuppressors(ctx: CommandContext, option: SuppressorOption): Promise<{ name: string, message: string } | false> {
+		if (!Array.isArray(option.suppressors) || option.suppressors.length < 1) return false;
+
+		for (let definition of option.suppressors) {
+			if (typeof definition !== 'object') definition = { type: definition, args: [] };
+
+			// resolve name
+			let name = definition.type;
+			if (typeof name === 'number') name = SuppressorType[name];
+			if (typeof definition.args === 'function') definition.args = await definition.args();
+			else if (!Array.isArray(definition.args)) definition.args = [];
+
+			const suppressor = this.suppressors.get(definition.type);
+			if (!suppressor) continue;
+
+			const result = await suppressor.suppress(ctx, option, ...definition.args);
+			if (result === false) continue;
+
+			return { name, message: result };
+		}
+
+		return false;
 	}
 
 	/**
@@ -212,7 +264,7 @@ export class CommandManager implements Component {
 	}
 
 	/**
-	 * Syncronize Slash Commands with Discord
+	 * Sync Slash Commands with Discord
 	 * @param commandsIn Array of ApplicationCommand
 	 * @param opts SyncOptions
 	 * @returns Discord Slash Bulk Update Response Payload
@@ -266,6 +318,23 @@ export class CommandManager implements Component {
 	}
 
 	/**
+	 * Sync test- prefixed Slash Commands with TestGuilds
+	 */
+	public async syncTestGuildCommands(): Promise<void> {
+		// get test guild list
+		const testGuilds = this.api.getVariable<string>({ name: BentocordVariable.BENTOCORD_TEST_GUILDS, default: '' }).split(',').map(g => g.trim());
+		if (testGuilds.length < 1) return;
+
+		// prefix commands with test-
+		const commands = this.convertCommands().map(c => ({ ...c, name: `${this.testPrefix}${c.name}` }));
+		for (const guildId of testGuilds) {
+			await this.syncCommands(commands, { delete: this.testPrefix, guildId });
+		}
+
+		log.info(`Successfully synced "${commands.length}" slash commnads in: "${testGuilds.join(', ')}"`);
+	}
+
+	/**
 	 * Convert all slash supporting Bentocord commands to Discord ApplicationCommand
 	 * @returns Array of ApplicationCommand
 	 */
@@ -278,8 +347,6 @@ export class CommandManager implements Component {
 
 			collector.push(this.convertCommand(definition.aliases[0]));
 		}
-
-		console.log(collector);
 
 		return collector;
 	}
@@ -344,15 +411,8 @@ export class CommandManager implements Component {
 			appOption.type = resolver ? resolver.convert : ApplicationCommandOptionType.String;
 
 			// Prepend type information to description
-			let typeBuild = '[';
-			if (typeof option.type === 'number') typeBuild += OptionType[option.type];
-			else typeBuild += option.type;
-
-			// handle array
-			if (option.array) typeBuild += ', ...';
-			typeBuild += ']';
-
-			appOption.description = `${typeBuild} ${appOption.description}`;
+			const typeInfo = this.getTypePreview(option);
+			appOption.description = `${typeInfo} ${appOption.description}`;
 
 			// Bentocord Array support
 			if (option.array) appOption.type = ApplicationCommandOptionType.String;
@@ -372,6 +432,19 @@ export class CommandManager implements Component {
 		return collector;
 	}
 
+	private getTypePreview(option: CommandOption) {
+		// Prepend type information to description
+		let typeBuild = '[';
+		if (typeof option.type === 'number') typeBuild += OptionType[option.type];
+		else typeBuild += option.type;
+
+		// handle array
+		if (option.array) typeBuild += ', ...';
+		typeBuild += ']';
+
+		return typeBuild;
+	}
+
 	public async fufillInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, data: APIApplicationCommandInteractionData): Promise<Record<string, unknown>> {
 		return this.processInteractionOptions(ctx, options, data.options);
 	}
@@ -388,13 +461,17 @@ export class CommandManager implements Component {
 			// Handle SubCommand & SubCommandGroup
 			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {
 				if (!data) continue;
+				const subOption = option as AnySubCommandOption;
 
-				collector = { ...collector, [option.name]: await this.processInteractionOptions(ctx, option.options, data.options) };
+				// process suppressors
+				const suppressed = await this.executeSuppressors(ctx, subOption);
+				if (suppressed) throw new Error(`${suppressed.name}: Execution halted: ${suppressed.message}`);
+
+				collector = { ...collector, [option.name]: await this.processInteractionOptions(ctx, subOption.options, data.options) };
 				break;
 			}
 
 			const value: string = data?.value.toString();
-
 			collector = { ...collector, [option.name]: await this.resolveOption(ctx, option, value) };
 		}
 
@@ -423,17 +500,25 @@ export class CommandManager implements Component {
 		let subNames = [];
 		for (const option of options) {
 			if (option.type === OptionType.SUB_COMMAND_GROUP || option.type === OptionType.SUB_COMMAND) {
-				subNames.push(option.name);
+				const subOption = option as AnySubCommandOption;
+
+				subNames.push(subOption.name);
 
 				// phrase is a single element
 				const phrase = output.phrases[index];
 				// validate arg matches subcommand or group name
-				if (!phrase || option.name !== phrase.value) continue;
+				if (!phrase || subOption.name !== phrase.value) continue;
 
 				index++;
 
+				// process suppressors
+				const suppressed = await this.executeSuppressors(ctx, subOption);
+				if (suppressed) throw new Error(`${suppressed.name}: Execution halted: ${suppressed.message}`);
+
 				// process nested option
-				collector = { ...collector, [option.name]: await this.processTextOptions(ctx, option.options, output, index) };
+				{
+					collector = { ...collector, [option.name]: await this.processTextOptions(ctx, subOption.options, output, index) };
+				}
 				subNames = []; // collected successfully
 				break;
 			}
@@ -463,6 +548,8 @@ export class CommandManager implements Component {
 	}
 
 	private async resolveOption<T = unknown>(ctx: CommandContext, option: CommandOption<T>, raw: string): Promise<T | Array<T>> {
+		if (raw === undefined) raw = '';
+
 		// array support
 		let inputs: Array<string> = option.array ? raw.split(/,\s?/gi) : [raw];
 		inputs = inputs.filter(i => !!i);
@@ -477,7 +564,7 @@ export class CommandManager implements Component {
 			// Multiple matches, TODO: reduce
 			if (Array.isArray(result)) result = result[0];
 
-			if (result !== undefined) value.push(result);
+			if (result != null) value.push(result);
 		}
 
 		let out: T | Array<T> = value;
@@ -498,22 +585,11 @@ export class CommandManager implements Component {
 	// eslint-disable-next-line @typescript-eslint/member-ordering
 	private alreadySynced = false;
 	@Subscribe(Discord, DiscordEvent.SHARD_READY)
-	private async syncTestGuildsSlashCommands() {
+	private async autoSyncTestGuildSlashCommands() {
 		if (this.alreadySynced) return;
-
-		// get test guild list
-		const testGuilds = this.api.getVariable<string>({ name: BentocordVariable.BENTOCORD_TEST_GUILDS, default: '' }).split(',').map(g => g.trim());
-		if (testGuilds.length < 1) return;
-
-		// prefix commands with test-
-		const commands = this.convertCommands().map(c => ({ ...c, name: `${this.testPrefix}${c.name}` }));
-		for (const guildId of testGuilds) {
-			await this.syncCommands(commands, { delete: this.testPrefix, guildId });
-		}
-
-		log.info(`Successfully synced "${commands.length}" slash commnads in: "${testGuilds.join(', ')}"`);
-
 		this.alreadySynced = true;
+
+		return this.syncTestGuildCommands();
 	}
 
 	@Subscribe(Discord, DiscordEvent.SHARD_READY)
@@ -544,6 +620,10 @@ export class CommandManager implements Component {
 
 		const ctx = new InteractionCommandContext(this.api, command, interaction);
 		try {
+			// process suppressors
+			const suppressed = await this.executeSuppressors(ctx, definition);
+			if (suppressed) throw new Error(`${suppressed.name}: Execution halted: ${suppressed.message}`);
+
 			const options = await this.fufillInteractionOptions(ctx, definition.options, data);
 			return this.executeCommand(command, ctx, options);
 		} catch (e) {
@@ -597,11 +677,16 @@ export class CommandManager implements Component {
 
 		// CommandContext
 		const ctx = new MessageCommandContext(this.api, command, message);
+
 		try {
+			// process suppressors
+			const suppressed = await this.executeSuppressors(ctx, definition);
+			if (suppressed) return ctx.createResponse(`Suppressor \`${suppressed.name}\` halted execution: ${suppressed.message}`);
+
 			const options = await this.fufillTextOptions(ctx, definition.options, args);
 			return this.executeCommand(command, ctx, options);
 		} catch (e) {
-			log.error(`Command "${definition.aliases[0]}" option error:\n${util.inspect(e)}`);
+			log.error(`Command "${definition.aliases[0]}" error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
 				return ctx.createResponse(`There was an error resolving command options:\`\`\`${e.message}\`\`\``);

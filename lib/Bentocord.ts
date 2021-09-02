@@ -6,7 +6,6 @@ import { BentocordInterface } from './BentocordInterface';
 import { BentocordVariable } from './BentocordVariable';
 import { CommandManager } from './commands/CommandManager';
 import { Discord } from './discord/Discord';
-import { InhibitorManager } from './inhibitors/InhibitorManager';
 import { PromptManager } from './prompt/PromptManager';
 
 export class Bentocord implements Plugin {
@@ -36,7 +35,6 @@ export class Bentocord implements Plugin {
 			Discord,
 			CommandManager,
 			PromptManager,
-			InhibitorManager,
 		]);
 
 		// Load built-in commands

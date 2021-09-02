@@ -32,7 +32,7 @@ export class UserResolver implements OptionResolver<User|Member> {
 
 		// handle mention
 		const id = /^<@!?(\d{17,19})>$/.exec(input);
-		if (id && id[0] === user.id) return true;
+		if (id && id[1] === user.id) return true;
 
 		// handle username
 		const match = /^([^#]+)#?(\d{4})?$/i.exec(input);

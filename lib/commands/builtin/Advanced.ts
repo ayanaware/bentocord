@@ -25,12 +25,11 @@ export class AdvancedCommand implements CommandEntity {
 		disablePrefix: true,
 	};
 
-	public async execute(ctx: CommandContext, options: { alias: string, opts: string }) {
+	public async execute(ctx: CommandContext, options: { alias: string, opts: string }): Promise<unknown> {
 		const command = this.commandManager.findCommand(options.alias);
 		if (!command) return ctx.createResponse(`Command "${options.alias}" does not exist in CommandManager`);
 
 		const cmdOptions = await this.commandManager.fufillTextOptions(ctx, command.definition.options, options.opts);
-
 		return this.commandManager.executeCommand(command, ctx, cmdOptions);
 	}
 }

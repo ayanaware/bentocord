@@ -6,6 +6,7 @@ import { Discord } from '../../discord/Discord';
 import { CommandContext } from '../CommandContext';
 import { CommandManager } from '../CommandManager';
 import { OptionType } from '../constants/OptionType';
+import { SuppressorType } from '../constants/SuppressorType';
 import { CommandDefinition } from '../interfaces/CommandDefinition';
 import { CommandEntity } from '../interfaces/entity/CommandEntity';
 
@@ -26,6 +27,10 @@ export class SetGameCommand implements CommandEntity {
 				{ name: 'watching', value: 3 },
 				{ name: 'competing', value: 5 },
 			], default: 0, required: false },
+		],
+
+		suppressors: [
+			{ type: SuppressorType.BOT_OWNER },
 		],
 
 		registerSlash: false,

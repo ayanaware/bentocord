@@ -21,7 +21,7 @@ export class BentocordInterface implements Plugin {
 
 	public replaceable = true;
 
-	@Variable({ name: BentocordVariable.BENTOCORD_BOT_OWNERS, default: null })
+	@Variable({ name: BentocordVariable.BENTOCORD_BOT_OWNERS, default: '' })
 	private readonly owners: string;
 
 	private readonly prefixes: Map<string, string> = new Map();
@@ -33,7 +33,6 @@ export class BentocordInterface implements Plugin {
 
 	public async isOwner(userId: string): Promise<boolean> {
 		const owners = this.owners.split(',').map(o => o.trim());
-
 		return owners.includes(userId);
 	}
 

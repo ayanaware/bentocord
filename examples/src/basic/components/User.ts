@@ -12,11 +12,15 @@ export class UserTest implements CommandEntity {
 		aliases: ['usertest'],
 		description: 'Test away all day',
 		options: [
-			{ type: OptionType.USER, name: 'user', description: 'user', rest: true, required: true },
+			{ type: OptionType.USER, array: true, name: 'users', description: 'users', rest: true, required: false },
+			{ type: OptionType.USER, name: 'user', description: 'user', required: false },
 		],
 	};
 
-	public async execute(ctx: CommandContext, options: { user: User }) {
-		return ctx.createResponse({ content: `selected users = ${options.user.username}#${options.user.discriminator}` });
+	public async execute(ctx: CommandContext, { users, user }: { users: Array<User>, user: User }) {
+		if (!users) users = [];
+		if (user) users.push(user)
+
+		return ctx.createResponse({ content: `selected users = ${users.map(u => `${u.username}#${u.discriminator}`).join(', ')}` });
 	}
 }
