@@ -322,7 +322,7 @@ export class CommandManager implements Component {
 	 */
 	public async syncTestGuildCommands(): Promise<void> {
 		// get test guild list
-		const testGuilds = this.api.getVariable<string>({ name: BentocordVariable.BENTOCORD_TEST_GUILDS, default: '' }).split(',').map(g => g.trim());
+		const testGuilds = this.api.getVariable<string>({ name: BentocordVariable.BENTOCORD_TEST_GUILDS, default: '' }).split(',').map(g => g.trim()).filter(v => !!v);
 		if (testGuilds.length < 1) return;
 
 		// prefix commands with test-
