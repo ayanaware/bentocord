@@ -21,10 +21,12 @@ import { CommandContext, InteractionCommandContext, MessageCommandContext } from
 import { APPLICATION_COMMANDS, APPLICATION_GUILD_COMMANDS } from './constants/API';
 import { OptionType } from './constants/OptionType';
 import { ApplicationCommand, ApplicationCommandOption } from './interfaces/ApplicationCommand';
-import type { CommandEntity } from './interfaces/CommandEntity';
+import { Command } from './interfaces/Command';
 import { AnyCommandOption, CommandOption } from './interfaces/CommandOption';
 import { InteractionDataOption } from './interfaces/Interaction';
 import { OptionResolver } from './interfaces/OptionResolver';
+import type { CommandEntity } from './interfaces/entity/CommandEntity';
+import type { OptionResolverEntity } from './interfaces/entity/OptionResolverEntity';
 import { ParsedItem, Parser, ParserOutput } from './internal/Parser';
 import { Tokenizer } from './internal/Tokenizer';
 import { Resolvers } from './resolvers';
@@ -49,7 +51,7 @@ export class CommandManager implements Component {
 
 	private readonly resolvers: Map<OptionType | string, OptionResolver<unknown>> = new Map();
 
-	private readonly commands: Map<string, CommandEntity> = new Map();
+	private readonly commands: Map<string, Command> = new Map();
 	private readonly aliases: Map<string, string> = new Map();
 
 	private selfId: string = null;
@@ -61,26 +63,42 @@ export class CommandManager implements Component {
 		Resolvers.forEach(resolver => this.addResolver(resolver));
 	}
 
-	public async onChildLoad(entity: CommandEntity): Promise<void> {
+	public async onChildLoad(entity: CommandEntity | OptionResolverEntity): Promise<void> {
 		try {
-			this.addCommand(entity);
+			if (typeof (entity as CommandEntity).definition === 'object') {
+				this.addCommand(entity as CommandEntity);
+			} else if (typeof (entity as OptionResolverEntity).option !== 'undefined') {
+				this.addResolver(entity as OptionResolverEntity);
+			}
 		} catch (e) {
 			log.warn(e.toString());
 		}
 	}
 
-	public async onChildUnload(entity: CommandEntity): Promise<void> {
+	public async onChildUnload(entity: CommandEntity | OptionResolverEntity): Promise<void> {
 		try {
-			this.removeCommand(entity);
+			if (typeof (entity as CommandEntity).definition === 'object') {
+				this.removeCommand(entity as CommandEntity);
+			} else if (typeof (entity as OptionResolverEntity).option !== 'undefined') {
+				this.removeResolver((entity as OptionResolverEntity).option);
+			}
 		} catch (e) {
 			log.warn(e.toString());
 		}
 	}
 
+	/**
+	 * Add Resolver
+	 * @param resolver OptionResolver
+	 */
 	public addResolver(resolver: OptionResolver<unknown>): void {
-		this.resolvers.set(resolver.type, resolver);
+		this.resolvers.set(resolver.option, resolver);
 	}
 
+	/**
+	 * Remove Resolver
+	 * @param type OptionType or string
+	 */
 	public removeResolver(type: OptionType | string): void {
 		this.resolvers.delete(type);
 	}
@@ -92,12 +110,16 @@ export class CommandManager implements Component {
 		return resolver.resolve(ctx, option, input);
 	}
 
-	public addCommand(entity: CommandEntity): void {
-		if (typeof entity.execute !== 'function') throw new Error(`${entity.name}: Execute must be a function`);
-		if (typeof entity.definition !== 'object') throw new Error(`${entity.name}: Definition must be an object`);
-		const definition = entity.definition;
+	/**
+	 * Add command
+	 * @param command Command
+	 */
+	public addCommand(command: Command): void {
+		if (typeof command.execute !== 'function') throw new Error('Execute must be a function');
+		if (typeof command.definition !== 'object') throw new Error('Definition must be an object');
+		const definition = command.definition;
 
-		if (definition.aliases.length < 1) throw new Error(`${entity.name}: At least one alias must be defined`);
+		if (definition.aliases.length < 1) throw new Error('At least one alias must be defined');
 		// ensure all aliases are lowercase
 		definition.aliases = definition.aliases.map(a => a.toLowerCase());
 
@@ -105,26 +127,43 @@ export class CommandManager implements Component {
 		const primary = definition.aliases[0];
 
 		// check dupes & save
-		if (this.commands.has(primary)) throw new Error(`${entity.name}: Command name "${primary}" already exists`);
-		this.commands.set(primary, entity);
+		if (this.commands.has(primary)) throw new Error(`Command name "${primary}" already exists`);
+		this.commands.set(primary, command);
 
 		// register alias => primary alias
 		for (const alias of definition.aliases) {
-			if (this.aliases.has(alias)) throw new Error(`${entity.name}: Attempted to register existing alias: ${alias}`);
+			if (this.aliases.has(alias)) throw new Error(`${primary}: Attempted to register existing alias: ${alias}`);
 
 			this.aliases.set(alias, primary);
 		}
 	}
 
-	public removeCommand(command: CommandEntity | string): void {
+	/**
+	 * Remove Command
+	 * @param command Command
+	 */
+	public removeCommand(command: Command | string): void {
 		if (typeof command === 'string') command = this.findCommand(command);
 		if (!command) throw new Error('Failed to find Command');
 
+		const definition = command.definition;
+		const primary = definition.aliases[0];
+
+		// remove any aliases
+		for (const [alias, name] of this.aliases.entries()) {
+			if (name === primary) this.aliases.delete(alias);
+		}
+
 		// remove reference
-		this.commands.delete(command.name);
+		this.commands.delete(primary);
 	}
 
-	public findCommand(alias: string): CommandEntity {
+	/**
+	 * Find Command by alias
+	 * @param alias Alias
+	 * @returns Command
+	 */
+	public findCommand(alias: string): Command {
 		if (alias) alias = alias.toLowerCase();
 
 		// convert alias to primary alias
@@ -138,8 +177,9 @@ export class CommandManager implements Component {
 		return command;
 	}
 
-	public async executeCommand(command: CommandEntity, ctx: CommandContext, options: Record<string, unknown>): Promise<unknown> {
+	public async executeCommand(command: Command, ctx: CommandContext, options: Record<string, unknown>): Promise<unknown> {
 		const definition = command.definition;
+		const primary = definition.aliases[0];
 
 		// selfPermissions
 		if (ctx.guild && Array.isArray(definition.selfPermissions) && definition.selfPermissions.length > 0) {
@@ -161,9 +201,9 @@ export class CommandManager implements Component {
 			// TODO: Use Typescript metadata to ensure .execute() and options match
 
 			await command.execute(ctx, options);
-			log.debug(`Command "${command.name}" executed by "${ctx.author.id}"`);
+			log.debug(`Command "${primary}" executed by "${ctx.author.id}"`);
 		} catch (e) {
-			log.error(`Command ${command.name}.execute() error:\n${util.inspect(e)}`);
+			log.error(`Command ${primary}.execute() error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
 				return ctx.createResponse(`There was an error executing this command:\`\`\`${e.message}\`\`\``);
@@ -171,6 +211,12 @@ export class CommandManager implements Component {
 		}
 	}
 
+	/**
+	 * Syncronize Slash Commands with Discord
+	 * @param commandsIn Array of ApplicationCommand
+	 * @param opts SyncOptions
+	 * @returns Discord Slash Bulk Update Response Payload
+	 */
 	public async syncCommands(commandsIn: Array<ApplicationCommand>, opts?: SyncOptions): Promise<unknown> {
 		opts = Object.assign({ delete: true, prefix: null }, opts);
 
@@ -219,6 +265,10 @@ export class CommandManager implements Component {
 		return this.discord.client.requestHandler.request('PUT', apiRoute, true, bulkOverwrite as any);
 	}
 
+	/**
+	 * Convert all slash supporting Bentocord commands to Discord ApplicationCommand
+	 * @returns Array of ApplicationCommand
+	 */
 	public convertCommands(): Array<ApplicationCommand> {
 		const collector: Array<ApplicationCommand> = [];
 
@@ -228,6 +278,8 @@ export class CommandManager implements Component {
 
 			collector.push(this.convertCommand(definition.aliases[0]));
 		}
+
+		console.log(collector);
 
 		return collector;
 	}
@@ -241,9 +293,9 @@ export class CommandManager implements Component {
 		if (!command) throw new Error(`Failed to find Command "${name}"`);
 
 		const definition = command.definition;
-		if (!definition) throw new Error(`Command "${command.name}" lacks definition`);
+		if (!definition) throw new Error(`Command "${name}" lacks definition`);
 
-		if (typeof definition.registerSlash === 'boolean' && !definition.registerSlash) throw new Error(`${command.name}: Command "${definition.aliases[0]}" has disabled slash conversion`);
+		if (typeof definition.registerSlash === 'boolean' && !definition.registerSlash) throw new Error(`${name}: Command "${definition.aliases[0]}" has disabled slash conversion`);
 
 		// infer application_id
 		const applicationId = this.discord.application.id;
@@ -253,7 +305,9 @@ export class CommandManager implements Component {
 			name: definition.aliases[0],
 			description: definition.description,
 
+			// eslint-disable-next-line @typescript-eslint/naming-convention
 			application_id: applicationId,
+			// eslint-disable-next-line @typescript-eslint/naming-convention
 			default_permission: true,
 		};
 
@@ -279,6 +333,8 @@ export class CommandManager implements Component {
 			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {
 				appOption.type = option.type === OptionType.SUB_COMMAND ? ApplicationCommandOptionType.Subcommand : ApplicationCommandOptionType.SubcommandGroup;
 				appOption.options = this.convertOptions(option.options);
+
+				collector.push(appOption);
 
 				continue;
 			}
@@ -331,11 +387,10 @@ export class CommandManager implements Component {
 
 			// Handle SubCommand & SubCommandGroup
 			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {
-				let subInteractionOptions: Array<InteractionDataOption>;
-				if (data) subInteractionOptions = data.options;
-				collector = { ...collector, [option.name]: await this.processInteractionOptions(ctx, option.options, subInteractionOptions) };
+				if (!data) continue;
 
-				continue;
+				collector = { ...collector, [option.name]: await this.processInteractionOptions(ctx, option.options, data.options) };
+				break;
 			}
 
 			const value: string = data?.value.toString();
@@ -365,18 +420,22 @@ export class CommandManager implements Component {
 
 		if (!options) options = [];
 
+		let subNames = [];
 		for (const option of options) {
 			if (option.type === OptionType.SUB_COMMAND_GROUP || option.type === OptionType.SUB_COMMAND) {
+				subNames.push(option.name);
+
 				// phrase is a single element
 				const phrase = output.phrases[index];
 				// validate arg matches subcommand or group name
-				if (option.name !== phrase.value) continue;
+				if (!phrase || option.name !== phrase.value) continue;
 
 				index++;
 
 				// process nested option
 				collector = { ...collector, [option.name]: await this.processTextOptions(ctx, option.options, output, index) };
-				continue;
+				subNames = []; // collected successfully
+				break;
 			}
 
 			let value: string;
@@ -396,6 +455,9 @@ export class CommandManager implements Component {
 
 			collector = { ...collector, [option.name]: await this.resolveOption(ctx, option, value) };
 		}
+
+		// Todo: Prompt for subcommand option
+		if (subNames.length > 0) throw new Error(`Please choose one of the following subcommands: ${subNames.join(', ')}`);
 
 		return collector;
 	}
@@ -480,12 +542,12 @@ export class CommandManager implements Component {
 		const definition = command.definition;
 		if (typeof definition.registerSlash === 'boolean' && !definition.registerSlash) return; // slash disabled
 
-		const ctx = new InteractionCommandContext(command, interaction);
+		const ctx = new InteractionCommandContext(this.api, command, interaction);
 		try {
 			const options = await this.fufillInteractionOptions(ctx, definition.options, data);
 			return this.executeCommand(command, ctx, options);
 		} catch (e) {
-			log.error(`Command "${command.name}" option error:\n${util.inspect(e)}`);
+			log.error(`Command "${definition.aliases[0]}" option error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
 				return ctx.createResponse(`There was an error resolving command options:\`\`\`${e.message}\`\`\``);
@@ -534,12 +596,12 @@ export class CommandManager implements Component {
 		if (definition.disablePrefix) return;
 
 		// CommandContext
-		const ctx = new MessageCommandContext(command, message);
+		const ctx = new MessageCommandContext(this.api, command, message);
 		try {
 			const options = await this.fufillTextOptions(ctx, definition.options, args);
 			return this.executeCommand(command, ctx, options);
 		} catch (e) {
-			log.error(`Command "${command.name}" option error:\n${util.inspect(e)}`);
+			log.error(`Command "${definition.aliases[0]}" option error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
 				return ctx.createResponse(`There was an error resolving command options:\`\`\`${e.message}\`\`\``);

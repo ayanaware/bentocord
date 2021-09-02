@@ -6,7 +6,7 @@ import { CommandOption } from '../interfaces/CommandOption';
 import { OptionResolver } from '../interfaces/OptionResolver';
 
 export class BooleanResolver implements OptionResolver<boolean> {
-	public type = OptionType.BOOLEAN;
+	public option = OptionType.BOOLEAN;
 	public convert = ApplicationCommandOptionType.Boolean;
 
 	public async resolve(ctx: CommandContext, option: CommandOption<unknown>, input: string): Promise<boolean> {

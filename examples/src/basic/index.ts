@@ -15,7 +15,7 @@ import { ApplicationCommandOptionType } from 'discord-api-types';
 	const cm = app.bento.getComponent(CommandManager);
 
 	cm.addResolver({
-		type: 'pog',
+		option: 'pog',
 		convert: ApplicationCommandOptionType.String,
 		async resolve(ctx: CommandContext, option: CommandOption, input) {
 			// count how many time pog appears in input
@@ -23,10 +23,7 @@ import { ApplicationCommandOptionType } from 'discord-api-types';
 		}
 	});
 
-	app.bento.addEntity({
-		name: 'pogcounttest',
-		type: EntityType.COMPONENT,
-		parent: CommandManager,
+	cm.addCommand({
 		definition: {
 			aliases: ['pogcounter'],
 			description: 'count pogs in a string',
@@ -37,7 +34,7 @@ import { ApplicationCommandOptionType } from 'discord-api-types';
 		async execute(ctx: CommandContext, options: { pogCount: Array<number> }) {
 			return ctx.createResponse({ content: `I saw ${options.pogCount.toString()} pogs` })
 		}
-	} as CommandEntity);
+	});
 })().catch(e => {
 	console.log(e);
 	process.exit(1);

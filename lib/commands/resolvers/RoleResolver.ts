@@ -7,7 +7,7 @@ import { CommandOption } from '../interfaces/CommandOption';
 import { OptionResolver } from '../interfaces/OptionResolver';
 
 export class RoleResolver implements OptionResolver<Role> {
-	public type = OptionType.ROLE;
+	public option = OptionType.ROLE;
 	public convert = ApplicationCommandOptionType.Role;
 
 	public async reduce(ctx: CommandContext, option: CommandOption<Role>, role: Role): Promise<{ display: string, extra?: string }> {

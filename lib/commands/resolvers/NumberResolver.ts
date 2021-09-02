@@ -6,7 +6,7 @@ import { CommandOption } from '../interfaces/CommandOption';
 import { OptionResolver } from '../interfaces/OptionResolver';
 
 export class NumberResolver implements OptionResolver<number> {
-	public type = OptionType.NUMBER;
+	public option = OptionType.NUMBER;
 	public convert = ApplicationCommandOptionType.Integer;
 
 	public async resolve(ctx: CommandContext, option: CommandOption, text: string): Promise<number> {

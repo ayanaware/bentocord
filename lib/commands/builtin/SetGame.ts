@@ -7,7 +7,7 @@ import { CommandContext } from '../CommandContext';
 import { CommandManager } from '../CommandManager';
 import { OptionType } from '../constants/OptionType';
 import { CommandDefinition } from '../interfaces/CommandDefinition';
-import { CommandEntity } from '../interfaces/CommandEntity';
+import { CommandEntity } from '../interfaces/entity/CommandEntity';
 
 export class SetGameCommand implements CommandEntity {
 	public name = '@ayanaware/bentocord:SetGameCommand';

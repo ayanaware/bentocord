@@ -24,7 +24,7 @@ export interface CommandOption<T = unknown> {
 	choices?: Array<CommandOptionChoice>;
 
 	/** Nested Options */
-	options?: Array<SubCommandGroupOption | SubCommandOption>;
+	options?: Array<SubCommandGroupOption | SubCommandOption | CommandOption>;
 
 	/** Consume the "rest" of available phrases */
 	rest?: boolean;

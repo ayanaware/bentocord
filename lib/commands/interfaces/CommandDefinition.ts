@@ -1,7 +1,7 @@
 import { DiscordPermission } from '../../discord/constants/DiscordPermission';
 import { CommandContext } from '../CommandContext';
 
-import { CommandOption, SubCommandGroupOption, SubCommandOption } from './CommandOption';
+import { AnyCommandOption } from './CommandOption';
 
 export interface CommandDefinition {
 	/** Command Aliases; First will be used for slash command name */
@@ -10,7 +10,7 @@ export interface CommandDefinition {
 	description: string;
 
 	/** Command Options */
-	options?: Array<SubCommandGroupOption | SubCommandOption | CommandOption>;
+	options?: Array<AnyCommandOption>;
 
 	/** Discord Permissions this command requires */
 	selfPermissions?: Array<DiscordPermission>;

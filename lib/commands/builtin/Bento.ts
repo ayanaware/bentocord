@@ -5,7 +5,7 @@ import { CodeblockBuilder } from '../../builders/CodeblockBuilder';
 import { CommandContext } from '../CommandContext';
 import { CommandManager } from '../CommandManager';
 import { CommandDefinition } from '../interfaces/CommandDefinition';
-import { CommandEntity } from '../interfaces/CommandEntity';
+import { CommandEntity } from '../interfaces/entity/CommandEntity';
 
 export class BentoCommand implements CommandEntity {
 	public name = '@ayanaware/bentocord:BentoCommand';

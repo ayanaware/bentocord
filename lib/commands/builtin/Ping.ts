@@ -3,7 +3,7 @@ import { ComponentAPI } from '@ayanaware/bento';
 import { CommandContext } from '../CommandContext';
 import { CommandManager } from '../CommandManager';
 import { CommandDefinition } from '../interfaces/CommandDefinition';
-import { CommandEntity } from '../interfaces/CommandEntity';
+import { CommandEntity } from '../interfaces/entity/CommandEntity';
 
 export class PingCommand implements CommandEntity {
 	public name = '@ayanaware/bentocord:PingCommand';

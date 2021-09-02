@@ -6,8 +6,13 @@ export * from './builders/CodeblockBuilder';
 
 export * from './commands/CommandManager';
 export * from './commands/CommandContext';
+export * from './commands/constants/OptionType';
+export * from './commands/interfaces/Command';
 export * from './commands/interfaces/CommandDefinition';
-export * from './commands/interfaces/CommandEntity';
+export * from './commands/interfaces/CommandOption';
+export * from './commands/interfaces/OptionResolver';
+export * from './commands/interfaces/entity/CommandEntity';
+export * from './commands/interfaces/entity/OptionResolverEntity';
 
 export * from './discord/Discord';
 export * from './discord/constants/DiscordEvent';

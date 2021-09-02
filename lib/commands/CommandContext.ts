@@ -1,3 +1,5 @@
+import { EntityAPI } from '@ayanaware/bento';
+
 import { APIApplicationCommandInteraction, InteractionResponseType } from 'discord-api-types';
 import {
 	BaseData,
@@ -17,10 +19,12 @@ import { Discord } from '../discord/Discord';
 import { PromptManager } from '../prompt/PromptManager';
 
 import { INTERACTION_MESSAGE, INTERACTION_RESPONSE } from './constants/API';
-import type { CommandEntity } from './interfaces/CommandEntity';
+import type { Command } from './interfaces/Command';
 
 export abstract class CommandContext {
-	public command: CommandEntity;
+	private readonly api: EntityAPI;
+
+	public readonly command: Command;
 	public type: 'message' | 'interaction';
 
 	public authorId: string;
@@ -38,14 +42,15 @@ export abstract class CommandContext {
 	public readonly discord: Discord;
 	public readonly promptManager: PromptManager;
 
-	public constructor(command: CommandEntity) {
+	public constructor(api: EntityAPI, command: Command) {
+		this.api = api;
 		this.command = command;
 
 		// Entities
-		this.discord = this.command.api.getEntity(Discord);
+		this.discord = api.getEntity(Discord);
 
-		this.interface = this.command.api.getEntity(BentocordInterface);
-		this.promptManager = this.command.api.getEntity(PromptManager);
+		this.interface = api.getEntity(BentocordInterface);
+		this.promptManager = api.getEntity(PromptManager);
 	}
 
 	/**
@@ -67,8 +72,8 @@ export class InteractionCommandContext extends CommandContext {
 
 	private hasResponded = false;
 
-	public constructor(command: CommandEntity, interaction: APIApplicationCommandInteraction) {
-		super(command);
+	public constructor(api: EntityAPI, command: Command, interaction: APIApplicationCommandInteraction) {
+		super(api, command);
 		this.interaction = interaction;
 
 		const client = this.discord.client;
@@ -132,8 +137,8 @@ export class MessageCommandContext extends CommandContext {
 
 	private responseId: string = null;
 
-	public constructor(command: CommandEntity, message: Message) {
-		super(command);
+	public constructor(api: EntityAPI, command: Command, message: Message) {
+		super(api, command);
 
 		this.message = message;
 

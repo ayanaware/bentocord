@@ -7,7 +7,7 @@ import { CommandOption } from './CommandOption';
 
 export interface OptionResolver<T> {
 	/** Bentocord Option Type */
-	type: OptionType | string;
+	option: OptionType | string;
 
 	/** Discord CommandOptionType to use */
 	convert: ApplicationCommandOptionType;
