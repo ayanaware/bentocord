@@ -31,11 +31,11 @@ Logger.getDefaultTransport().setLevel(LogLevel.DEBUG);
 			aliases: ['pogcounter'],
 			description: 'count pogs in a string',
 			options: [
-				{ type: 'pog', array: true, name: 'pogCount', description: 'input string', rest: true }
+				{ type: 'pog', name: 'count', array: true, description: 'input string', rest: true }
 			]
 		},
-		async execute(ctx: CommandContext, options: { pogCount: Array<number> }) {
-			return ctx.createResponse({ content: `I saw ${options.pogCount.toString()} pogs` })
+		async execute(ctx: CommandContext, options: { count: number }) {
+			return ctx.createResponse({ content: `I saw ${options.count.toString()} pogs` })
 		}
 	});
 })().catch(e => {

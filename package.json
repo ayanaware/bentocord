@@ -8,7 +8,7 @@
 	"author": "HcgRandon <me@randon.moe>",
 	"scripts": {
 		"build": "rm -rf ./build && tsc",
-		"prepublishOnly": "rm -rf ./build && tsc",
+		"prepare": "rm -rf ./build && tsc",
 		"lint": "eslint --ext \".ts\" --ignore-path .gitignore lib/",
 		"lint:fix": "eslint --ext \".ts\" --fix --ignore-path .gitignore lib/"
 	},

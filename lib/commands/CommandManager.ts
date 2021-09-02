@@ -465,7 +465,7 @@ export class CommandManager implements Component {
 
 				// process suppressors
 				const suppressed = await this.executeSuppressors(ctx, subOption);
-				if (suppressed) throw new Error(`${suppressed.name}: Execution halted: ${suppressed.message}`);
+				if (suppressed) throw new Error(`Suppressor \`${suppressed.name}\` halted execution: ${suppressed.message}`);
 
 				collector = { ...collector, [option.name]: await this.processInteractionOptions(ctx, subOption.options, data.options) };
 				break;
@@ -513,12 +513,10 @@ export class CommandManager implements Component {
 
 				// process suppressors
 				const suppressed = await this.executeSuppressors(ctx, subOption);
-				if (suppressed) throw new Error(`${suppressed.name}: Execution halted: ${suppressed.message}`);
+				if (suppressed) throw new Error(`Suppressor \`${suppressed.name}\` halted execution: ${suppressed.message}`);
 
 				// process nested option
-				{
-					collector = { ...collector, [option.name]: await this.processTextOptions(ctx, subOption.options, output, index) };
-				}
+				collector = { ...collector, [option.name]: await this.processTextOptions(ctx, subOption.options, output, index) };
 				subNames = []; // collected successfully
 				break;
 			}
@@ -622,7 +620,7 @@ export class CommandManager implements Component {
 		try {
 			// process suppressors
 			const suppressed = await this.executeSuppressors(ctx, definition);
-			if (suppressed) throw new Error(`${suppressed.name}: Execution halted: ${suppressed.message}`);
+			if (suppressed) return ctx.createResponse(`Suppressor \`${suppressed.name}\` halted execution: ${suppressed.message}`);
 
 			const options = await this.fufillInteractionOptions(ctx, definition.options, data);
 			return this.executeCommand(command, ctx, options);
