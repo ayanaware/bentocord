@@ -71,6 +71,10 @@ export class CommandManager implements Component {
 		Suppressors.forEach(suppressor => this.addSuppressor(suppressor));
 	}
 
+	public async onVerify(): Promise<void> {
+		return this.syncTestGuildCommands();
+	}
+
 	public async onChildLoad(entity: CommandEntity | OptionResolverEntity | SuppressorEntity): Promise<void> {
 		try {
 			if (typeof (entity as CommandEntity).definition === 'object') {
@@ -578,16 +582,6 @@ export class CommandManager implements Component {
 
 		// TODO: Transform function
 		return out;
-	}
-
-	// eslint-disable-next-line @typescript-eslint/member-ordering
-	private alreadySynced = false;
-	@Subscribe(Discord, DiscordEvent.SHARD_READY)
-	private async autoSyncTestGuildSlashCommands() {
-		if (this.alreadySynced) return;
-		this.alreadySynced = true;
-
-		return this.syncTestGuildCommands();
 	}
 
 	@Subscribe(Discord, DiscordEvent.SHARD_READY)
