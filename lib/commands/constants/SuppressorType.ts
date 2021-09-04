@@ -5,7 +5,7 @@ export enum SuppressorType {
 	/** Guild Owner */
 	GUILD_OWNER,
 	/** Guild Administrator */
-	GUILD_ADMINISTRATOR,
+	GUILD_ADMIN,
 
 	// Filters
 	/** User: userIds[] */

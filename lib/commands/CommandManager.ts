@@ -151,13 +151,16 @@ export class CommandManager implements Component {
 			// resolve name
 			let name = definition.type;
 			if (typeof name === 'number') name = SuppressorType[name];
-			if (typeof definition.args === 'function') definition.args = await definition.args();
-			else if (!Array.isArray(definition.args)) definition.args = [];
+
+			let args = definition.args;
+			if (typeof definition.args === 'function') args = await definition.args();
+
+			if (!Array.isArray(args)) args = [];
 
 			const suppressor = this.suppressors.get(definition.type);
 			if (!suppressor) continue;
 
-			const result = await suppressor.suppress(ctx, option, ...definition.args);
+			const result = await suppressor.suppress(ctx, option, ...args);
 			if (result === false) continue;
 
 			return { name, message: result };
@@ -396,6 +399,7 @@ export class CommandManager implements Component {
 	private convertOptions(options: Array<AnyCommandOption>) {
 		const collector: Array<APIApplicationCommandOption> = [];
 
+		if (!options) options = [];
 		// drop SubCommandGroupOption & SubCommandOption special types
 		for (const option of options as Array<CommandOption>) {
 			const appOption: ApplicationCommandOption = { type: null, name: option.name.toLowerCase(), description: option.description };
