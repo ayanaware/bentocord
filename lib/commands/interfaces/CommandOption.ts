@@ -1,4 +1,3 @@
-import { CommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
 
 import type { SuppressorDefinition } from './Suppressor';
@@ -11,7 +10,7 @@ export interface CommandOption<T = unknown> {
 	name: string;
 
 	/** Option description */
-	description: string;
+	description?: string;
 
 	/** Expect user to input array and always return array */
 	array?: boolean;

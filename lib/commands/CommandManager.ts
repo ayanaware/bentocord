@@ -402,7 +402,7 @@ export class CommandManager implements Component {
 		if (!options) options = [];
 		// drop SubCommandGroupOption & SubCommandOption special types
 		for (const option of options as Array<CommandOption>) {
-			const appOption: ApplicationCommandOption = { type: null, name: option.name.toLowerCase(), description: option.description };
+			const appOption: ApplicationCommandOption = { type: null, name: option.name.toLowerCase(), description: option.description || '' };
 
 			// Handle Special Subcommand & SubcommandGroup OptionTypes
 			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {

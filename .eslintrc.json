@@ -11,11 +11,6 @@
 		"build/"
 	],
 	"rules": {
-		"padded-blocks": [
-			"error",
-			"never"
-		],
-		"max-len": "off",
-		"@typescript-eslint/require-await": "off"
+		"max-len": "off"
 	}
 }
