@@ -78,7 +78,7 @@ export class CommandManager implements Component {
 		// Create Reply Command for prompts
 		this.addCommand({
 			definition: {
-				aliases: ['r', 'reply'],
+				aliases: ['r'],
 				description: 'Reply to a pending prompt',
 				options: [{ type: OptionType.STRING, name: 'response', rest: true }],
 			},
@@ -657,7 +657,7 @@ export class CommandManager implements Component {
 	 * @param channelId channelId
 	 * @param userId userId
 	 */
-	public async cancelPrompt(channelId: string, userId: string): Promise<void> {
+	public async cancelPrompt(channelId: string, userId: string, reason?: string): Promise<void> {
 		const key = `${channelId}.${userId}`;
 		const prompt = this.prompts.get(key);
 		if (!prompt) return;
@@ -665,7 +665,14 @@ export class CommandManager implements Component {
 		this.prompts.delete(key);
 		if (prompt.timeout) clearTimeout(prompt.timeout);
 
+		let content = 'Prompt has been canceled';
+		if (reason) content += `: ${reason}`;
+
 		prompt.reject();
+
+		const ctx = prompt.options.ctx;
+		if (ctx) await ctx.createResponse({ content });
+		else await this.discord.client.createMessage(channelId, { content });
 	}
 
 	/**
@@ -696,7 +703,7 @@ export class CommandManager implements Component {
 		if (!channelId || !userId) return;
 
 		const key = `${channelId}.${userId}`;
-		if (this.prompts.has(key)) await this.cancelPrompt(channelId, userId);
+		if (this.prompts.has(key)) await this.cancelPrompt(channelId, userId, 'New prompt opened');
 
 		// add usage help
 		content += '\n*You may respond via message or the `r` command*';
@@ -715,7 +722,7 @@ export class CommandManager implements Component {
 					if (prompt.timeout) clearTimeout(prompt.timeout);
 
 					prompt.timeout = setTimeout(() => {
-						this.cancelPrompt(channelId, userId).catch((e: unknown) => log.warn(`cancelPrompt(): Failed: ${e.toString()}`));
+						this.cancelPrompt(channelId, userId, 'Input Timeout').catch((e: unknown) => log.warn(`cancelPrompt(): Failed: ${e.toString()}`));
 					}, options.time || 30 * 1000);
 				},
 			};
@@ -785,19 +792,17 @@ export class CommandManager implements Component {
 			// attempt limit
 			prompt.attempt = (prompt.attempt || 0) + 1;
 			if (prompt.attempt >= 3) {
-				this.cleanupPrompt(channelId, userId);
-				prompt.reject();
+				await this.cancelPrompt(channelId, userId, 'Max invalid attempts');
 
 				return;
 			}
 
 			prompt.refresh();
 
-			const message = 'Failed to validate input, please try again';
-
+			const errorMessage = 'Failed to validate, please try again:';
 			const ctx = prompt.options.ctx;
-			if (ctx) return ctx.createResponse({ content: message });
-			return this.discord.client.createMessage(channelId, message);
+			if (ctx) return ctx.createResponse({ content: errorMessage });
+			return this.discord.client.createMessage(channelId, errorMessage);
 		}
 
 		this.cleanupPrompt(channelId, userId);
