@@ -212,6 +212,8 @@ export class MessageCommandContext extends CommandContext {
 	}
 
 	public async createResponse(content: MessageContent, file?: MessageFile): Promise<unknown> {
+		if (this.responseId) return this.editResponse(content);
+
 		const message = await this.channel.createMessage(content, file);
 		this.responseId = message.id;
 

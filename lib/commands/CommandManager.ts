@@ -86,7 +86,7 @@ export class CommandManager implements Component {
 				if (ctx.type === 'interaction') await ctx.acknowledge();
 
 				await ctx.deleteResponse();
-				return this.handlePrompt(ctx.channelId, ctx.authorId, response);
+				return this.handlePrompt(ctx.channelId, ctx.authorId, response, (ctx as MessageCommandContext).message || null);
 			},
 		});
 	}
@@ -652,6 +652,11 @@ export class CommandManager implements Component {
 		return out;
 	}
 
+	/**
+	 * Cancel a pending prompt
+	 * @param channelId channelId
+	 * @param userId userId
+	 */
 	public async cancelPrompt(channelId: string, userId: string): Promise<void> {
 		const key = `${channelId}.${userId}`;
 		const prompt = this.prompts.get(key);
@@ -663,6 +668,11 @@ export class CommandManager implements Component {
 		prompt.reject();
 	}
 
+	/**
+	 * Cleanup a prompt
+	 * @param channelId channelId
+	 * @param userId userId
+	 */
 	private cleanupPrompt(channelId: string, userId: string) {
 		const key = `${channelId}.${userId}`;
 		const prompt = this.prompts.get(key);
@@ -672,6 +682,13 @@ export class CommandManager implements Component {
 		if (prompt.timeout) clearTimeout(prompt.timeout);
 	}
 
+	/**
+	 * Prompt user for further input
+	 * @param options PromptOptions
+	 * @param content Prompt to display
+	 * @param validate Prompt Input validation
+	 * @returns Validated input
+	 */
 	public async prompt<T extends unknown = unknown>(options: PromptOptions, content: string, validate: PromptValidate<T>): Promise<T> {
 		// infer channelId & userId from context if exist
 		const channelId = options.channelId || options.ctx.channelId;
@@ -708,6 +725,13 @@ export class CommandManager implements Component {
 		});
 	}
 
+	/**
+	 * Prompt a user to select one of up to 10 options
+	 * @param options PromptOptions
+	 * @param choices Array of PromptChoice
+	 * @param content Optional Choose detail message to display
+	 * @returns PromptChoice
+	 */
 	public async choose<T = unknown>(options: PromptOptions, choices: Array<PromptChoice<T>>, content?: string): Promise<PromptChoice<T>> {
 		const cbb = new CodeblockBuilder();
 		cbb.language = '';
@@ -734,10 +758,17 @@ export class CommandManager implements Component {
 		});
 	}
 
-	private async handlePrompt(channelId: string, userId: string, content: string) {
+	private async handlePrompt(channelId: string, userId: string, content: string, message?: Message) {
 		const key = `${channelId}.${userId}`;
 		const prompt = this.prompts.get(key);
 		if (!prompt) return;
+
+		// Prune message based replies
+		if (message) {
+			try {
+				await message.delete();
+			} catch { /* Failed */ }
+		}
 
 		let result: unknown = content;
 		if (typeof prompt.validate === 'function') {
@@ -848,7 +879,7 @@ export class CommandManager implements Component {
 			// send message content to prompt if one exists
 			const channelId = message.channel.id;
 			const userId = message.author.id;
-			if (this.prompts.has(`${channelId}.${userId}`)) await this.handlePrompt(channelId, userId, message.content);
+			if (this.prompts.has(`${channelId}.${userId}`)) await this.handlePrompt(channelId, userId, message.content, message);
 
 			return;
 		}
@@ -865,7 +896,6 @@ export class CommandManager implements Component {
 
 		// CommandContext
 		const ctx = new MessageCommandContext(this, command, message);
-
 		try {
 			// process suppressors
 			const suppressed = await this.executeSuppressors(ctx, definition);

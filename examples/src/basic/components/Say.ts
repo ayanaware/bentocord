@@ -16,6 +16,8 @@ export class SayCommand implements CommandEntity {
 	};
 
 	public async execute(ctx: CommandContext, options: { text: string }) {
+		if (!await ctx.promptConfirm(`Say \`${options.text}\`[y/n]?`)) return;
+
 		return ctx.createResponse({ content: options.text });
 	}
 }
