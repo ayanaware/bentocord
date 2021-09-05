@@ -19,7 +19,7 @@
 	},
 	"peerDependencies": {
 		"@ayanaware/bento": "^1.0.0-rc.14",
-		"eris": "DonovanDMC/eris#everything"
+		"eris": "^0.15.1"
 	},
 	"devDependencies": {
 		"@ayanaware/bento": "^1.0.0-rc.24",
