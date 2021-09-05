@@ -14,6 +14,7 @@ import { GuildChannel, Message } from 'eris';
 
 import { BentocordInterface } from '../BentocordInterface';
 import { BentocordVariable } from '../BentocordVariable';
+import { CodeblockBuilder } from '../builders/CodeblockBuilder';
 import { Discord } from '../discord/Discord';
 import { DiscordEvent } from '../discord/constants/DiscordEvent';
 
@@ -21,12 +22,13 @@ import { CommandContext, InteractionCommandContext, MessageCommandContext } from
 import { APPLICATION_COMMANDS, APPLICATION_GUILD_COMMANDS } from './constants/API';
 import { OptionType } from './constants/OptionType';
 import { SuppressorType } from './constants/SuppressorType';
-import { ApplicationCommand, ApplicationCommandOption } from './interfaces/ApplicationCommand';
-import { Command } from './interfaces/Command';
-import { AnyCommandOption, AnySubCommandOption, CommandOption } from './interfaces/CommandOption';
-import { InteractionDataOption } from './interfaces/Interaction';
-import { OptionResolver } from './interfaces/OptionResolver';
-import { Suppressor, SuppressorOption } from './interfaces/Suppressor';
+import type { ApplicationCommand, ApplicationCommandOption } from './interfaces/ApplicationCommand';
+import type { Command } from './interfaces/Command';
+import type { AnyCommandOption, AnySubCommandOption, CommandOption } from './interfaces/CommandOption';
+import type { InteractionDataOption } from './interfaces/Interaction';
+import type { OptionResolver } from './interfaces/OptionResolver';
+import { Prompt, PromptChoice, PromptOptions, PromptValidate } from './interfaces/Prompt';
+import type { Suppressor, SuppressorOption } from './interfaces/Suppressor';
 import type { CommandEntity } from './interfaces/entity/CommandEntity';
 import type { OptionResolverEntity } from './interfaces/entity/OptionResolverEntity';
 import type { SuppressorEntity } from './interfaces/entity/SuppressorEntity';
@@ -59,9 +61,12 @@ export class CommandManager implements Component {
 	private readonly resolvers: Map<OptionType | string, OptionResolver<unknown>> = new Map();
 	private readonly suppressors: Map<SuppressorType | string, Suppressor> = new Map();
 
+	private readonly prompts: Map<string, Prompt<any>> = new Map();
+
 	private selfId: string = null;
 
 	private readonly testPrefix = 'test-';
+	promptManager: any;
 
 	public async onLoad(): Promise<void> {
 		// Load built-in resolvers
@@ -69,6 +74,21 @@ export class CommandManager implements Component {
 
 		// Load built-in suppressors
 		Suppressors.forEach(suppressor => this.addSuppressor(suppressor));
+
+		// Create Reply Command for prompts
+		this.addCommand({
+			definition: {
+				aliases: ['r', 'reply'],
+				description: 'Reply to a pending prompt',
+				options: [{ type: OptionType.STRING, name: 'response', rest: true }],
+			},
+			execute: async (ctx: CommandContext, { response }: { response: string }) => {
+				if (ctx.type === 'interaction') await ctx.acknowledge();
+
+				await ctx.deleteResponse();
+				return this.handlePrompt(ctx.channelId, ctx.authorId, response);
+			},
+		});
 	}
 
 	public async onVerify(): Promise<void> {
@@ -547,8 +567,24 @@ export class CommandManager implements Component {
 			collector = { ...collector, [option.name]: await this.resolveOption(ctx, option, value) };
 		}
 
-		// Todo: Prompt for subcommand option
-		if (subNames.length > 0) throw new Error(`Please choose one of the following subcommands: ${subNames.join(', ')}`);
+		// Prompt for subcommand option
+		let useSub: string = null;
+		if (subNames.length > 1) {
+			const choices: Array<PromptChoice<string>> = [];
+			for (const subName of subNames) {
+				choices.push({ value: subName, display: subName, match: [subName] });
+			}
+
+			const choice = await this.choose({ ctx }, choices, 'Please select a subcommand:');
+			useSub = choice.value;
+		} else {
+			useSub = subNames[0];
+		}
+
+		if (useSub) {
+			const subOption = options.find(o => o.name.toLowerCase() === useSub.toLowerCase()) as AnySubCommandOption;
+			if (subOption) collector = { ...collector, [useSub]: await this.processTextOptions(ctx, subOption.options, output, index) };
+		}
 
 		return collector;
 	}
@@ -560,15 +596,43 @@ export class CommandManager implements Component {
 		let inputs: Array<string> = option.array ? raw.split(/,\s?/gi) : [raw];
 		inputs = inputs.filter(i => !!i);
 
-		const value: Array<T> = [];
-		for (const item of inputs) {
-			let result = await this.executeResolver(ctx, option, item);
-			if (result == null) {
-				// Resolve failed, prompt!
-			}
+		// Auto prompt missing data on required option
+		if (inputs.length < 1 && (typeof option.required !== 'boolean' || option.required)) {
+			const promptContent = `Please provide an input for option \`${option.name}\` of type \`${this.getTypePreview(option)}\`:`;
+			const promptInput = await this.prompt<string>({ ctx }, promptContent, async (content: string) => content);
 
-			// Multiple matches, TODO: reduce
-			if (Array.isArray(result)) result = result[0];
+			inputs = option.array ? promptInput.split(/,\s?/gi) : [promptInput];
+			inputs = inputs.filter(i => !!i);
+		}
+
+		const value: Array<T> = [];
+		for (const input of inputs) {
+			let result = await this.executeResolver<T>(ctx, option, input);
+
+			// Reduce Choose Prompt
+			if (Array.isArray(result) && result.length > 1) {
+				const resolver = this.resolvers.get(option.type);
+
+				const choices: Array<PromptChoice<T>> = [];
+				for (const item of result) {
+					const match = [];
+					let display = item.toString();
+
+					if (resolver && typeof resolver.reduce === 'function') {
+						const reduce = await resolver.reduce(ctx, option, item);
+						display = reduce.display;
+
+						if (reduce.extra) match.push(reduce.extra);
+					}
+
+					choices.push({ value: item, display, match });
+				}
+
+				const choice = await this.choose<T>({ ctx }, choices);
+				result = choice.value;
+			} else if (Array.isArray(result)) {
+				result = result[0];
+			}
 
 			if (result != null) value.push(result);
 		}
@@ -586,6 +650,127 @@ export class CommandManager implements Component {
 
 		// TODO: Transform function
 		return out;
+	}
+
+	public async cancelPrompt(channelId: string, userId: string): Promise<void> {
+		const key = `${channelId}.${userId}`;
+		const prompt = this.prompts.get(key);
+		if (!prompt) return;
+
+		this.prompts.delete(key);
+		if (prompt.timeout) clearTimeout(prompt.timeout);
+
+		prompt.reject();
+	}
+
+	private cleanupPrompt(channelId: string, userId: string) {
+		const key = `${channelId}.${userId}`;
+		const prompt = this.prompts.get(key);
+
+		this.prompts.delete(key);
+
+		if (prompt.timeout) clearTimeout(prompt.timeout);
+	}
+
+	public async prompt<T extends unknown = unknown>(options: PromptOptions, content: string, validate: PromptValidate<T>): Promise<T> {
+		// infer channelId & userId from context if exist
+		const channelId = options.channelId || options.ctx.channelId;
+		const userId = options.userId || options.ctx.authorId;
+		if (!channelId || !userId) return;
+
+		const key = `${channelId}.${userId}`;
+		if (this.prompts.has(key)) await this.cancelPrompt(channelId, userId);
+
+		// add usage help
+		content += '\n*You may respond via message or the `r` command*';
+
+		// Show prompt message
+		const ctx = options.ctx;
+		if (ctx) await ctx.createResponse({ content });
+		else await this.discord.client.createMessage(channelId, { content });
+
+		return new Promise<T>((resolve, reject) => {
+			const prompt: Prompt<T> = {
+				options,
+				validate,
+				resolve, reject,
+				refresh: () => {
+					if (prompt.timeout) clearTimeout(prompt.timeout);
+
+					prompt.timeout = setTimeout(() => {
+						this.cancelPrompt(channelId, userId).catch((e: unknown) => log.warn(`cancelPrompt(): Failed: ${e.toString()}`));
+					}, options.time || 30 * 1000);
+				},
+			};
+			prompt.refresh();
+
+			this.prompts.set(key, prompt);
+		});
+	}
+
+	public async choose<T = unknown>(options: PromptOptions, choices: Array<PromptChoice<T>>, content?: string): Promise<PromptChoice<T>> {
+		const cbb = new CodeblockBuilder();
+		cbb.language = '';
+
+		for (let i = 0; i < Math.min(choices.length, 10); i++) {
+			const choice = choices[i];
+			if (!Array.isArray(choice.match)) choice.match = [];
+
+			choice.match.push((i + 1).toString());
+			cbb.addLine(i + 1, choice.display);
+		}
+
+		if (!content) content = 'Please select one of the following choices:';
+		content += await cbb.render();
+
+		return this.prompt<PromptChoice<T>>(options, content, async (input: string) => {
+			for (const choice of choices) {
+				if (!Array.isArray(choice.match)) continue;
+
+				if (choice.match.some(c => c.toLowerCase() === input.toLowerCase())) return choice;
+			}
+
+			return null;
+		});
+	}
+
+	private async handlePrompt(channelId: string, userId: string, content: string) {
+		const key = `${channelId}.${userId}`;
+		const prompt = this.prompts.get(key);
+		if (!prompt) return;
+
+		let result: unknown = content;
+		if (typeof prompt.validate === 'function') {
+			try {
+				result = await prompt.validate(content);
+			} catch (e) {
+				this.cleanupPrompt(channelId, userId);
+
+				prompt.reject(e);
+			}
+		}
+
+		if (result == null) {
+			// attempt limit
+			prompt.attempt = (prompt.attempt || 0) + 1;
+			if (prompt.attempt >= 3) {
+				this.cleanupPrompt(channelId, userId);
+				prompt.reject();
+
+				return;
+			}
+
+			prompt.refresh();
+
+			const message = 'Failed to validate input, please try again';
+
+			const ctx = prompt.options.ctx;
+			if (ctx) return ctx.createResponse({ content: message });
+			return this.discord.client.createMessage(channelId, message);
+		}
+
+		this.cleanupPrompt(channelId, userId);
+		prompt.resolve(result);
 	}
 
 	@Subscribe(Discord, DiscordEvent.SHARD_READY)
@@ -614,7 +799,7 @@ export class CommandManager implements Component {
 		const definition = command.definition;
 		if (typeof definition.registerSlash === 'boolean' && !definition.registerSlash) return; // slash disabled
 
-		const ctx = new InteractionCommandContext(this.api, command, interaction);
+		const ctx = new InteractionCommandContext(this, command, interaction);
 		try {
 			// process suppressors
 			const suppressed = await this.executeSuppressors(ctx, definition);
@@ -659,7 +844,14 @@ export class CommandManager implements Component {
 		const matches = new RegExp(build, 'si').exec(raw);
 
 		// message is not a command
-		if (!matches) return;
+		if (!matches) {
+			// send message content to prompt if one exists
+			const channelId = message.channel.id;
+			const userId = message.author.id;
+			if (this.prompts.has(`${channelId}.${userId}`)) await this.handlePrompt(channelId, userId, message.content);
+
+			return;
+		}
 		const name = matches.groups.name;
 		const args = matches.groups.args;
 
@@ -672,7 +864,7 @@ export class CommandManager implements Component {
 		if (definition.disablePrefix) return;
 
 		// CommandContext
-		const ctx = new MessageCommandContext(this.api, command, message);
+		const ctx = new MessageCommandContext(this, command, message);
 
 		try {
 			// process suppressors

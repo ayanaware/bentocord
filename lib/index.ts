@@ -12,6 +12,7 @@ export * from './commands/interfaces/Command';
 export * from './commands/interfaces/CommandDefinition';
 export * from './commands/interfaces/CommandOption';
 export * from './commands/interfaces/OptionResolver';
+export * from './commands/interfaces/Prompt';
 export * from './commands/interfaces/Suppressor';
 export * from './commands/interfaces/entity/CommandEntity';
 export * from './commands/interfaces/entity/OptionResolverEntity';
@@ -20,7 +21,3 @@ export * from './commands/interfaces/entity/SuppressorEntity';
 export * from './discord/Discord';
 export * from './discord/constants/DiscordEvent';
 export * from './discord/constants/DiscordPermission';
-
-export * from './prompt/PromptManager';
-export * from './prompt/constants/PromptRejectType';
-export * from './prompt/interfaces/PromptOptions';

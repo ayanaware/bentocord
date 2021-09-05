@@ -1,4 +1,4 @@
-import { OptionType } from '../constants/OptionType';
+import type { OptionType } from '../constants/OptionType';
 
 import type { SuppressorDefinition } from './Suppressor';
 

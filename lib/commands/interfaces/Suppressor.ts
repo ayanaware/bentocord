@@ -1,8 +1,8 @@
-import { CommandContext } from '../CommandContext';
-import { SuppressorType } from '../constants/SuppressorType';
+import type { CommandContext } from '../CommandContext';
+import type { SuppressorType } from '../constants/SuppressorType';
 
-import { CommandDefinition } from './CommandDefinition';
-import { AnySubCommandOption } from './CommandOption';
+import type { CommandDefinition } from './CommandDefinition';
+import type { AnySubCommandOption } from './CommandOption';
 
 export interface Suppressor {
 	/** Suppressor Type */

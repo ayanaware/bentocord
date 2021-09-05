@@ -16,10 +16,11 @@ import {
 
 import { BentocordInterface } from '../BentocordInterface';
 import { Discord } from '../discord/Discord';
-import { PromptManager } from '../prompt/PromptManager';
 
+import type { CommandManager } from './CommandManager';
 import { INTERACTION_MESSAGE, INTERACTION_RESPONSE } from './constants/API';
 import type { Command } from './interfaces/Command';
+import { PromptOptions, PromptValidate } from './interfaces/Prompt';
 
 export abstract class CommandContext {
 	private readonly api: EntityAPI;
@@ -40,17 +41,18 @@ export abstract class CommandContext {
 
 	public readonly interface: BentocordInterface;
 	public readonly discord: Discord;
-	public readonly promptManager: PromptManager;
 
-	public constructor(api: EntityAPI, command: Command) {
-		this.api = api;
+	public readonly manager: CommandManager;
+
+	public constructor(manager: CommandManager, command: Command) {
+		this.manager = manager;
+		this.api = manager.api;
+
 		this.command = command;
 
 		// Entities
-		this.discord = api.getEntity(Discord);
-
-		this.interface = api.getEntity(BentocordInterface);
-		this.promptManager = api.getEntity(PromptManager);
+		this.discord = this.api.getEntity(Discord);
+		this.interface = this.api.getEntity(BentocordInterface);
 	}
 
 	/**
@@ -60,8 +62,35 @@ export abstract class CommandContext {
 		return this.interface.isOwner(this.authorId);
 	}
 
+	/**
+	 * Prompt command author for additional input
+	 * @param options PromptOptions
+	 * @param content Message to display
+	 * @param validate Validate their input
+	 * @returns Validated input
+	 */
+	public async prompt<T = unknown>(options: PromptOptions, content: string, validate: PromptValidate<T>): Promise<T> {
+		return this.manager.prompt<T>({ ...options, ctx: this }, content, validate);
+	}
+
+	/**
+	 * Prompt the author for confirmation
+	 * @param content Optional message detailing what they are confirming
+	 * @returns boolean
+	 */
+	public async promptConfirm(content?: string): Promise<boolean> {
+		return this.prompt<boolean>({}, content || 'Please confirm this action [y/n]:', async (input: string) => {
+			if (/^true|t|yes|y|1$/i.exec(input)) return true;
+
+			return false;
+		});
+	}
+
+	public abstract acknowledge(): Promise<void>;
+
 	public abstract createResponse(content: MessageContent): Promise<unknown>;
 	public abstract editResponse(content: MessageContent): Promise<unknown>;
+	public abstract deleteResponse(): Promise<void>;
 }
 
 export class InteractionCommandContext extends CommandContext {
@@ -72,8 +101,8 @@ export class InteractionCommandContext extends CommandContext {
 
 	private hasResponded = false;
 
-	public constructor(api: EntityAPI, command: Command, interaction: APIApplicationCommandInteraction) {
-		super(api, command);
+	public constructor(manager: CommandManager, command: Command, interaction: APIApplicationCommandInteraction) {
+		super(manager, command);
 		this.interaction = interaction;
 
 		const client = this.discord.client;
@@ -102,6 +131,19 @@ export class InteractionCommandContext extends CommandContext {
 		}
 	}
 
+	public async acknowledge(): Promise<void> {
+		if (this.hasResponded) return;
+
+		const response = {
+			type: InteractionResponseType.DeferredChannelMessageWithSource,
+		};
+
+		const client = this.discord.client;
+		await client.requestHandler.request('POST', INTERACTION_RESPONSE(this.interaction.id, this.interaction.token), false, response);
+
+		this.hasResponded = true;
+	}
+
 	public async createResponse(content: MessageContent): Promise<unknown> {
 		if (this.hasResponded) return this.editResponse(content);
 
@@ -127,6 +169,13 @@ export class InteractionCommandContext extends CommandContext {
 		const client = this.discord.client;
 		await client.requestHandler.request('PATCH', INTERACTION_MESSAGE(this.discord.application.id, this.interaction.token, '@original'), true, content);
 	}
+
+	public async deleteResponse(): Promise<void> {
+		if (!this.hasResponded) return;
+
+		const client = this.discord.client;
+		await client.requestHandler.request('DELETE', INTERACTION_MESSAGE(this.discord.application.id, this.interaction.token, '@original'));
+	}
 }
 
 export class MessageCommandContext extends CommandContext {
@@ -137,8 +186,8 @@ export class MessageCommandContext extends CommandContext {
 
 	private responseId: string = null;
 
-	public constructor(api: EntityAPI, command: Command, message: Message) {
-		super(api, command);
+	public constructor(manager: CommandManager, command: Command, message: Message) {
+		super(manager, command);
 
 		this.message = message;
 
@@ -158,6 +207,10 @@ export class MessageCommandContext extends CommandContext {
 		}
 	}
 
+	public async acknowledge(): Promise<void> {
+		// NO-OP on Message Context
+	}
+
 	public async createResponse(content: MessageContent, file?: MessageFile): Promise<unknown> {
 		const message = await this.channel.createMessage(content, file);
 		this.responseId = message.id;
@@ -169,5 +222,11 @@ export class MessageCommandContext extends CommandContext {
 		if (!this.responseId) return this.createResponse(content);
 
 		return this.channel.editMessage(this.responseId, content);
+	}
+
+	public async deleteResponse(): Promise<void> {
+		if (!this.responseId) return;
+
+		return this.channel.deleteMessage(this.responseId);
 	}
 }

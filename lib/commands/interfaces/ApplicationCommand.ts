@@ -1,4 +1,4 @@
-import { APIApplicationCommand, APIApplicationCommandOptionChoice, ApplicationCommandOptionType, Snowflake }  from 'discord-api-types';
+import type { APIApplicationCommand, APIApplicationCommandOptionChoice, ApplicationCommandOptionType, Snowflake }  from 'discord-api-types';
 
 export interface ApplicationCommand extends Omit<APIApplicationCommand, 'id'> {
 	id?: Snowflake;

@@ -1,7 +1,7 @@
-import { DiscordPermission } from '../../discord/constants/DiscordPermission';
-import { CommandContext } from '../CommandContext';
+import type { DiscordPermission } from '../../discord/constants/DiscordPermission';
+import type { CommandContext } from '../CommandContext';
 
-import { AnyCommandOption } from './CommandOption';
+import type { AnyCommandOption } from './CommandOption';
 import type { SuppressorDefinition } from './Suppressor';
 
 export interface CommandDefinition {

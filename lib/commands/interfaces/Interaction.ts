@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionType } from 'discord-api-types';
+import type { ApplicationCommandOptionType } from 'discord-api-types';
 
 export interface InteractionDataOption<D = unknown> {
 	name: string;

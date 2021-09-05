@@ -1,9 +1,9 @@
-import { ApplicationCommandOptionType } from 'discord-api-types';
+import type { ApplicationCommandOptionType } from 'discord-api-types';
 
-import { CommandContext } from '../CommandContext';
-import { OptionType } from '../constants/OptionType';
+import type { CommandContext } from '../CommandContext';
+import type { OptionType } from '../constants/OptionType';
 
-import { CommandOption } from './CommandOption';
+import type { CommandOption } from './CommandOption';
 
 export interface OptionResolver<T> {
 	/** Bentocord Option Type */

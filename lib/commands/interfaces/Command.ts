@@ -1,6 +1,6 @@
-import { CommandContext } from '../CommandContext';
+import type { CommandContext } from '../CommandContext';
 
-import { CommandDefinition } from './CommandDefinition';
+import type { CommandDefinition } from './CommandDefinition';
 
 export interface Command {
 	/** Command Definition */
