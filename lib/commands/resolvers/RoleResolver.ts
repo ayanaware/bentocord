@@ -4,9 +4,9 @@ import { Role } from 'eris';
 import { CommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
 import { CommandOption } from '../interfaces/CommandOption';
-import { OptionResolver } from '../interfaces/OptionResolver';
+import { Resolver } from '../interfaces/Resolver';
 
-export class RoleResolver implements OptionResolver<Role> {
+export class RoleResolver implements Resolver<Role> {
 	public option = OptionType.ROLE;
 	public convert = ApplicationCommandOptionType.Role;
 

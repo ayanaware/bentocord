@@ -4,9 +4,9 @@ import { Guild } from 'eris';
 import { CommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
 import { CommandOption } from '../interfaces/CommandOption';
-import { OptionResolver } from '../interfaces/OptionResolver';
+import { Resolver } from '../interfaces/Resolver';
 
-export class GuildResolver implements OptionResolver<Guild> {
+export class GuildResolver implements Resolver<Guild> {
 	public option = OptionType.GUILD;
 	public convert = ApplicationCommandOptionType.String;
 

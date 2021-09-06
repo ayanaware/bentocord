@@ -3,9 +3,9 @@ import { ApplicationCommandOptionType } from 'discord-api-types';
 import { CommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
 import { CommandOption } from '../interfaces/CommandOption';
-import { OptionResolver } from '../interfaces/OptionResolver';
+import { Resolver } from '../interfaces/Resolver';
 
-export class BooleanResolver implements OptionResolver<boolean> {
+export class BooleanResolver implements Resolver<boolean> {
 	public option = OptionType.BOOLEAN;
 	public convert = ApplicationCommandOptionType.Boolean;
 

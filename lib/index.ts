@@ -11,11 +11,11 @@ export * from './commands/constants/SuppressorType';
 export * from './commands/interfaces/Command';
 export * from './commands/interfaces/CommandDefinition';
 export * from './commands/interfaces/CommandOption';
-export * from './commands/interfaces/OptionResolver';
+export * from './commands/interfaces/Resolver';
 export * from './commands/interfaces/Prompt';
 export * from './commands/interfaces/Suppressor';
 export * from './commands/interfaces/entity/CommandEntity';
-export * from './commands/interfaces/entity/OptionResolverEntity';
+export * from './commands/interfaces/entity/ResolverEntity';
 export * from './commands/interfaces/entity/SuppressorEntity';
 
 export * from './discord/Discord';

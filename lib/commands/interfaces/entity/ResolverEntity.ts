@@ -1,8 +1,8 @@
 import type { Entity, InstanceType } from '@ayanaware/bento';
 
 import type { CommandManager } from '../../CommandManager';
-import type { OptionResolver } from '../OptionResolver';
+import type { Resolver } from '../Resolver';
 
-export interface OptionResolverEntity extends Entity, OptionResolver<unknown> {
+export interface ResolverEntity extends Entity, Resolver<unknown> {
 	parent: InstanceType<CommandManager>;
 }

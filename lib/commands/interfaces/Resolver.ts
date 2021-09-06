@@ -5,7 +5,7 @@ import type { OptionType } from '../constants/OptionType';
 
 import type { CommandOption } from './CommandOption';
 
-export interface OptionResolver<T> {
+export interface Resolver<T> {
 	/** Bentocord Option Type */
 	option: OptionType | string;
 

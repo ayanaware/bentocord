@@ -3,9 +3,9 @@ import { ApplicationCommandOptionType } from 'discord-api-types';
 import { CommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
 import { CommandOption } from '../interfaces/CommandOption';
-import { OptionResolver } from '../interfaces/OptionResolver';
+import { Resolver } from '../interfaces/Resolver';
 
-export class StringResolver implements OptionResolver<string> {
+export class StringResolver implements Resolver<string> {
 	public option = OptionType.STRING;
 	public convert = ApplicationCommandOptionType.String;
 

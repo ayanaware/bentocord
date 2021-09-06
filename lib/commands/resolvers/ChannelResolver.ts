@@ -4,9 +4,9 @@ import { AnyGuildChannel } from 'eris';
 import { CommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
 import { CommandOption } from '../interfaces/CommandOption';
-import { OptionResolver } from '../interfaces/OptionResolver';
+import { Resolver } from '../interfaces/Resolver';
 
-export class ChannelResolver implements OptionResolver<AnyGuildChannel> {
+export class ChannelResolver implements Resolver<AnyGuildChannel> {
 	public option = OptionType.CHANNEL;
 	public convert = ApplicationCommandOptionType.Channel;
 
@@ -14,7 +14,7 @@ export class ChannelResolver implements OptionResolver<AnyGuildChannel> {
 		return { display: `#${channel.name}`, extra: channel.id };
 	}
 
-	public async resolve(ctx: CommandContext, option: CommandOption<AnyGuildChannel>, input: string): Promise<AnyGuildChannel | AnyGuildChannel[]> {
+	public async resolve(ctx: CommandContext, option: CommandOption<AnyGuildChannel>, input: string): Promise<AnyGuildChannel | Array<AnyGuildChannel>> {
 		const guild = ctx.guild;
 		if (!guild) return null;
 

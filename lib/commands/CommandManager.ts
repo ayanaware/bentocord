@@ -26,11 +26,11 @@ import type { ApplicationCommand, ApplicationCommandOption } from './interfaces/
 import type { Command } from './interfaces/Command';
 import type { AnyCommandOption, AnySubCommandOption, CommandOption } from './interfaces/CommandOption';
 import type { InteractionDataOption } from './interfaces/Interaction';
-import type { OptionResolver } from './interfaces/OptionResolver';
 import { Prompt, PromptChoice, PromptOptions, PromptValidate } from './interfaces/Prompt';
+import type { Resolver } from './interfaces/Resolver';
 import type { Suppressor, SuppressorOption } from './interfaces/Suppressor';
 import type { CommandEntity } from './interfaces/entity/CommandEntity';
-import type { OptionResolverEntity } from './interfaces/entity/OptionResolverEntity';
+import type { ResolverEntity } from './interfaces/entity/ResolverEntity';
 import type { SuppressorEntity } from './interfaces/entity/SuppressorEntity';
 import { ParsedItem, Parser, ParserOutput } from './internal/Parser';
 import { Tokenizer } from './internal/Tokenizer';
@@ -58,7 +58,7 @@ export class CommandManager implements Component {
 	private readonly commands: Map<string, Command> = new Map();
 	private readonly aliases: Map<string, string> = new Map();
 
-	private readonly resolvers: Map<OptionType | string, OptionResolver<unknown>> = new Map();
+	private readonly resolvers: Map<OptionType | string, Resolver<unknown>> = new Map();
 	private readonly suppressors: Map<SuppressorType | string, Suppressor> = new Map();
 
 	private readonly prompts: Map<string, Prompt<any>> = new Map();
@@ -95,12 +95,12 @@ export class CommandManager implements Component {
 		return this.syncTestGuildCommands();
 	}
 
-	public async onChildLoad(entity: CommandEntity | OptionResolverEntity | SuppressorEntity): Promise<void> {
+	public async onChildLoad(entity: CommandEntity | ResolverEntity | SuppressorEntity): Promise<void> {
 		try {
 			if (typeof (entity as CommandEntity).definition === 'object') {
 				this.addCommand(entity as CommandEntity);
-			} else if (typeof (entity as OptionResolverEntity).option !== 'undefined') {
-				this.addResolver(entity as OptionResolverEntity);
+			} else if (typeof (entity as ResolverEntity).option !== 'undefined') {
+				this.addResolver(entity as ResolverEntity);
 			} else if (typeof (entity as SuppressorEntity).suppressor !== 'undefined') {
 				this.addSuppressor((entity as SuppressorEntity));
 			}
@@ -109,12 +109,12 @@ export class CommandManager implements Component {
 		}
 	}
 
-	public async onChildUnload(entity: CommandEntity | OptionResolverEntity | SuppressorEntity): Promise<void> {
+	public async onChildUnload(entity: CommandEntity | ResolverEntity | SuppressorEntity): Promise<void> {
 		try {
 			if (typeof (entity as CommandEntity).definition === 'object') {
 				this.removeCommand(entity as CommandEntity);
-			} else if (typeof (entity as OptionResolverEntity).option !== 'undefined') {
-				this.removeResolver((entity as OptionResolverEntity).option);
+			} else if (typeof (entity as ResolverEntity).option !== 'undefined') {
+				this.removeResolver((entity as ResolverEntity).option);
 			} else if (typeof (entity as SuppressorEntity).suppressor !== 'undefined') {
 				this.removeSuppressor((entity as SuppressorEntity).suppressor);
 			}
@@ -127,7 +127,7 @@ export class CommandManager implements Component {
 	 * Add Resolver
 	 * @param resolver OptionResolver
 	 */
-	public addResolver(resolver: OptionResolver<unknown>): void {
+	public addResolver(resolver: Resolver<unknown>): void {
 		this.resolvers.set(resolver.option, resolver);
 	}
 
@@ -140,7 +140,7 @@ export class CommandManager implements Component {
 	}
 
 	private async executeResolver<T = unknown>(ctx: CommandContext, option: CommandOption<T>, input: string) {
-		const resolver = this.resolvers.get(option.type) as OptionResolver<T>;
+		const resolver = this.resolvers.get(option.type) as Resolver<T>;
 		if (!resolver) return null;
 
 		return resolver.resolve(ctx, option, input);
@@ -611,7 +611,7 @@ export class CommandManager implements Component {
 
 			// Reduce Choose Prompt
 			if (Array.isArray(result) && result.length > 1) {
-				const resolver = this.resolvers.get(option.type);
+				const resolver = this.resolvers.get(option.type) as Resolver<T>;
 
 				const choices: Array<PromptChoice<T>> = [];
 				for (const item of result) {

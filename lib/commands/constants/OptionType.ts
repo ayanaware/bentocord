@@ -24,4 +24,6 @@ export enum OptionType {
 	// DISCORD SPECIAL
 	/** Guild */
 	GUILD,
+
+	EMOJI,
 }
