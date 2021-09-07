@@ -11,11 +11,13 @@ export class SayCommand implements CommandEntity {
 		aliases: ['say', 'echo'],
 		description: 'Simon says repeat after me',
 		options: [
-			{ type: OptionType.STRING, name: 'text', description: 'text to repeat', rest: true, required: true, },
+			{ type: OptionType.STRING, name: 'text', description: 'text to repeat', rest: true, required: true },
+			{ type: OptionType.EMOJI, name: 'emoji', description: 'emoji test' }
 		],
 	};
 
 	public async execute(ctx: CommandContext, options: { text: string }) {
+		console.log(options);
 		if (!await ctx.promptConfirm(`Say \`${options.text}\`[y/n]?`)) return;
 
 		return ctx.createResponse({ content: options.text });

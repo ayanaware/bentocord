@@ -22,13 +22,13 @@ import { CommandContext, InteractionCommandContext, MessageCommandContext } from
 import { APPLICATION_COMMANDS, APPLICATION_GUILD_COMMANDS } from './constants/API';
 import { OptionType } from './constants/OptionType';
 import { SuppressorType } from './constants/SuppressorType';
-import type { ApplicationCommand, ApplicationCommandOption } from './interfaces/ApplicationCommand';
 import type { Command } from './interfaces/Command';
 import type { AnyCommandOption, AnySubCommandOption, CommandOption } from './interfaces/CommandOption';
-import type { InteractionDataOption } from './interfaces/Interaction';
 import { Prompt, PromptChoice, PromptOptions, PromptValidate } from './interfaces/Prompt';
 import type { Resolver } from './interfaces/Resolver';
 import type { Suppressor, SuppressorOption } from './interfaces/Suppressor';
+import type { ApplicationCommand, ApplicationCommandOption } from './interfaces/discord/ApplicationCommand';
+import type { InteractionDataOption } from './interfaces/discord/Interaction';
 import type { CommandEntity } from './interfaces/entity/CommandEntity';
 import type { ResolverEntity } from './interfaces/entity/ResolverEntity';
 import type { SuppressorEntity } from './interfaces/entity/SuppressorEntity';
@@ -89,6 +89,11 @@ export class CommandManager implements Component {
 				return this.handlePrompt(ctx.channelId, ctx.authorId, response, (ctx as MessageCommandContext).message || null);
 			},
 		});
+	}
+
+	public async onUnload(): Promise<void> {
+		// Remove reply command
+		this.removeCommand('r');
 	}
 
 	public async onVerify(): Promise<void> {

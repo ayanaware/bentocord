@@ -25,7 +25,7 @@ export interface CommandOption<T = unknown> {
 	choices?: Array<CommandOptionChoice>;
 
 	/** Nested Options */
-	options?: Array<SubCommandGroupOption | SubCommandOption | CommandOption>;
+	options?: Array<AnyCommandOption>;
 
 	/** Consume the "rest" of available phrases */
 	rest?: boolean;
@@ -41,28 +41,23 @@ export interface CommandOptionChoice {
 
 export interface SubCommandOption extends Omit<CommandOption, 'choices'|'options'> {
 	type: OptionType.SUB_COMMAND;
+
 	/** Nested Options */
 	options: Array<CommandOption>;
 
-	required: true;
-
 	/** Suppressors */
 	suppressors: Array<SuppressorDefinition>;
-
-	/** Function or method name to execute */
-	// execute?: string | ((ctx?: CommandContext) => void);
 }
 
 export interface SubCommandGroupOption extends Omit<CommandOption, 'choices'> {
 	type: OptionType.SUB_COMMAND_GROUP;
+
 	/** Nested Options */
 	options: Array<SubCommandOption>;
-
-	required: true;
 
 	/** Suppressors */
 	suppressors: Array<SuppressorDefinition>;
 }
 
-export type AnySubCommandOption = SubCommandOption | SubCommandGroupOption;
 export type AnyCommandOption = CommandOption | SubCommandOption | SubCommandGroupOption;
+export type AnySubCommandOption = SubCommandOption | SubCommandGroupOption;
