@@ -21,12 +21,12 @@ export class Discord implements Component {
 
 	@Inject() private readonly interface: BentocordInterface;
 
-	public async onLoad(): Promise<void> {
-		return this.connect();
-	}
-
 	public async onUnload(): Promise<void> {
 		return this.disconnect();
+	}
+
+	public async onVerify(): Promise<void> {
+		return this.connect();
 	}
 
 	public async connect(tokenOverride?: string, optionsOverride?: ClientOptions): Promise<void> {
