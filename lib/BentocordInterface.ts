@@ -10,7 +10,10 @@ export interface MessageSnowflakes {
 }
 
 export interface ShardData {
+	/** shardIds, currently MUST be sorted & consecutive. 0, 1, 2. NOT 0, 2, 42 */
 	shardIds: Array<number>;
+
+	/** shard count */
 	shardCount: number;
 }
 
@@ -26,6 +29,10 @@ export class BentocordInterface implements Plugin {
 
 	protected readonly prefixes: Map<string, string> = new Map();
 	protected readonly permissions: Map<string, boolean> = new Map();
+
+	public async getShardData(): Promise<ShardData> {
+		return { shardIds: [0, 1], shardCount: 1 };
+	}
 
 	public async isOwner(userId: string): Promise<boolean> {
 		const owners = this.owners.split(',').map(o => o.trim());

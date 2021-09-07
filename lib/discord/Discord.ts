@@ -1,8 +1,9 @@
-import { Component, ComponentAPI, Subscribe, Variable } from '@ayanaware/bento';
+import { Component, ComponentAPI, Inject, Subscribe } from '@ayanaware/bento';
 import { Logger } from '@ayanaware/logger-api';
 
 import { Client, ClientOptions, OAuthApplicationInfo } from 'eris';
 
+import { BentocordInterface } from '../BentocordInterface';
 import { BentocordVariable } from '../BentocordVariable';
 
 import { DiscordEvent } from './constants/DiscordEvent';
@@ -14,11 +15,11 @@ export class Discord implements Component {
 	public api!: ComponentAPI;
 
 	public client: Client;
+	private clientOptions: ClientOptions;
 
 	public application: OAuthApplicationInfo;
 
-	@Variable({ name: BentocordVariable.BENTOCORD_CLIENT_OPTIONS, default: {} })
-	private readonly clientOptions: ClientOptions;
+	@Inject() private readonly interface: BentocordInterface;
 
 	public async onLoad(): Promise<void> {
 		return this.connect();
@@ -36,9 +37,24 @@ export class Discord implements Component {
 
 		if (this.client) await this.disconnect();
 
+		let clientOptions = this.api.getVariable<ClientOptions>({ name: BentocordVariable.BENTOCORD_CLIENT_OPTIONS, default: {} });
+
+		let { shardIds, shardCount } = await this.interface.getShardData();
+		clientOptions.maxShards = shardCount || 1;
+
+		// resolve firstShardID & lastShardID
+		if (!Array.isArray(shardIds) || shardIds.length === 0) shardIds = [0, 1];
+		shardIds.sort(); // just in case, for that special person
+
+		if (shardIds.length < 2) clientOptions = { ...clientOptions, firstShardID: shardIds[0], lastShardID: shardIds[0] + 1 };
+		else clientOptions = { ...clientOptions, firstShardID: shardIds[0], lastShardID: shardIds[shardIds.length - 1] };
+
 		// merge options & overrides
-		const clientOptions = { ...this.clientOptions, ...optionsOverride };
+		clientOptions = { ...clientOptions, ...optionsOverride };
 		clientOptions.autoreconnect = true;
+
+		this.clientOptions = clientOptions;
+		log.info(`ClientOptions = ${JSON.stringify(clientOptions)}`);
 
 		this.client = new Client(`Bot ${token}`, clientOptions);
 		this.api.forwardEvents(this.client, Object.values(DiscordEvent));
