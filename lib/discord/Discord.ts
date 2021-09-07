@@ -44,7 +44,7 @@ export class Discord implements Component {
 
 		// resolve firstShardID & lastShardID
 		if (!Array.isArray(shardIds) || shardIds.length === 0) shardIds = [0, 1];
-		shardIds.sort(); // just in case, for that special person
+		shardIds.sort((a, b) => a - b); // just in case, for that special person
 
 		if (shardIds.length < 2) clientOptions = { ...clientOptions, firstShardID: shardIds[0], lastShardID: shardIds[0] + 1 };
 		else clientOptions = { ...clientOptions, firstShardID: shardIds[0], lastShardID: shardIds[shardIds.length - 1] };
