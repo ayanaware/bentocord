@@ -2,7 +2,7 @@
  * Maps to Eris camelCase Event names
  * https://abal.moe/Eris/docs/Client#event-callCreate
  */
-export enum DiscordEvent { 
+export enum DiscordEvent {
 	// Eris
 	ERROR = 'error', // error, shardId
 	WARN = 'warn', // message, shardId

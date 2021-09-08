@@ -2,15 +2,15 @@
 	"name": "bentocord-examples",
 	"version": "1.0.0",
 	"scripts": {
-		"build": "rm -rf ./build && tsc"
+		"build": "rm -rf build && tsc"
 	},
 	"dependencies": {
-		"@ayanaware/bento": "^1.0.0-rc.21",
-		"@ayanaware/bentocord": "../",
+		"@ayanaware/bento": "^1.0.0-rc.24",
+		"@ayanaware/bentocord": "../build",
 		"@ayanaware/logger": "^2.0.0-beta.3",
-		"@types/node": "^16.4.10",
+		"@types/node": "^16.7.10",
 		"eris": "^0.15.1",
-		"typescript": "^4.3.5"
+		"typescript": "^4.4.2"
 	},
 	"license": "MIT"
 }

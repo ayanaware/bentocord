@@ -1,63 +1,54 @@
 import 'reflect-metadata';
 
-import { EntityType, FSEntityLoader, Plugin, PluginAPI } from '@ayanaware/bento';
-import { ClientOptions } from 'eris';
+import { FSEntityLoader, Plugin, PluginAPI } from '@ayanaware/bento';
 
 import { BentocordInterface } from './BentocordInterface';
 import { BentocordVariable } from './BentocordVariable';
-
-import { Logger } from '@ayanaware/logger-api';
-const log = Logger.get();
+import { CommandManager } from './commands/CommandManager';
+import { Discord } from './discord/Discord';
 
 export class Bentocord implements Plugin {
 	public name = '@ayanaware/bentocord';
 	public version: string;
 	public api!: PluginAPI;
 
-	public clientOptions: ClientOptions;
-
 	public fsel: FSEntityLoader;
 
-	public constructor(clientOptions?: ClientOptions) {
+	public constructor() {
 		try {
+			// ESLint Hates him, check out this one weird trick
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-var-requires, import/extensions
 			const { version } = require('../package.json');
-			this.version = version;
+			this.version = version as string || 'Error';
 		} catch (e) {
 			this.version = 'Error';
 		}
-
-		this.clientOptions = clientOptions;
 	}
 
-	public setClientOptions(clientOptions: ClientOptions) {
-		this.clientOptions = clientOptions;
-	}
-
-	public async onLoad() {
-		// get prexisting FSEntityLoader, or create one just for us
-		this.fsel = await this.api.getBento().getPlugin(FSEntityLoader);
-		if (!this.fsel) {
-			this.fsel = new (class extends FSEntityLoader {
-				name = '@ayanaware/bentocord:FSEntityLoader'
-			})();
-
-			await this.api.getBento().addPlugin(this.fsel);
-		}
-
+	public async onLoad(): Promise<void> {
+		const entityManager = this.api.getBento().entities;
 		// Load BentocordInterface
-		await this.api.getBento().addPlugin(BentocordInterface);
+		await entityManager.addPlugin(BentocordInterface);
 
-		// Load Components
-		await this.fsel.addDirectories([
-			[__dirname, 'arguments'],
-			[__dirname, 'commands'],
-			[__dirname, 'discord'],
-			[__dirname, 'inhibitors'],
-			[__dirname, 'prompt'],
-		], EntityType.COMPONENT, false);
+		await entityManager.addComponents([
+			Discord,
+			CommandManager,
+		]);
 
 		// Load built-in commands
 		const loadBuiltin = this.api.getVariable<boolean>({ name: BentocordVariable.BENTOCORD_BUILTIN_COMMANDS, default: true });
-		if (loadBuiltin) return this.fsel.addDirectory([__dirname, 'commands', 'builtin']);
+		if (loadBuiltin) {
+			// get prexisting FSEntityLoader, or create one just for us
+			this.fsel = entityManager.getPlugin(FSEntityLoader);
+			if (!this.fsel) {
+				this.fsel = new (class extends FSEntityLoader {
+					name = '@ayanaware/bentocord:FSEntityLoader';
+				})();
+
+				await entityManager.addPlugin(this.fsel);
+			}
+
+			return this.fsel.addDirectory([__dirname, 'commands', 'builtin']);
+		}
 	}
 }

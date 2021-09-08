@@ -1,12 +1,13 @@
 import { Component, ComponentAPI, Inject, Subscribe } from '@ayanaware/bento';
-import { Client, ClientOptions } from 'eris';
+import { Logger } from '@ayanaware/logger-api';
 
-import { Bentocord } from '../Bentocord';
+import { Client, ClientOptions, OAuthApplicationInfo } from 'eris';
+
+import { BentocordInterface } from '../BentocordInterface';
 import { BentocordVariable } from '../BentocordVariable';
 
-import { DiscordEvent } from './constants';
+import { DiscordEvent } from './constants/DiscordEvent';
 
-import { Logger } from '@ayanaware/logger-api';
 const log = Logger.get(null);
 
 export class Discord implements Component {
@@ -14,18 +15,21 @@ export class Discord implements Component {
 	public api!: ComponentAPI;
 
 	public client: Client;
+	private clientOptions: ClientOptions;
 
-	@Inject() private bentocord: Bentocord;
+	public application: OAuthApplicationInfo;
 
-	public async onLoad() {
-		return this.connect();
-	}
+	@Inject() private readonly interface: BentocordInterface;
 
-	public async onUnload() {
+	public async onUnload(): Promise<void> {
 		return this.disconnect();
 	}
 
-	public async connect(tokenOverride?: string, optionsOverride?: ClientOptions) {
+	public async onVerify(): Promise<void> {
+		return this.connect();
+	}
+
+	public async connect(tokenOverride?: string, optionsOverride?: ClientOptions): Promise<void> {
 		const token = tokenOverride || this.api.getVariable({ name: BentocordVariable.BENTOCORD_TOKEN, default: null });
 		if (!token) {
 			throw new Error(`Failed to find token: Variable "${BentocordVariable.BENTOCORD_TOKEN}" and param tokenOverride empty`);
@@ -33,17 +37,38 @@ export class Discord implements Component {
 
 		if (this.client) await this.disconnect();
 
+		let clientOptions = this.api.getVariable<ClientOptions>({ name: BentocordVariable.BENTOCORD_CLIENT_OPTIONS, default: {} });
+
+		let { shardIds, shardCount } = await this.interface.getShardData();
+		clientOptions.maxShards = shardCount || 1;
+
+		// resolve firstShardID & lastShardID
+		if (!Array.isArray(shardIds) || shardIds.length === 0) shardIds = [0, 1];
+		shardIds.sort((a, b) => a - b); // just in case, for that special person
+
+		if (shardIds.length < 2) clientOptions = { ...clientOptions, firstShardID: shardIds[0], lastShardID: shardIds[0] };
+		else clientOptions = { ...clientOptions, firstShardID: shardIds[0], lastShardID: shardIds[shardIds.length - 1] };
+
 		// merge options & overrides
-		const clientOptions = {...this.bentocord.clientOptions, ...optionsOverride};
+		clientOptions = { ...clientOptions, ...optionsOverride };
 		clientOptions.autoreconnect = true;
 
-		this.client = new Client(token, clientOptions);
+		this.clientOptions = clientOptions;
+		log.info(`ClientOptions = ${JSON.stringify(clientOptions)}`);
+
+		this.client = new Client(`Bot ${token}`, clientOptions);
 		this.api.forwardEvents(this.client, Object.values(DiscordEvent));
 
-		return this.client.connect();
+		// refresh application object
+		// https://discord.com/developers/docs/resources/application#application-object
+		this.application = await this.client.getOAuthApplication();
+		log.info(`Discord Application: ${this.application.name} (${this.application.id}).`);
+
+		await this.client.connect();
 	}
 
-	public async disconnect() {
+	// eslint-disable-next-line @typescript-eslint/require-await
+	public async disconnect(): Promise<void> {
 		this.client.disconnect({ reconnect: false });
 		this.client.removeAllListeners();
 	}

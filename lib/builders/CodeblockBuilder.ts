@@ -1,27 +1,26 @@
-export type CodeblockLine = { key?: CodeblockLineItem, value: CodeblockLineItem };
+export interface CodeblockLine { key?: CodeblockLineItem; value: CodeblockLineItem }
 export type CodeblockLineItem = number | string | boolean | CodeblockLineObject;
-export type CodeblockLineObject = {[key: string]: number | string | boolean};
+export interface CodeblockLineObject {[key: string]: number | string | boolean}
 
 export type CodeblockLanguage = 'apache' | 'prolog' | 'css' | string;
 
 export class CodeblockBuilder {
 	public language: CodeblockLanguage = null;
-	private lines: Array<CodeblockLine> = [];
+	private readonly lines: Array<CodeblockLine> = [];
 
+	// eslint-disable-next-line @typescript-eslint/require-await
 	public async resolveLine(item: CodeblockLineItem): Promise<string> {
 		return JSON.stringify(item);
 	}
 
-	public addLine(item: CodeblockLineItem): CodeblockBuilder;
-	public addLine(key: CodeblockLineItem, value: CodeblockLineItem): CodeblockBuilder;
-	public addLine(): CodeblockBuilder {
-		if (arguments.length === 2) this.lines.push({ key: arguments[0], value: arguments[1] });
-		else this.lines.push({ value: arguments[0] });
+	public addLine(item: CodeblockLineItem, value?: CodeblockLineItem): CodeblockBuilder {
+		if (value !== undefined) this.lines.push({ key: item, value });
+		else this.lines.push({ value: item });
 
 		return this;
 	}
 
-	public async render() {
+	public async render(): Promise<string> {
 		// add top
 		let render = '```';
 
@@ -39,7 +38,9 @@ export class CodeblockBuilder {
 
 			lines.push(line as { key?: string, value: string });
 		}
-		const paddingSize = this.lines.reduce((a, line) => line.key != null && line.key.toString().length > a ? line.key.toString().length : a, 0);
+		const paddingSize = this.lines.reduce((a, line) =>
+			line.key != null && line.key.toString().length > a ? line.key.toString().length : a, 0,
+		);
 
 		// add lines
 		for (const line of lines) {

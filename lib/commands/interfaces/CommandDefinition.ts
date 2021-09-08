@@ -1,17 +1,30 @@
-import { Argument } from '../../arguments';
-import { DiscordPermission } from '../../discord';
-import { InhibitorDefinition } from '../../inhibitors';
+import type { DiscordPermission } from '../../discord/constants/DiscordPermission';
+import type { CommandContext } from '../CommandContext';
+
+import type { AnyCommandOption } from './CommandOption';
+import type { SuppressorDefinition } from './Suppressor';
 
 export interface CommandDefinition {
-	/** Command Aliases */
+	/** Command Aliases; First will be used for slash command name */
 	aliases: Array<string>;
+	/** Command Description */
+	description: string;
 
-	/** Command Inhibitors */
-	inhibitors?: Array<InhibitorDefinition>;
+	/** Command Options */
+	options?: Array<AnyCommandOption>;
 
-	/** Argument definitions */
-	args?: Array<Argument>;
-
-	/** Discord permissions */
+	/** Discord Permissions this command requires */
 	selfPermissions?: Array<DiscordPermission>;
+
+	/** Should this command be registered as a slash command? */
+	registerSlash?: boolean | undefined;
+
+	/** Disable execution via message w/ prefix */
+	disablePrefix?: boolean;
+
+	/** Suppressors */
+	suppressors?: Array<SuppressorDefinition>;
+
+	/** Function name or implementation to execute */
+	execute?: string | ((ctx?: CommandContext) => Promise<any>);
 }

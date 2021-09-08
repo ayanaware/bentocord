@@ -1,21 +1,13 @@
-import { Bento, FSComponentLoader } from '@ayanaware/bento';
-import { Bentocord, BentocordVariable } from '@ayanaware/bentocord';
-
-const bento = new Bento();
+import { Application } from '@ayanaware/bento';
+import { Bentocord } from '@ayanaware/bentocord';
 
 (async () => {
-	const key = BentocordVariable.BENTOCORD_TOKEN;
-	if (!process.env[key]) throw new Error(`Please append ${key}=xxx to the front of your command`);
+	const app = new Application({ variables: [[__dirname, '..', '..', 'env.json']] });
+	await app.start();
 
-	const bentocord = new Bentocord();
-	bento.setVariable(key, process.env[key]);
+	await app.bento.addPlugin(new Bentocord());
 
-	const fsloader = new FSComponentLoader();
-	await fsloader.addDirectory(__dirname, 'commands');
-
-	await bento.addPlugins([fsloader, bentocord]);
-
-	await bento.verify();
+	await app.verify();
 })().catch(e => {
 	console.log(e);
 	process.exit(1);

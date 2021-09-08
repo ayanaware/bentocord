@@ -39,7 +39,7 @@ export class Messenger {
 		return this.discord.client.createMessage(this.channelId, prepare.content, prepare.file);
 	}
 
-	public async updateMessage(message: string | Message, content: MessageContent, options?: MessageOptions) {
+	public async updateMessage(message: string | Message, content: MessageContent, options?: MessageOptions): Promise<Message> {
 		if (typeof message === 'object') message = message.id;
 		const prepare = this.prepareMessage(content, null, options);
 

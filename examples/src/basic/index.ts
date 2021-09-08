@@ -1,29 +1,44 @@
-import { Bento, FSComponentLoader, VariableFileLoader } from '@ayanaware/bento';
-import { Bentocord, BentocordVariable } from '@ayanaware/bentocord';
+import { Application, EntityType } from '@ayanaware/bento';
+import { Bentocord, CommandContext, CommandEntity, CommandManager } from '@ayanaware/bentocord';
+import { CommandOption } from '@ayanaware/bentocord/commands/interfaces/CommandOption';
+import Logger, { LogLevel } from '@ayanaware/logger';
+import { ApplicationCommandOptionType } from 'discord-api-types';
 
-import * as util from 'util';
-
-const bento = new Bento();
+Logger.getDefaultTransport().setLevel(LogLevel.DEBUG);
 
 (async () => {
-	const vfl = new VariableFileLoader();
-	vfl.addVariable(BentocordVariable.BENTOCORD_TOKEN);
-	await vfl.addFile([__dirname, '..', '..', 'env.json']);
+	const app = new Application({ variables: [[__dirname, '..', '..', 'env.json']] });
+	await app.start();
 
-	vfl.parseFileContents
+	await app.bento.addPlugin(new Bentocord());
 
-	const bentocord = new Bentocord();
+	await app.verify();
 
-	const fsloader = new FSComponentLoader();
-	await fsloader.addDirectory(__dirname, 'components');
+	// lets add a custom type to commandmanager
+	const cm = app.bento.getComponent(CommandManager);
 
-	await bento.addPlugin(vfl);
-	if (!bento.hasVariable(BentocordVariable.BENTOCORD_TOKEN)) throw new Error(`Please append ${BentocordVariable.BENTOCORD_TOKEN}=xxx to the front of your command`);
+	cm.addResolver({
+		option: 'pog',
+		convert: ApplicationCommandOptionType.String,
+		async resolve(ctx: CommandContext, option: CommandOption, input) {
+			// count how many time pog appears in input
+			return (input.match(/pog/gi) || []).length;
+		}
+	});
 
-	await bento.addPlugins([bentocord, fsloader]);
-
-	await bento.verify();
+	cm.addCommand({
+		definition: {
+			aliases: ['pogcounter'],
+			description: 'count pogs in a string',
+			options: [
+				{ type: 'pog', name: 'count', array: true, description: 'input string', rest: true }
+			]
+		},
+		async execute(ctx: CommandContext, options: { count: number }) {
+			return ctx.createResponse({ content: `I saw ${options.count.toString()} pogs` })
+		}
+	});
 })().catch(e => {
-	console.log(util.inspect(e));
+	console.log(e);
 	process.exit(1);
 });

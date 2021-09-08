@@ -1,8 +1,9 @@
 import { ComponentAPI } from '@ayanaware/bento';
 
-import { CommandDefinition, CommandEntity } from '../interfaces';
-import { CommandManager } from '../CommandManager';
 import { CommandContext } from '../CommandContext';
+import { CommandManager } from '../CommandManager';
+import { CommandDefinition } from '../interfaces/CommandDefinition';
+import { CommandEntity } from '../interfaces/entity/CommandEntity';
 
 export class PingCommand implements CommandEntity {
 	public name = '@ayanaware/bentocord:PingCommand';
@@ -11,16 +12,19 @@ export class PingCommand implements CommandEntity {
 
 	public definition: CommandDefinition = {
 		aliases: ['ping', 'pong'],
+		description: 'Check if bot alive',
+
+		registerSlash: false,
 	};
 
-	public async execute(ctx: CommandContext) {
+	public async execute(ctx: CommandContext): Promise<unknown> {
 		const start = process.hrtime();
-		const message = await ctx.messenger.createMessage('Pong!');
+		await ctx.createResponse('Pong!');
 		const end = process.hrtime(start);
 
 		const s = end[0];
-		const ms = end[1] / 1000000; 
+		const ms = end[1] / 1000000;
 
-		return ctx.messenger.updateMessage(message, `Pong! \`${s}s ${ms}ms\``);
+		return ctx.editResponse(`Pong! \`${s}s ${ms}ms\``);
 	}
 }

@@ -8,22 +8,27 @@
 	"author": "HcgRandon <me@randon.moe>",
 	"scripts": {
 		"build": "rm -rf ./build && tsc",
-		"prepublishOnly": "rm -rf ./build && tsc"
+		"prepare": "rm -rf ./build && tsc",
+		"lint": "eslint --ext \".ts\" --ignore-path .gitignore lib/",
+		"lint:fix": "eslint --ext \".ts\" --fix --ignore-path .gitignore lib/"
 	},
 	"dependencies": {
 		"@ayanaware/logger-api": "^2.0.0",
+		"discord-api-types": "^0.22.0",
 		"reflect-metadata": "^0.1.13"
 	},
 	"peerDependencies": {
 		"@ayanaware/bento": "^1.0.0-rc.14",
-		"eris": "^0.14.0"
+		"eris": "^0.15.1"
 	},
 	"devDependencies": {
-		"@ayanaware/bento": "^1.0.0-rc.21",
+		"@ayanaware/bento": "^1.0.0-rc.24",
+		"@ayanaware/eslint-plugin": "^1.0.4",
 		"@ayanaware/logger": "^2.2.1",
-		"@types/node": "^16.4.10",
+		"@types/node": "^16.7.10",
 		"@types/ws": "^7.4.7",
 		"eris": "^0.15.1",
+		"eslint": "^7.32.0",
 		"typescript": "^4.3.5"
 	},
 	"license": "MIT",
