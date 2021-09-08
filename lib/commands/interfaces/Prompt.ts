@@ -25,7 +25,7 @@ export interface PromptOptions {
 }
 
 export interface PromptChoice<T extends unknown = unknown> {
-	display: string;
+	name: string;
 	value: T;
 
 	match?: Array<string>;

@@ -584,7 +584,7 @@ export class CommandManager implements Component {
 		if (subNames.length > 1) {
 			const choices: Array<PromptChoice<string>> = [];
 			for (const subName of subNames) {
-				choices.push({ value: subName, display: subName, match: [subName] });
+				choices.push({ value: subName, name: subName, match: [subName] });
 			}
 
 			const choice = await this.choose({ ctx }, choices, 'Please select a subcommand:');
@@ -638,7 +638,7 @@ export class CommandManager implements Component {
 						if (reduce.extra) match.push(reduce.extra);
 					}
 
-					choices.push({ value: item, display, match });
+					choices.push({ value: item, name: display, match });
 				}
 
 				const choice = await this.choose<T>({ ctx }, choices);
@@ -647,6 +647,7 @@ export class CommandManager implements Component {
 
 			// either single element array or reducer failed
 			if (Array.isArray(result)) reduced = result[0];
+			else reduced = result;
 
 			// handle choices
 			if (option.choices) {
@@ -656,7 +657,7 @@ export class CommandManager implements Component {
 				const findChoice = choices.find(c => c.value === reduced.toString() || c.value === parseInt(reduced.toString(), 10));
 				if (!findChoice) {
 					const promptChoice = `Please select one of the following choices for option "${option.name}":`;
-					const choice = await this.choose<T>({ ctx }, choices.map(c => ({ display: c.name, value: c.value as unknown as T })), promptChoice);
+					const choice = await this.choose<T>({ ctx }, choices.map(c => ({ name: c.name, value: c.value as unknown as T })), promptChoice);
 					reduced = choice.value;
 				}
 			}
@@ -775,7 +776,7 @@ export class CommandManager implements Component {
 			if (!Array.isArray(choice.match)) choice.match = [];
 
 			choice.match.push((i + 1).toString());
-			cbb.addLine(i + 1, choice.display);
+			cbb.addLine(i + 1, choice.name);
 		}
 
 		if (!content) content = 'Please select one of the following choices:';
