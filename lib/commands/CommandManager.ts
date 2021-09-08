@@ -655,21 +655,21 @@ export class CommandManager implements Component {
 		// unwrap array if need be
 		if (!option.array && Array.isArray(out)) out = out[0];
 
+		// default value
+		if ((out == null || (Array.isArray(out) && out.length === 0)) && option.default !== undefined) out = option.default;
+
 		// handle choices
 		if (option.choices) {
 			let choices = option.choices;
 			if (typeof choices === 'function') choices = await choices();
 
-			const findChoice = choices.find(c => c.value === out.toString() || c.value === parseInt(out.toString(), 10));
+			const findChoice = choices.find(c => out && (c.value === out.toString() || c.value === parseInt(out.toString(), 10)));
 			if (!findChoice) {
 				const promptChoice = `Please select one of the following choices for option "${option.name}":`;
 				const choice = await this.choose<T>({ ctx }, choices.map(c => ({ name: c.name, value: c.value as unknown as T })), promptChoice);
 				out = choice.value;
 			}
 		}
-
-		// default value
-		if ((out == null || (Array.isArray(out) && out.length === 0)) && option.default !== undefined) out = option.default;
 
 		// required value
 		if ((out == null || (Array.isArray(out) && out.length === 0)) && (typeof option.required !== 'boolean' || option.required)) throw new Error(`Failed to resolve required option "${option.name}"`);
