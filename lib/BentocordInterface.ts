@@ -31,7 +31,7 @@ export class BentocordInterface implements Plugin {
 	protected readonly permissions: Map<string, boolean> = new Map();
 
 	public async getShardData(): Promise<ShardData> {
-		return { shardIds: [0, 1], shardCount: 1 };
+		return { shardIds: [0], shardCount: 1 };
 	}
 
 	public async isOwner(userId: string): Promise<boolean> {
