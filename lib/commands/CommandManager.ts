@@ -619,10 +619,9 @@ export class CommandManager implements Component {
 
 		const value: Array<T> = [];
 		for (const input of inputs) {
-			const result = await this.executeResolver<T>(ctx, option, input);
+			let result = await this.executeResolver<T>(ctx, option, input);
 
 			// Reduce Choose Prompt
-			let reduced: T;
 			if (Array.isArray(result) && result.length > 1) {
 				const resolver = this.resolvers.get(option.type) as Resolver<T>;
 
@@ -642,33 +641,32 @@ export class CommandManager implements Component {
 				}
 
 				const choice = await this.choose<T>({ ctx }, choices);
-				reduced = choice.value;
+				result = choice.value;
 			}
 
 			// either single element array or reducer failed
-			if (Array.isArray(result)) reduced = result[0];
-			else reduced = result;
+			if (Array.isArray(result)) result = result[0];
 
-			// handle choices
-			if (option.choices) {
-				let choices = option.choices;
-				if (typeof choices === 'function') choices = await choices();
-
-				const findChoice = choices.find(c => c.value === reduced.toString() || c.value === parseInt(reduced.toString(), 10));
-				if (!findChoice) {
-					const promptChoice = `Please select one of the following choices for option "${option.name}":`;
-					const choice = await this.choose<T>({ ctx }, choices.map(c => ({ name: c.name, value: c.value as unknown as T })), promptChoice);
-					reduced = choice.value;
-				}
-			}
-
-			if (result != null) value.push(reduced);
+			if (result != null) value.push(result);
 		}
 
 		let out: T | Array<T> = value;
 
 		// unwrap array if need be
 		if (!option.array && Array.isArray(out)) out = out[0];
+
+		// handle choices
+		if (option.choices) {
+			let choices = option.choices;
+			if (typeof choices === 'function') choices = await choices();
+
+			const findChoice = choices.find(c => c.value === out.toString() || c.value === parseInt(out.toString(), 10));
+			if (!findChoice) {
+				const promptChoice = `Please select one of the following choices for option "${option.name}":`;
+				const choice = await this.choose<T>({ ctx }, choices.map(c => ({ name: c.name, value: c.value as unknown as T })), promptChoice);
+				out = choice.value;
+			}
+		}
 
 		// default value
 		if ((out == null || (Array.isArray(out) && out.length === 0)) && option.default !== undefined) out = option.default;
