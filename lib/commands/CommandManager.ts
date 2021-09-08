@@ -358,7 +358,9 @@ export class CommandManager implements Component {
 		if (testGuilds.length < 1) return;
 
 		// prefix commands with test-
-		const commands = this.convertCommands().map(c => ({ ...c, name: `${this.testPrefix}${c.name}` }));
+		let commands = await this.convertCommands();
+		commands = commands.map(c => ({ ...c, name: `${this.testPrefix}${c.name}` }));
+
 		for (const guildId of testGuilds) {
 			await this.syncCommands(commands, { delete: this.testPrefix, guildId });
 		}
@@ -370,14 +372,14 @@ export class CommandManager implements Component {
 	 * Convert all slash supporting Bentocord commands to Discord ApplicationCommand
 	 * @returns Array of ApplicationCommand
 	 */
-	public convertCommands(): Array<ApplicationCommand> {
+	public async convertCommands(): Promise<Array<ApplicationCommand>> {
 		const collector: Array<ApplicationCommand> = [];
 
 		for (const command of this.commands.values()) {
 			const definition = command.definition;
 			if (!definition || typeof definition.registerSlash === 'boolean' && !definition.registerSlash) continue;
 
-			collector.push(this.convertCommand(definition.aliases[0]));
+			collector.push(await this.convertCommand(definition.aliases[0]));
 		}
 
 		return collector;
@@ -387,7 +389,7 @@ export class CommandManager implements Component {
 	 * Convert Bentocord Command into Discord ApplicationCommand
 	 * @param command
 	 */
-	public convertCommand(name: string): ApplicationCommand {
+	public async convertCommand(name: string): Promise<ApplicationCommand> {
 		const command = this.findCommand(name);
 		if (!command) throw new Error(`Failed to find Command "${name}"`);
 
@@ -411,7 +413,7 @@ export class CommandManager implements Component {
 		};
 
 		// convert options
-		if (Array.isArray(definition.options)) appCommand.options = this.convertOptions(definition.options);
+		if (Array.isArray(definition.options)) appCommand.options = await this.convertOptions(definition.options);
 
 		return appCommand;
 	}
@@ -421,7 +423,7 @@ export class CommandManager implements Component {
 	 * @param options Array of CommandOptions
 	 * @returns ApplicationCommandOption Structure
 	 */
-	private convertOptions(options: Array<AnyCommandOption>) {
+	private async convertOptions(options: Array<AnyCommandOption>) {
 		const collector: Array<APIApplicationCommandOption> = [];
 
 		if (!options) options = [];
@@ -432,7 +434,7 @@ export class CommandManager implements Component {
 			// Handle Special Subcommand & SubcommandGroup OptionTypes
 			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {
 				appOption.type = option.type === OptionType.SUB_COMMAND ? ApplicationCommandOptionType.Subcommand : ApplicationCommandOptionType.SubcommandGroup;
-				appOption.options = this.convertOptions(option.options);
+				appOption.options = await this.convertOptions(option.options);
 
 				collector.push(appOption);
 
@@ -451,7 +453,12 @@ export class CommandManager implements Component {
 			if (option.array) appOption.type = ApplicationCommandOptionType.String;
 
 			// choices support
-			if (option.choices) appOption.choices = option.choices;
+			if (option.choices) {
+				let choices = option.choices;
+				if (typeof choices === 'function') choices = await choices();
+
+				appOption.choices = choices;
+			}
 
 			// required support
 			appOption.required = typeof option.required === 'boolean' ? option.required : true;
@@ -612,9 +619,10 @@ export class CommandManager implements Component {
 
 		const value: Array<T> = [];
 		for (const input of inputs) {
-			let result = await this.executeResolver<T>(ctx, option, input);
+			const result = await this.executeResolver<T>(ctx, option, input);
 
 			// Reduce Choose Prompt
+			let reduced: T;
 			if (Array.isArray(result) && result.length > 1) {
 				const resolver = this.resolvers.get(option.type) as Resolver<T>;
 
@@ -634,12 +642,26 @@ export class CommandManager implements Component {
 				}
 
 				const choice = await this.choose<T>({ ctx }, choices);
-				result = choice.value;
-			} else if (Array.isArray(result)) {
-				result = result[0];
+				reduced = choice.value;
 			}
 
-			if (result != null) value.push(result);
+			// either single element array or reducer failed
+			if (Array.isArray(result)) reduced = result[0];
+
+			// handle choices
+			if (option.choices) {
+				let choices = option.choices;
+				if (typeof choices === 'function') choices = await choices();
+
+				const findChoice = choices.find(c => c.value === reduced.toString() || c.value === parseInt(reduced.toString(), 10));
+				if (!findChoice) {
+					const promptChoice = `Please select one of the following choices for option "${option.name}":`;
+					const choice = await this.choose<T>({ ctx }, choices.map(c => ({ display: c.name, value: c.value as unknown as T })), promptChoice);
+					reduced = choice.value;
+				}
+			}
+
+			if (result != null) value.push(reduced);
 		}
 
 		let out: T | Array<T> = value;

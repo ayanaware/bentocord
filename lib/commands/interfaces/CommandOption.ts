@@ -22,7 +22,7 @@ export interface CommandOption<T = unknown> {
 	default?: T;
 
 	/** Array of Choices */
-	choices?: Array<CommandOptionChoice>;
+	choices?: Array<CommandOptionChoice> | (() => Promise<Array<CommandOptionChoice>>);
 
 	/** Nested Options */
 	options?: Array<AnyCommandOption>;
