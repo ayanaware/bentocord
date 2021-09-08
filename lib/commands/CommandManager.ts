@@ -609,7 +609,7 @@ export class CommandManager implements Component {
 		inputs = inputs.filter(i => !!i);
 
 		// Auto prompt missing data on required option
-		if (inputs.length < 1 && (typeof option.required !== 'boolean' || option.required)) {
+		if (inputs.length < 1 && (typeof option.required !== 'boolean' || option.required) && typeof option.choices === 'undefined') {
 			const promptContent = `Please provide an input for option \`${option.name}\` of type \`${this.getTypePreview(option)}\`:`;
 			const promptInput = await this.prompt<string>({ ctx }, promptContent, async (content: string) => content);
 
