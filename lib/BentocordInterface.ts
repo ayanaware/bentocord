@@ -53,6 +53,10 @@ export class BentocordInterface implements Plugin {
 		this.prefixes.set(snowflake, prefix);
 	}
 
+	public async getTranslation(key: string, repl?: Record<string, unknown>, ctx?: Record<string, string>): Promise<string> {
+		return null;
+	}
+
 	public async getPermission(permission: string, snowflake?: string, guildId?: string): Promise<boolean> {
 		let key = `${permission}`;
 		if (snowflake) key = `${snowflake}.${key}`;

@@ -86,6 +86,24 @@ export abstract class CommandContext {
 		});
 	}
 
+	public async getTranslation(key: string, repl?: Record<string, unknown>): Promise<string> {
+		return this.interface.getTranslation(key, repl, {
+			guildId: this.guildId || null,
+			userId: this.authorId || null,
+			channelId: this.channelId || null,
+		});
+	}
+
+	public async createTranslatedResponse(key: string, repl?: Record<string, unknown>): Promise<unknown> {
+		const content = await this.getTranslation(key, repl);
+		return this.createResponse({ content });
+	}
+
+	public async editTranslatedResponse(key: string, repl?: Record<string, unknown>): Promise<unknown> {
+		const content = await this.getTranslation(key, repl);
+		return this.editResponse({ content });
+	}
+
 	public abstract acknowledge(): Promise<void>;
 
 	public abstract createResponse(content: MessageContent): Promise<unknown>;
