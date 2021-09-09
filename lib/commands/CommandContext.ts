@@ -88,9 +88,9 @@ export abstract class CommandContext {
 
 	public async getTranslation(key: string, repl?: Record<string, unknown>): Promise<string> {
 		return this.interface.getTranslation(key, repl, {
-			guildId: this.guildId || null,
 			userId: this.authorId || null,
 			channelId: this.channelId || null,
+			guildId: this.guildId || null,
 		});
 	}
 
