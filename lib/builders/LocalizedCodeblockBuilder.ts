@@ -1,6 +1,8 @@
 import { CommandContext } from '../commands/CommandContext';
 
-import { CodeblockBuilder, CodeblockLineItem } from './CodeblockBuilder';
+import { CodeblockBuilder } from './CodeblockBuilder';
+
+export type LocalizedLineItem = string | { key: string, repl?: Record<string, unknown> };
 
 export class LocalizedCodeblockBuilder extends CodeblockBuilder {
 	private readonly ctx: CommandContext;
@@ -11,9 +13,15 @@ export class LocalizedCodeblockBuilder extends CodeblockBuilder {
 		this.ctx = ctx;
 	}
 
-	public async addTranslatedLine(key: string, value: CodeblockLineItem, repl?: Record<string, unknown>): Promise<LocalizedCodeblockBuilder> {
-		const translated = await this.ctx.getTranslation(key, repl);
-		this.addLine(translated, value);
+	public async addTranslatedLine(key: LocalizedLineItem, value: LocalizedLineItem): Promise<LocalizedCodeblockBuilder> {
+		if (typeof key === 'string') key = { key };
+		const keyTranslated = await this.ctx.getTranslation(key.key, key.repl);
+
+		let valueTranslated: string;
+		if (typeof value === 'object') valueTranslated = await this.ctx.getTranslation(value.key, value.repl);
+		else valueTranslated = value;
+
+		this.addLine(keyTranslated, valueTranslated);
 
 		return this;
 	}
