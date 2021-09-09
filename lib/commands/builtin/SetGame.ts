@@ -19,8 +19,8 @@ export class SetGameCommand implements CommandEntity {
 		aliases: ['setgame'],
 		description: 'Set Discord Activity',
 		options: [
-			{ type: OptionType.STRING, name: 'message', description: 'Activity Name' },
-			{ type: OptionType.NUMBER, name: 'type', description: 'Activity Type', choices: [
+			{ type: OptionType.STRING, name: 'message', description: 'activity name' },
+			{ type: OptionType.NUMBER, name: 'type', description: 'activity type', choices: [
 				{ name: 'playing', value: 0 },
 				{ name: 'streaming', value: 1 },
 				{ name: 'listening', value: 2 },
@@ -29,9 +29,7 @@ export class SetGameCommand implements CommandEntity {
 			], default: 0, required: false },
 		],
 
-		suppressors: [
-			{ type: SuppressorType.BOT_OWNER },
-		],
+		suppressors: [SuppressorType.BOT_OWNER],
 
 		registerSlash: false,
 	};
@@ -39,11 +37,9 @@ export class SetGameCommand implements CommandEntity {
 	@Inject(Discord) private readonly discord: Discord;
 
 	public async execute(ctx: CommandContext, options: { type: number, message: string }): Promise<unknown> {
-		if (!(await ctx.isOwner())) return ctx.createResponse('You lack permission to perform this command.');
-
 		const game: ActivityPartial<BotActivityType> = { type: options.type as BotActivityType, name: options.message };
 
 		this.discord.client.editStatus('online', game);
-		return ctx.createResponse('Presence Updated!');
+		return ctx.createResponse(await ctx.getTranslation('BENTOCORD_PRESENCE_UPDATED') || 'Presence Updated!');
 	}
 }

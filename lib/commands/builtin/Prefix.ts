@@ -4,6 +4,7 @@ import { BentocordInterface } from '../../BentocordInterface';
 import { CommandContext } from '../CommandContext';
 import { CommandManager } from '../CommandManager';
 import { OptionType } from '../constants/OptionType';
+import { SuppressorType } from '../constants/SuppressorType';
 import { CommandDefinition } from '../interfaces/CommandDefinition';
 import { CommandEntity } from '../interfaces/entity/CommandEntity';
 
@@ -14,10 +15,12 @@ export class PrefixCommand implements CommandEntity {
 
 	public definition: CommandDefinition = {
 		aliases: ['prefix'],
-		description: 'Set bot prefix',
+		description: 'Set command prefix',
 		options: [
-			{ type: OptionType.STRING, name: 'prefix', description: 'New Prefix', required: false },
+			{ type: OptionType.STRING, name: 'prefix', description: 'new prefix', required: false },
 		],
+
+		suppressors: [SuppressorType.GUILD, SuppressorType.GUILD_ADMIN],
 
 		registerSlash: false,
 	};
@@ -25,19 +28,15 @@ export class PrefixCommand implements CommandEntity {
 	@Inject() private readonly interface: BentocordInterface;
 
 	public async execute(ctx: CommandContext, options: { prefix?: string }): Promise<unknown> {
-		if (!ctx.guild) return ctx.createResponse('This command can only be run in a Guild');
-
-		// handle `prefix set`
 		if (options.prefix) return this.set(ctx, options.prefix);
 
 		const prefix = await this.interface.getPrefix(ctx.guild.id);
-		return ctx.createResponse(`This Guild's prefix is \`${prefix}\`.`);
+		return ctx.createResponse(await ctx.getTranslation('BENTOCORD_PREFIX', { prefix }) || `Current prefix is \`${prefix}\``);
 	}
 
-	private async set(ctx: CommandContext, newPrefix: string) {
-		// TODO: add permission check
-		await this.interface.setPrefix(ctx.guild.id, newPrefix);
+	private async set(ctx: CommandContext, prefix: string) {
+		await this.interface.setPrefix(ctx.guild.id, prefix);
 
-		return ctx.createResponse(`This Guild's prefix has been set to \`${newPrefix}\``);
+		return ctx.createResponse(await ctx.getTranslation('BENTOCORD_PREFIX_SET', { prefix }) || `Prefix has been set to \`${prefix}\``);
 	}
 }

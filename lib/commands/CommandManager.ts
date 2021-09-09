@@ -587,7 +587,8 @@ export class CommandManager implements Component {
 				choices.push({ value: subName, name: subName, match: [subName] });
 			}
 
-			const choice = await this.choose({ ctx }, choices, 'Please select a subcommand:');
+			const content = await ctx.getTranslation('BENTOCORD_PROMPT_SUBCOMMAND') || 'Please select a subcommand:';
+			const choice = await this.choose({ ctx }, choices, content);
 			useSub = choice.value;
 		} else {
 			useSub = subNames[0];
@@ -610,8 +611,9 @@ export class CommandManager implements Component {
 
 		// Auto prompt missing data on required option
 		if (inputs.length < 1 && (typeof option.required !== 'boolean' || option.required) && typeof option.choices === 'undefined') {
-			const promptContent = `Please provide an input for option \`${option.name}\` of type \`${this.getTypePreview(option)}\`:`;
-			const promptInput = await this.prompt<string>({ ctx }, promptContent, async (content: string) => content);
+			const type = this.getTypePreview(option);
+			const content = await ctx.getTranslation('BENTOCORD_PROMPT_OPTION', { option: option.name, type }) || `Please provide an input for option \`${option.name}\` of type \`${type}\`:`;
+			const promptInput = await this.prompt<string>({ ctx }, content, async (input: string) => input);
 
 			inputs = option.array ? promptInput.split(/,\s?/gi) : [promptInput];
 			inputs = inputs.filter(i => !!i);
@@ -665,8 +667,8 @@ export class CommandManager implements Component {
 
 			const findChoice = choices.find(c => out && (c.value === out.toString() || c.value === parseInt(out.toString(), 10)));
 			if (!findChoice) {
-				const promptChoice = `Please select one of the following choices for option "${option.name}":`;
-				const choice = await this.choose<T>({ ctx }, choices.map(c => ({ name: c.name, value: c.value as unknown as T })), promptChoice);
+				const content = await ctx.getTranslation('BENTOCORD_PROMPT_CHOICE_OPTION', { option: option.name }) || `Please select one of the following choices for option \`${option.name}\``;
+				const choice = await this.choose<T>({ ctx }, choices.map(c => ({ name: c.name, value: c.value as unknown as T })), content);
 				out = choice.value;
 			}
 		}
@@ -691,12 +693,12 @@ export class CommandManager implements Component {
 		this.prompts.delete(key);
 		if (prompt.timeout) clearTimeout(prompt.timeout);
 
-		let content = 'Prompt has been canceled';
-		if (reason) content += `: ${reason}`;
-
 		prompt.reject();
 
 		const ctx = prompt.options.ctx;
+		let content = await ctx.getTranslation('BENTOCORD_PROMPT_CANCELED') || 'Prompt has been canceled';
+		if (reason) content += `: ${reason}`;
+
 		if (ctx) await ctx.createResponse({ content });
 		else await this.discord.client.createMessage(channelId, { content });
 	}
@@ -731,11 +733,12 @@ export class CommandManager implements Component {
 		const key = `${channelId}.${userId}`;
 		if (this.prompts.has(key)) await this.cancelPrompt(channelId, userId, 'New prompt opened');
 
-		// add usage help
-		content += '\n*You may respond via message or the `r` command*';
-
 		// Show prompt message
 		const ctx = options.ctx;
+
+		// add usage help
+		content += `\n*${await ctx.getTranslation('BENTOCORD_PROMPT_USAGE') || 'You may respond via message or the `r` command*'}`;
+
 		if (ctx) await ctx.createResponse({ content });
 		else await this.discord.client.createMessage(channelId, { content });
 
@@ -777,8 +780,9 @@ export class CommandManager implements Component {
 			cbb.addLine(i + 1, choice.name);
 		}
 
-		if (!content) content = 'Please select one of the following choices:';
-		content += await cbb.render();
+		const ctx = options.ctx;
+		if (!content) content = await ctx.getTranslation('BENTOCORD_PROMPT_CHOICE') || 'Please select one of the following choices:';
+		content += cbb.render();
 
 		return this.prompt<PromptChoice<T>>(options, content, async (input: string) => {
 			for (const choice of choices) {
@@ -865,7 +869,7 @@ export class CommandManager implements Component {
 		try {
 			// process suppressors
 			const suppressed = await this.executeSuppressors(ctx, definition);
-			if (suppressed) return ctx.createResponse(`Suppressor \`${suppressed.name}\` halted execution: ${suppressed.message}`);
+			if (suppressed) return ctx.createResponse(await ctx.getTranslation('BENTOCORD_SUPPRESSOR_HALT', { suppressor: suppressed.name, message: suppressed.message }) || `Suppressor \`${suppressed.name}\` halted execution: ${suppressed.message}`);
 
 			const options = await this.fufillInteractionOptions(ctx, definition.options, data);
 			return this.executeCommand(command, ctx, options);
@@ -873,7 +877,7 @@ export class CommandManager implements Component {
 			log.error(`Command "${definition.aliases[0]}" option error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
-				return ctx.createResponse(`There was an error resolving command options:\`\`\`${e.message}\`\`\``);
+				return ctx.createResponse(await ctx.getTranslation('BENTOCORD_COMMAND_ERROR', { error: e.message }) || `There was an error resolving command options: ${e.message}`);
 			}
 		}
 	}
@@ -930,7 +934,7 @@ export class CommandManager implements Component {
 		try {
 			// process suppressors
 			const suppressed = await this.executeSuppressors(ctx, definition);
-			if (suppressed) return ctx.createResponse(`Suppressor \`${suppressed.name}\` halted execution: ${suppressed.message}`);
+			if (suppressed) return ctx.createResponse(await ctx.getTranslation('BENTOCORD_SUPPRESSOR_HALT', { suppressor: suppressed.name, message: suppressed.message }) || `Suppressor \`${suppressed.name}\` halted execution: ${suppressed.message}`);
 
 			const options = await this.fufillTextOptions(ctx, definition.options, args);
 			return this.executeCommand(command, ctx, options);
@@ -938,7 +942,7 @@ export class CommandManager implements Component {
 			log.error(`Command "${definition.aliases[0]}" error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
-				return ctx.createResponse(`There was an error resolving command options:\`\`\`${e.message}\`\`\``);
+				return ctx.createResponse(await ctx.getTranslation('BENTOCORD_COMMAND_ERROR', { error: e.message }) || `There was an error resolving command options: ${e.message}`);
 			}
 		}
 	}

@@ -27,7 +27,7 @@ export class AdvancedCommand implements CommandEntity {
 
 	public async execute(ctx: CommandContext, options: { alias: string, opts: string }): Promise<unknown> {
 		const command = this.commandManager.findCommand(options.alias);
-		if (!command) return ctx.createResponse(`Command "${options.alias}" does not exist in CommandManager`);
+		if (!command) return ctx.createResponse(await ctx.getTranslation('BENTOCORD_ADV_NOTEXIST', { command: options.alias }) || `Command "${options.alias}" does not exist in CommandManager`);
 
 		const cmdOptions = await this.commandManager.fufillTextOptions(ctx, command.definition.options, options.opts);
 		return this.commandManager.executeCommand(command, ctx, cmdOptions);
