@@ -3,6 +3,7 @@ export * from './BentocordInterface';
 export * from './BentocordVariable';
 
 export * from './builders/CodeblockBuilder';
+export * from './builders/LocalizedCodeblockBuilder';
 
 export * from './commands/CommandManager';
 export * from './commands/CommandContext';
