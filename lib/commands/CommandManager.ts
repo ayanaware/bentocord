@@ -697,7 +697,7 @@ export class CommandManager implements Component {
 
 		const ctx = prompt.options.ctx;
 		let content = await ctx.getTranslation('BENTOCORD_PROMPT_CANCELED') || 'Prompt has been canceled';
-		if (reason) content += `: ${reason}`;
+		if (reason) content = await ctx.getTranslation('BENTOCORD_PROMPT_CANCELED_REASON', { reason }) || `Prompt has been canceled: ${reason}`;
 
 		if (ctx) await ctx.createResponse({ content });
 		else await this.discord.client.createMessage(channelId, { content });
@@ -730,14 +730,19 @@ export class CommandManager implements Component {
 		const userId = options.userId || options.ctx.authorId;
 		if (!channelId || !userId) return;
 
-		const key = `${channelId}.${userId}`;
-		if (this.prompts.has(key)) await this.cancelPrompt(channelId, userId, 'New prompt opened');
-
-		// Show prompt message
 		const ctx = options.ctx;
 
+		const key = `${channelId}.${userId}`;
+		if (this.prompts.has(key)) {
+			let message = 'New prompt was opened.';
+			if (ctx) message = await ctx.getTranslation('BENTOCORD_PROMPT_CANCELED_NEW') || message;
+			await this.cancelPrompt(channelId, userId, message);
+		}
+
 		// add usage help
-		content += `\n*${await ctx.getTranslation('BENTOCORD_PROMPT_USAGE') || 'You may respond via message or the `r` command*'}`;
+		let usage = '*You may respond via message or the `r` command.*';
+		if (ctx) usage = await ctx.getTranslation('BENTOCORD_PROMPT_USAGE') || usage;
+		content += `\n${usage}`;
 
 		if (ctx) await ctx.createResponse({ content });
 		else await this.discord.client.createMessage(channelId, { content });
@@ -745,13 +750,25 @@ export class CommandManager implements Component {
 		return new Promise<T>((resolve, reject) => {
 			const prompt: Prompt<T> = {
 				options,
+				content,
 				validate,
 				resolve, reject,
 				refresh: () => {
 					if (prompt.timeout) clearTimeout(prompt.timeout);
 
 					prompt.timeout = setTimeout(() => {
-						this.cancelPrompt(channelId, userId, 'Input Timeout').catch((e: unknown) => log.warn(`cancelPrompt(): Failed: ${e.toString()}`));
+						// The things we do for i18n
+						const handle = (message: string) => {
+							this.cancelPrompt(channelId, userId, message).catch((e: unknown) => log.warn(`cancelPrompt(): Failed: ${e.toString()}`));
+						};
+
+						if (ctx) {
+							ctx.getTranslation('BENTOCORD_PROMPT_CANCELED_TIMEOUT')
+								.then(handle)
+								.catch(() => handle('Input timeout.'));
+						} else {
+							handle('Input timeout');
+						}
 					}, options.time || 30 * 1000);
 				},
 			};
@@ -781,7 +798,10 @@ export class CommandManager implements Component {
 		}
 
 		const ctx = options.ctx;
-		if (!content) content = await ctx.getTranslation('BENTOCORD_PROMPT_CHOICE') || 'Please select one of the following choices:';
+		if (!content) {
+			content =  'Please select one of the following choices:';
+			if (ctx) content = await ctx.getTranslation('BENTOCORD_PROMPT_CHOICE') || content;
+		}
 		content += cbb.render();
 
 		return this.prompt<PromptChoice<T>>(options, content, async (input: string) => {
@@ -819,20 +839,29 @@ export class CommandManager implements Component {
 		}
 
 		if (result == null) {
+			const ctx = prompt.options.ctx;
+
 			// attempt limit
 			prompt.attempt = (prompt.attempt || 0) + 1;
 			if (prompt.attempt >= 3) {
-				await this.cancelPrompt(channelId, userId, 'Max invalid attempts');
+				let canceled = 'Max invalid attempts.';
+				if (ctx) canceled = await ctx.getTranslation('BENTOCORD_PROMPT_CANCELED_MAX_ATTEMPTS') || canceled;
+				await this.cancelPrompt(channelId, userId, canceled);
 
 				return;
 			}
 
 			prompt.refresh();
 
-			const errorMessage = 'Failed to validate, please try again:';
-			const ctx = prompt.options.ctx;
-			if (ctx) return ctx.createResponse({ content: errorMessage });
-			return this.discord.client.createMessage(channelId, errorMessage);
+			let validateContent = prompt.content;
+
+			let validateMessage = '**Failed to validate input. Please try again**';
+			if (ctx) validateMessage = await ctx.getTranslation('BENTOCORD_PROMPT_VALIDATE_ERROR') || validateMessage;
+
+			validateContent += `\n\n${validateMessage}`;
+
+			if (ctx) return ctx.createResponse({ content: validateContent });
+			return this.discord.client.createMessage(channelId, validateContent);
 		}
 
 		this.cleanupPrompt(channelId, userId);
@@ -869,7 +898,10 @@ export class CommandManager implements Component {
 		try {
 			// process suppressors
 			const suppressed = await this.executeSuppressors(ctx, definition);
-			if (suppressed) return ctx.createResponse(await ctx.getTranslation('BENTOCORD_SUPPRESSOR_HALT', { suppressor: suppressed.name, message: suppressed.message }) || `Suppressor \`${suppressed.name}\` halted execution: ${suppressed.message}`);
+			if (suppressed) {
+				const message = await ctx.getTranslation('BENTOCORD_SUPPRESSOR_HALT', { suppressor: suppressed.name, message: suppressed.message }) || `Execution was halted by \`${suppressed.name}\`: ${suppressed.message}`;
+				return ctx.createResponse(message);
+			}
 
 			const options = await this.fufillInteractionOptions(ctx, definition.options, data);
 			return this.executeCommand(command, ctx, options);
@@ -934,7 +966,10 @@ export class CommandManager implements Component {
 		try {
 			// process suppressors
 			const suppressed = await this.executeSuppressors(ctx, definition);
-			if (suppressed) return ctx.createResponse(await ctx.getTranslation('BENTOCORD_SUPPRESSOR_HALT', { suppressor: suppressed.name, message: suppressed.message }) || `Suppressor \`${suppressed.name}\` halted execution: ${suppressed.message}`);
+			if (suppressed) {
+				const suppressedMessage = await ctx.getTranslation('BENTOCORD_SUPPRESSOR_HALT', { suppressor: suppressed.name, message: suppressed.message }) || `Execution was halted by \`${suppressed.name}\`: ${suppressed.message}`;
+				return ctx.createResponse(suppressedMessage);
+			}
 
 			const options = await this.fufillTextOptions(ctx, definition.options, args);
 			return this.executeCommand(command, ctx, options);

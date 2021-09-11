@@ -25,8 +25,6 @@ export class EmojiResolver implements Resolver<Emoji> {
 		const unicode = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/.exec(input);
 		if (unicode) return { id: null, name: unicode[1], require_colons: false, animated: false, available: true, managed: false, roles: [] };
 
-		console.log(emojis, input);
-
 		return emojis;
 	}
 

@@ -9,6 +9,7 @@ export class GuildAdminSuppressor implements Suppressor {
 		const member = ctx.member;
 		if (!member) return false;
 
-		return member.permissions.has('administrator') ? false : 'You lack the required permission';
+		const message = await ctx.getTranslation('BENTOCORD_SUPPRESSOR_GUILD_ADMIN') || 'You are not a server administrator.';
+		return member.permissions.has('administrator') ? false : message;
 	}
 }

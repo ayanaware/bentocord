@@ -5,6 +5,8 @@ export type PromptValidate<T> = (input: string) => Promise<T | Array<T>>;
 export interface Prompt<T extends unknown = unknown> {
 	options: PromptOptions;
 
+	content?: string;
+
 	validate: PromptValidate<T>;
 
 	resolve: (value?: T) => void;

@@ -15,6 +15,7 @@ export class RoleSuppressor implements Suppressor {
 		if (all) result = roleIds.every(r => memberRoleIds.includes(r));
 		else result = roleIds.some(r => memberRoleIds.includes(r));
 
-		return result ? false : 'You do not have the required role(s)';
+		const message = await ctx.getTranslation('BENTOCORD_SUPPRESSOR_ROLE') || 'You do not possess the required roles.';
+		return result ? false : message;
 	}
 }

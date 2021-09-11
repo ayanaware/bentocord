@@ -9,6 +9,7 @@ export class GuildOwnerSuppressor implements Suppressor {
 		const guild = ctx.guild;
 		if (!guild) return false;
 
-		return guild.ownerID === ctx.authorId ? false : 'You lack the required permission';
+		const message = await ctx.getTranslation('BENTOCORD_SUPPRESSOR_GUILD_OWNER') || 'You are not the server owner.';
+		return guild.ownerID === ctx.authorId ? false : message;
 	}
 }
