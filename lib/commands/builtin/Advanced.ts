@@ -17,7 +17,7 @@ export class AdvancedCommand implements CommandEntity {
 		aliases: ['adv'],
 		description: 'Meta Command. Takes passed arg and redirects to relevant command',
 		options: [
-			{ type: OptionType.STRING, name: 'alias', description: 'Command name or alias' },
+			{ type: OptionType.STRING, name: 'alias', description: 'command name or alias' },
 			{ type: OptionType.STRING, name: 'opts', description: 'option string to parse', required: false, rest: true },
 		],
 
@@ -26,6 +26,8 @@ export class AdvancedCommand implements CommandEntity {
 	};
 
 	public async execute(ctx: CommandContext, options: { alias: string, opts: string }): Promise<unknown> {
+		if (this.definition.aliases.some(a => a.toLowerCase() === options.alias.toLowerCase())) return ctx.createResponse(await ctx.getTranslation('BENTOCORD_ADV_NO_RECURSIVE') || 'Recursive execution is not allowed.');
+
 		const command = this.commandManager.findCommand(options.alias);
 		if (!command) return ctx.createResponse(await ctx.getTranslation('BENTOCORD_ADV_NOTEXIST', { command: options.alias }) || `Command "${options.alias}" does not exist in CommandManager`);
 
