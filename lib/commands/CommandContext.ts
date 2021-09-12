@@ -18,9 +18,9 @@ import { BentocordInterface } from '../BentocordInterface';
 import { Discord } from '../discord/Discord';
 
 import type { CommandManager } from './CommandManager';
+import { Prompt, PromptChoice, PromptValidate } from './Prompt';
 import { INTERACTION_MESSAGE, INTERACTION_RESPONSE } from './constants/API';
 import type { Command } from './interfaces/Command';
-import { PromptOptions, PromptValidate } from './interfaces/Prompt';
 
 export abstract class CommandContext {
 	private readonly api: EntityAPI;
@@ -63,29 +63,11 @@ export abstract class CommandContext {
 	}
 
 	/**
-	 * Prompt command author for additional input
-	 * @param options PromptOptions
-	 * @param content Message to display
-	 * @param validate Validate their input
-	 * @returns Validated input
+	 * Get translation of key if available
+	 * @param key Translation key
+	 * @param repl Translation replacements
+	 * @returns Formatted translation or null
 	 */
-	public async prompt<T = unknown>(options: PromptOptions, content: string, validate: PromptValidate<T>): Promise<T> {
-		return this.manager.prompt<T>({ ...options, ctx: this }, content, validate);
-	}
-
-	/**
-	 * Prompt the author for confirmation
-	 * @param content Optional message detailing what they are confirming
-	 * @returns boolean
-	 */
-	public async promptConfirm(content?: string): Promise<boolean> {
-		return this.prompt<boolean>({}, content || 'Please confirm this action [y/n]:', async (input: string) => {
-			if (/^true|t|yes|y|1$/i.exec(input)) return true;
-
-			return false;
-		});
-	}
-
 	public async getTranslation(key: string, repl?: Record<string, unknown>): Promise<string> {
 		return this.interface.getTranslation(key, repl, {
 			userId: this.authorId || null,
@@ -94,11 +76,58 @@ export abstract class CommandContext {
 		});
 	}
 
+	/**
+	 * Prompt command author for additional input
+	 * @param options PromptOptions
+	 * @param content Message to display
+	 * @param validate Validate their input
+	 * @returns Validated input
+	 */
+	public async prompt<T = string>(content: string, validate: PromptValidate<T>): Promise<T> {
+		return this.manager.prompt<T>(this, content, validate);
+	}
+
+	/**
+	 * Prompt command author to select a choice
+	 * @param choices Array of PromptChoice
+	 * @param content Optional Extra details about what they are selecting
+	 * @returns Selected PromptChoice value
+	 */
+	public async choose<T = string>(choices: Array<PromptChoice<T>>, content?: string): Promise<T> {
+		return this.manager.choose<T>(this, choices, content);
+	}
+
+	/**
+	 * Prompt command author for extra confirmation
+	 * @param content Optional message detailing what they are confirming
+	 * @returns boolean
+	 */
+	public async confirm(content?: string): Promise<boolean> {
+		if (!content) content = await this.getTranslation('BENTOCORD_PROMPT_CONFIRM') || 'Please confirm you wish to continue [y/n]:';
+		return this.prompt<boolean>(content, async input => {
+			if (/^true|t|yes|y|1$/i.exec(input)) return true;
+
+			return false;
+		});
+	}
+
+	/**
+	 * Send translated response, getTranstion & createResponse
+	 * @param key Translation Key
+	 * @param repl Replacements
+	 * @returns Message/Interaction
+	 */
 	public async createTranslatedResponse(key: string, repl?: Record<string, unknown>): Promise<unknown> {
 		const content = await this.getTranslation(key, repl);
 		return this.createResponse({ content });
 	}
 
+	/**
+	 * Edit translation response
+	 * @param key Translation Key
+	 * @param repl Replacements
+	 * @returns Message/Interaction
+	 */
 	public async editTranslatedResponse(key: string, repl?: Record<string, unknown>): Promise<unknown> {
 		const content = await this.getTranslation(key, repl);
 		return this.editResponse({ content });

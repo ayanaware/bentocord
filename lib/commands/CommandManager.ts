@@ -4,27 +4,27 @@ import { Component, ComponentAPI, Inject, Subscribe, Variable } from '@ayanaware
 import { Logger } from '@ayanaware/logger-api';
 
 import {
-	APIApplicationCommandInteraction,
-	APIApplicationCommandInteractionData,
 	APIApplicationCommandOption,
+	APIChatInputApplicationCommandInteraction,
+	APIChatInputApplicationCommandInteractionData,
 	ApplicationCommandOptionType,
+	ApplicationCommandType,
 	InteractionType,
 } from 'discord-api-types';
 import { GuildChannel, Message } from 'eris';
 
 import { BentocordInterface } from '../BentocordInterface';
 import { BentocordVariable } from '../BentocordVariable';
-import { CodeblockBuilder } from '../builders/CodeblockBuilder';
 import { Discord } from '../discord/Discord';
 import { DiscordEvent } from '../discord/constants/DiscordEvent';
 
 import { CommandContext, InteractionCommandContext, MessageCommandContext } from './CommandContext';
+import { Prompt, PromptChoice, PromptValidate } from './Prompt';
 import { APPLICATION_COMMANDS, APPLICATION_GUILD_COMMANDS } from './constants/API';
 import { OptionType } from './constants/OptionType';
 import { SuppressorType } from './constants/SuppressorType';
 import type { Command } from './interfaces/Command';
 import type { AnyCommandOption, AnySubCommandOption, CommandOption } from './interfaces/CommandOption';
-import { Prompt, PromptChoice, PromptOptions, PromptValidate } from './interfaces/Prompt';
 import type { Resolver } from './interfaces/Resolver';
 import type { Suppressor, SuppressorOption } from './interfaces/Suppressor';
 import type { ApplicationCommand, ApplicationCommandOption } from './interfaces/discord/ApplicationCommand';
@@ -403,6 +403,7 @@ export class CommandManager implements Component {
 		if (!applicationId) throw new Error('Failed to find application_id');
 
 		const appCommand: ApplicationCommand = {
+			type: ApplicationCommandType.ChatInput,
 			name: definition.aliases[0],
 			description: definition.description,
 
@@ -485,7 +486,7 @@ export class CommandManager implements Component {
 		return typeBuild;
 	}
 
-	public async fufillInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, data: APIApplicationCommandInteractionData): Promise<Record<string, unknown>> {
+	public async fufillInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, data: APIChatInputApplicationCommandInteractionData): Promise<Record<string, unknown>> {
 		return this.processInteractionOptions(ctx, options, data.options);
 	}
 
@@ -588,8 +589,8 @@ export class CommandManager implements Component {
 			}
 
 			const content = await ctx.getTranslation('BENTOCORD_PROMPT_SUBCOMMAND') || 'Please select a subcommand:';
-			const choice = await this.choose({ ctx }, choices, content);
-			useSub = choice.value;
+			const choice = await this.choose(ctx, choices, content);
+			useSub = choice;
 		} else {
 			useSub = subNames[0];
 		}
@@ -613,9 +614,9 @@ export class CommandManager implements Component {
 		if (inputs.length < 1 && (typeof option.required !== 'boolean' || option.required) && typeof option.choices === 'undefined') {
 			const type = this.getTypePreview(option);
 			const content = await ctx.getTranslation('BENTOCORD_PROMPT_OPTION', { option: option.name, type }) || `Please provide an input for option \`${option.name}\` of type \`${type}\`:`;
-			const promptInput = await this.prompt<string>({ ctx }, content, async (input: string) => input);
+			const input = await this.prompt(ctx, content, async s => s);
 
-			inputs = option.array ? promptInput.split(/,\s?/gi) : [promptInput];
+			inputs = option.array ? input.split(/,\s?/gi) : [input];
 			inputs = inputs.filter(i => !!i);
 		}
 
@@ -642,8 +643,7 @@ export class CommandManager implements Component {
 					choices.push({ value: item, name: display, match });
 				}
 
-				const choice = await this.choose<T>({ ctx }, choices);
-				result = choice.value;
+				result = await this.choose<T>(ctx, choices);
 			}
 
 			// either single element array or reducer failed
@@ -668,8 +668,7 @@ export class CommandManager implements Component {
 			const findChoice = choices.find(c => out && (c.value === out.toString() || c.value === parseInt(out.toString(), 10)));
 			if (!findChoice) {
 				const content = await ctx.getTranslation('BENTOCORD_PROMPT_CHOICE_OPTION', { option: option.name }) || `Please select one of the following choices for option \`${option.name}\``;
-				const choice = await this.choose<T>({ ctx }, choices.map(c => ({ name: c.name, value: c.value as unknown as T })), content);
-				out = choice.value;
+				out = await this.choose<T>(ctx, choices.map(c => ({ name: c.name, value: c.value as unknown as T })), content);
 			}
 		}
 
@@ -680,142 +679,41 @@ export class CommandManager implements Component {
 		return out;
 	}
 
-	/**
-	 * Cancel a pending prompt
-	 * @param channelId channelId
-	 * @param userId userId
-	 */
-	public async cancelPrompt(channelId: string, userId: string, reason?: string): Promise<void> {
-		const key = `${channelId}.${userId}`;
-		const prompt = this.prompts.get(key);
-		if (!prompt) return;
-
-		this.prompts.delete(key);
-		if (prompt.timeout) clearTimeout(prompt.timeout);
-
-		prompt.reject();
-
-		const ctx = prompt.options.ctx;
-		let content = await ctx.getTranslation('BENTOCORD_PROMPT_CANCELED') || 'Prompt has been canceled';
-		if (reason) content = await ctx.getTranslation('BENTOCORD_PROMPT_CANCELED_REASON', { reason }) || `Prompt has been canceled: ${reason}`;
-
-		if (ctx) await ctx.createResponse({ content });
-		else await this.discord.client.createMessage(channelId, { content });
-	}
-
-	/**
-	 * Cleanup a prompt
-	 * @param channelId channelId
-	 * @param userId userId
-	 */
-	private cleanupPrompt(channelId: string, userId: string) {
-		const key = `${channelId}.${userId}`;
-		const prompt = this.prompts.get(key);
-
-		this.prompts.delete(key);
-
-		if (prompt.timeout) clearTimeout(prompt.timeout);
-	}
-
-	/**
-	 * Prompt user for further input
-	 * @param options PromptOptions
-	 * @param content Prompt to display
-	 * @param validate Prompt Input validation
-	 * @returns Validated input
-	 */
-	public async prompt<T extends unknown = unknown>(options: PromptOptions, content: string, validate: PromptValidate<T>): Promise<T> {
-		// infer channelId & userId from context if exist
-		const channelId = options.channelId || options.ctx.channelId;
-		const userId = options.userId || options.ctx.authorId;
-		if (!channelId || !userId) return;
-
-		const ctx = options.ctx;
-
-		const key = `${channelId}.${userId}`;
+	public async prompt<T = string>(ctx: CommandContext, content: string, validate: PromptValidate<T>): Promise<T> {
+		const key = `${ctx.channelId}.${ctx.authorId}`;
 		if (this.prompts.has(key)) {
-			let message = 'New prompt was opened.';
-			if (ctx) message = await ctx.getTranslation('BENTOCORD_PROMPT_CANCELED_NEW') || message;
-			await this.cancelPrompt(channelId, userId, message);
+			const message = await ctx.getTranslation('BENTOCORD_PROMPT_CANCELED_NEW') || 'New prompt was opened.';
+			await this.prompts.get(key).cancel(message);
 		}
 
-		// add usage help
-		let usage = '*You may respond via message or the `r` command.*';
-		if (ctx) usage = await ctx.getTranslation('BENTOCORD_PROMPT_USAGE') || usage;
-		content += `\n${usage}`;
+		const prompt = new Prompt<T>(ctx);
+		this.prompts.set(key, prompt);
 
-		if (ctx) await ctx.createResponse({ content });
-		else await this.discord.client.createMessage(channelId, { content });
+		const result = await prompt.prompt(content, validate);
 
-		return new Promise<T>((resolve, reject) => {
-			const prompt: Prompt<T> = {
-				options,
-				content,
-				validate,
-				resolve, reject,
-				refresh: () => {
-					if (prompt.timeout) clearTimeout(prompt.timeout);
+		this.prompts.delete(key);
 
-					prompt.timeout = setTimeout(() => {
-						// The things we do for i18n
-						const handle = (message: string) => {
-							this.cancelPrompt(channelId, userId, message).catch((e: unknown) => log.warn(`cancelPrompt(): Failed: ${e.toString()}`));
-						};
-
-						if (ctx) {
-							ctx.getTranslation('BENTOCORD_PROMPT_CANCELED_TIMEOUT')
-								.then(handle)
-								.catch(() => handle('Input timeout.'));
-						} else {
-							handle('Input timeout');
-						}
-					}, options.time || 30 * 1000);
-				},
-			};
-			prompt.refresh();
-
-			this.prompts.set(key, prompt);
-		});
+		return result;
 	}
 
-	/**
-	 * Prompt a user to select one of up to 10 options
-	 * @param options PromptOptions
-	 * @param choices Array of PromptChoice
-	 * @param content Optional Choose detail message to display
-	 * @returns PromptChoice
-	 */
-	public async choose<T = unknown>(options: PromptOptions, choices: Array<PromptChoice<T>>, content?: string): Promise<PromptChoice<T>> {
-		const cbb = new CodeblockBuilder();
-		cbb.language = '';
-
-		for (let i = 0; i < Math.min(choices.length, 10); i++) {
-			const choice = choices[i];
-			if (!Array.isArray(choice.match)) choice.match = [];
-
-			choice.match.push((i + 1).toString());
-			cbb.addLine(i + 1, choice.name);
+	public async choose<T = unknown>(ctx: CommandContext, choices: Array<PromptChoice<T>>, content?: string): Promise<T> {
+		const key = `${ctx.channelId}.${ctx.authorId}`;
+		if (this.prompts.has(key)) {
+			const message = await ctx.getTranslation('BENTOCORD_PROMPT_CANCELED_NEW') || 'New prompt was opened.';
+			await this.prompts.get(key).cancel(message);
 		}
 
-		const ctx = options.ctx;
-		if (!content) {
-			content =  'Please select one of the following choices:';
-			if (ctx) content = await ctx.getTranslation('BENTOCORD_PROMPT_CHOICE') || content;
-		}
-		content += cbb.render();
+		const prompt = new Prompt<T>(ctx);
+		this.prompts.set(key, prompt);
 
-		return this.prompt<PromptChoice<T>>(options, content, async (input: string) => {
-			for (const choice of choices) {
-				if (!Array.isArray(choice.match)) continue;
+		const result = await prompt.choose(choices, content);
 
-				if (choice.match.some(c => c.toLowerCase() === input.toLowerCase())) return choice;
-			}
+		this.prompts.delete(key);
 
-			return null;
-		});
+		return result;
 	}
 
-	private async handlePrompt(channelId: string, userId: string, content: string, message?: Message) {
+	private async handlePrompt(channelId: string, userId: string, input: string, message?: Message) {
 		const key = `${channelId}.${userId}`;
 		const prompt = this.prompts.get(key);
 		if (!prompt) return;
@@ -827,45 +725,7 @@ export class CommandManager implements Component {
 			} catch { /* Failed */ }
 		}
 
-		let result: unknown = content;
-		if (typeof prompt.validate === 'function') {
-			try {
-				result = await prompt.validate(content);
-			} catch (e) {
-				this.cleanupPrompt(channelId, userId);
-
-				prompt.reject(e);
-			}
-		}
-
-		if (result == null) {
-			const ctx = prompt.options.ctx;
-
-			// attempt limit
-			prompt.attempt = (prompt.attempt || 0) + 1;
-			if (prompt.attempt >= 3) {
-				let canceled = 'Max invalid attempts.';
-				if (ctx) canceled = await ctx.getTranslation('BENTOCORD_PROMPT_CANCELED_MAX_ATTEMPTS') || canceled;
-				await this.cancelPrompt(channelId, userId, canceled);
-
-				return;
-			}
-
-			prompt.refresh();
-
-			let validateContent = prompt.content;
-
-			let validateMessage = '**Failed to validate input. Please try again**';
-			if (ctx) validateMessage = await ctx.getTranslation('BENTOCORD_PROMPT_VALIDATE_ERROR') || validateMessage;
-
-			validateContent += `\n\n${validateMessage}`;
-
-			if (ctx) return ctx.createResponse({ content: validateContent });
-			return this.discord.client.createMessage(channelId, validateContent);
-		}
-
-		this.cleanupPrompt(channelId, userId);
-		prompt.resolve(result);
+		return prompt.handleResponse(input);
 	}
 
 	@Subscribe(Discord, DiscordEvent.SHARD_READY)
@@ -880,7 +740,7 @@ export class CommandManager implements Component {
 		if (pkt.op !== 0 || pkt.t !== 'INTERACTION_CREATE') return; // Limit to Interaction Create
 
 		// Only handle APPLICATION_COMMAND interactions
-		const interaction = pkt.d as unknown as APIApplicationCommandInteraction;
+		const interaction = pkt.d as unknown as APIChatInputApplicationCommandInteraction;
 		if (interaction.type !== InteractionType.ApplicationCommand) return;
 
 		const data = interaction.data;
