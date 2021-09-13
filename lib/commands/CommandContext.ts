@@ -2,13 +2,14 @@ import { EntityAPI } from '@ayanaware/bento';
 
 import { APIApplicationCommandInteraction, InteractionResponseType } from 'discord-api-types';
 import {
+	AllowedMentions,
 	BaseData,
+	EmbedOptions,
 	Guild,
 	GuildTextableChannel,
 	Member,
 	Message,
 	MessageContent,
-	MessageFile,
 	TextableChannel,
 	TextChannel,
 	User,
@@ -18,9 +19,16 @@ import { BentocordInterface } from '../BentocordInterface';
 import { Discord } from '../discord/Discord';
 
 import type { CommandManager } from './CommandManager';
-import { Prompt, PromptChoice, PromptValidate } from './Prompt';
+import { PromptChoice, PromptValidate } from './Prompt';
 import { INTERACTION_MESSAGE, INTERACTION_RESPONSE } from './constants/API';
 import type { Command } from './interfaces/Command';
+
+export interface ResponseContent {
+	content?: string;
+	embeds?: Array<EmbedOptions>;
+
+	allowedMentions?: AllowedMentions;
+}
 
 export abstract class CommandContext {
 	private readonly api: EntityAPI;
@@ -135,8 +143,8 @@ export abstract class CommandContext {
 
 	public abstract acknowledge(): Promise<void>;
 
-	public abstract createResponse(content: MessageContent): Promise<unknown>;
-	public abstract editResponse(content: MessageContent): Promise<unknown>;
+	public abstract createResponse(response: string | ResponseContent): Promise<unknown>;
+	public abstract editResponse(response: string | ResponseContent): Promise<unknown>;
 	public abstract deleteResponse(): Promise<void>;
 }
 
@@ -191,27 +199,37 @@ export class InteractionCommandContext extends CommandContext {
 		this.hasResponded = true;
 	}
 
-	public async createResponse(content: MessageContent): Promise<unknown> {
-		if (this.hasResponded) return this.editResponse(content);
+	public async createResponse(response: string | ResponseContent): Promise<unknown> {
+		if (this.hasResponded) return this.editResponse(response);
 
-		if (typeof content === 'string') content = { content };
+		if (typeof response === 'string') response = { content: response };
 		// TODO: handle allowed_mentions
 
-		const response = {
+		const content = {
 			type: InteractionResponseType.ChannelMessageWithSource,
-			data: content,
+			data: {
+				content: response.content,
+				embeds: response.embeds,
+				allowed_mentions: response.allowedMentions,
+			},
 		};
 
 		const client = this.discord.client;
-		await client.requestHandler.request('POST', INTERACTION_RESPONSE(this.interaction.id, this.interaction.token), false, response as any);
+		await client.requestHandler.request('POST', INTERACTION_RESPONSE(this.interaction.id, this.interaction.token), false, content as any);
 		this.hasResponded = true;
 	}
 
-	public async editResponse(content: MessageContent): Promise<unknown> {
-		if (!this.hasResponded) return this.createResponse(content);
+	public async editResponse(response: string | ResponseContent): Promise<unknown> {
+		if (!this.hasResponded) return this.createResponse(response);
 
-		if (typeof content === 'string') content = { content };
+		if (typeof response === 'string') response = { content: response };
 		// TODO: handle allowed_mentions
+
+		const content = {
+			content: response.content,
+			embeds: response.embeds,
+			allowed_mentions: response.allowedMentions,
+		};
 
 		const client = this.discord.client;
 		await client.requestHandler.request('PATCH', INTERACTION_MESSAGE(this.discord.application.id, this.interaction.token, '@original'), true, content);
@@ -258,17 +276,33 @@ export class MessageCommandContext extends CommandContext {
 		// NO-OP on Message Context
 	}
 
-	public async createResponse(content: MessageContent, file?: MessageFile): Promise<unknown> {
-		if (this.responseId) return this.editResponse(content);
+	public async createResponse(response: string | ResponseContent): Promise<unknown> {
+		if (this.responseId) return this.editResponse(response);
 
-		const message = await this.channel.createMessage(content, file);
+		if (typeof response === 'string') response = { content: response };
+
+		const content: MessageContent = {
+			content: response.content,
+			embed: response.embeds ? response.embeds[0] : null,
+			allowedMentions: response.allowedMentions,
+		};
+
+		const message = await this.channel.createMessage(content);
 		this.responseId = message.id;
 
 		return message;
 	}
 
-	public async editResponse(content: MessageContent): Promise<unknown> {
-		if (!this.responseId) return this.createResponse(content);
+	public async editResponse(response: string | ResponseContent): Promise<unknown> {
+		if (!this.responseId) return this.createResponse(response);
+
+		if (typeof response === 'string') response = { content: response };
+
+		const content: MessageContent = {
+			content: response.content,
+			embed: response.embeds ? response.embeds[0] : null,
+			allowedMentions: response.allowedMentions,
+		};
 
 		return this.channel.editMessage(this.responseId, content);
 	}
