@@ -4,6 +4,8 @@ export * from './BentocordVariable';
 
 export * from './builders/CodeblockBuilder';
 export * from './builders/LocalizedCodeblockBuilder';
+export * from './builders/EmbedBuilder';
+export * from './builders/LocalizedEmbedBuilder';
 
 export * from './commands/CommandManager';
 export * from './commands/CommandContext';
