@@ -17,7 +17,7 @@ export class LocalizedEmbedBuilder extends EmbedBuilder {
 	}
 
 	public async setTranslatedTitle(title: string | EmbedTranslateable): Promise<this> {
-		if (typeof title === 'object') title = await this.ctx.getTranslation(title.key, title.repl) || title.key;
+		if (typeof title === 'object') title = await this.ctx.formatTranslation(title.key, title.repl) || title.key;
 
 		this.setTitle(title);
 
@@ -25,7 +25,7 @@ export class LocalizedEmbedBuilder extends EmbedBuilder {
 	}
 
 	public async setTranslatedDescription(description: string | EmbedTranslateable): Promise<this> {
-		if (typeof description === 'object') description = await this.ctx.getTranslation(description.key, description.repl) || description.key;
+		if (typeof description === 'object') description = await this.ctx.formatTranslation(description.key, description.repl) || description.key;
 
 		this.setDescription(description);
 
@@ -33,7 +33,7 @@ export class LocalizedEmbedBuilder extends EmbedBuilder {
 	}
 
 	public async setTranslatedAuthor(name: string | EmbedTranslateable, url?: string, iconUrl?: string): Promise<this> {
-		if (typeof name === 'object') name = await this.ctx.getTranslation(name.key, name.repl) || name.key;
+		if (typeof name === 'object') name = await this.ctx.formatTranslation(name.key, name.repl) || name.key;
 
 		this.setAuthor(name, url, iconUrl);
 
@@ -41,8 +41,8 @@ export class LocalizedEmbedBuilder extends EmbedBuilder {
 	}
 
 	public async addTranslatedField(name: string | EmbedTranslateable, value?: string | EmbedTranslateable, inline: boolean = false): Promise<this> {
-		if (typeof name === 'object') name = await this.ctx.getTranslation(name.key, name.repl) || name.key;
-		if (typeof value === 'object') value = await this.ctx.getTranslation(value.key, value.repl) || value.key;
+		if (typeof name === 'object') name = await this.ctx.formatTranslation(name.key, name.repl) || name.key;
+		if (typeof value === 'object') value = await this.ctx.formatTranslation(value.key, value.repl) || value.key;
 
 		this.addField(name, value, inline);
 
@@ -50,7 +50,7 @@ export class LocalizedEmbedBuilder extends EmbedBuilder {
 	}
 
 	public async setTranslatedFooter(text: string | EmbedTranslateable, iconUrl?: string): Promise<this> {
-		if (typeof text === 'object') text = await this.ctx.getTranslation(text.key, text.repl) || text.key;
+		if (typeof text === 'object') text = await this.ctx.formatTranslation(text.key, text.repl) || text.key;
 
 		this.setFooter(text, iconUrl);
 

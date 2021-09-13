@@ -40,6 +40,6 @@ export class SetGameCommand implements CommandEntity {
 		const game: ActivityPartial<BotActivityType> = { type: options.type as BotActivityType, name: options.message };
 
 		this.discord.client.editStatus('online', game);
-		return ctx.createResponse(await ctx.getTranslation('BENTOCORD_PRESENCE_UPDATED') || 'Presence Updated!');
+		return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_PRESENCE_UPDATED') || 'Presence Updated!');
 	}
 }

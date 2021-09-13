@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Plugin, PluginAPI, Variable } from '@ayanaware/bento';
 
 import { BentocordVariable } from './BentocordVariable';
@@ -53,7 +54,15 @@ export class BentocordInterface implements Plugin {
 		this.prefixes.set(snowflake, prefix);
 	}
 
-	public async getTranslation(key: string, repl?: Record<string, unknown>, ctx?: Record<string, string>): Promise<string> {
+	public async formatNumber(num: number, ctx?: Record<string, string>): Promise<string> {
+		return null;
+	}
+
+	public async formatDate(date: Date, ctx?: Record<string, string>): Promise<string> {
+		return null;
+	}
+
+	public async formatTranslation(key: string, repl?: Record<string, unknown>, ctx?: Record<string, string>): Promise<string> {
 		return null;
 	}
 

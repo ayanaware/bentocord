@@ -15,10 +15,10 @@ export class LocalizedCodeblockBuilder extends CodeblockBuilder {
 
 	public async addTranslatedLine(key: LocalizedLineItem, value: LocalizedLineItem | CodeblockLineItem): Promise<LocalizedCodeblockBuilder> {
 		if (typeof key === 'string') key = { key };
-		const keyTranslated = await this.ctx.getTranslation(key.key, key.repl);
+		const keyTranslated = await this.ctx.formatTranslation(key.key, key.repl);
 
 		let valueTranslated: CodeblockLineItem;
-		if (typeof value === 'object') valueTranslated = await this.ctx.getTranslation(value.key, value.repl);
+		if (typeof value === 'object') valueTranslated = await this.ctx.formatTranslation(value.key, value.repl);
 		else valueTranslated = value;
 
 		this.addLine(keyTranslated, valueTranslated);

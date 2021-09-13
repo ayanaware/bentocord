@@ -41,15 +41,15 @@ export class Prompt<T = string> {
 	}
 
 	private async timeout() {
-		const reason = await this.ctx.getTranslation('BENTOCORD_PROMPT_CANCELED_TIMEOUT') || 'You took too much time to respond.';
+		const reason = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_TIMEOUT') || 'You took too much time to respond.';
 		return this.cancel(reason);
 	}
 
 	/** Cancel this prompt if it is open */
 	public async cancel(reason?: string): Promise<void> {
 		let content;
-		if (reason) content = await this.ctx.getTranslation('BENTOCORD_PROMPT_CANCELED_REASON', { reason }) || `Prompt has been canceled: ${reason}`;
-		else content = await this.ctx.getTranslation('BENTOCORD_PROMPT_CANCELED') || 'Prompt has been canceled.';
+		if (reason) content = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_REASON', { reason }) || `Prompt has been canceled: ${reason}`;
+		else content = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED') || 'Prompt has been canceled.';
 
 		this.reject(reason);
 
@@ -57,9 +57,9 @@ export class Prompt<T = string> {
 	}
 
 	public async prompt(content: string, validate: PromptValidate<T>): Promise<T> {
-		if (this.pending) await this.cancel(await this.ctx.getTranslation('BENTOCORD_PROMPT_CANCELED_NEW') || 'New prompt was opened.');
+		if (this.pending) await this.cancel(await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_NEW') || 'New prompt was opened.');
 
-		const usage = await this.ctx.getTranslation('BENTOCORD_PROMPT_USAGE') || '*You may respond via message or the `r` command.*';
+		const usage = await this.ctx.formatTranslation('BENTOCORD_PROMPT_USAGE') || '*You may respond via message or the `r` command.*';
 		content += `\n${usage}`;
 
 		await this.ctx.createResponse({ content });
@@ -88,7 +88,7 @@ export class Prompt<T = string> {
 	}
 
 	public async choose(choices: Array<PromptChoice<T>>, content?: string): Promise<T> {
-		if (this.pending) await this.cancel(await this.ctx.getTranslation('BENTOCORD_PROMPT_CANCELED_NEW') || 'New prompt was opened.');
+		if (this.pending) await this.cancel(await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_NEW') || 'New prompt was opened.');
 
 		const cbb = new CodeblockBuilder('');
 
@@ -101,7 +101,7 @@ export class Prompt<T = string> {
 			cbb.addLine(i + 1, choice.name);
 		}
 
-		if (!content) content = await this.ctx.getTranslation('BENTOCORD_PROMPT_CHOICE') || 'Please select one of the following choices:';
+		if (!content) content = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CHOICE') || 'Please select one of the following choices:';
 		content += cbb.render();
 
 		return this.prompt(content, async (input: string) => {
@@ -133,11 +133,11 @@ export class Prompt<T = string> {
 		if (result) return this.resolve(result);
 
 		if (this.attempt++ >= 3) {
-			const canceled = await this.ctx.getTranslation('BENTOCORD_PROMPT_CANCELED_MAX_ATTEMPTS') || 'Max invalid attempts reached.';
+			const canceled = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_MAX_ATTEMPTS') || 'Max invalid attempts reached.';
 			return this.cancel(canceled);
 		}
 
-		const message = await this.ctx.getTranslation('BENTOCORD_PROMPT_VALIDATE_ERROR') || '**Failed to validate input. Please try again**';
+		const message = await this.ctx.formatTranslation('BENTOCORD_PROMPT_VALIDATE_ERROR') || '**Failed to validate input. Please try again**';
 		const content = `${this.content}\n\n${message}`;
 
 		await this.ctx.createResponse({ content });

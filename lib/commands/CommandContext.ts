@@ -71,13 +71,39 @@ export abstract class CommandContext {
 	}
 
 	/**
-	 * Get translation of key if available
+	 * Format a number based on who/where ran
+	 * @param num Number
+	 * @returns
+	 */
+	public async formatNumber(num: number): Promise<string> {
+		return this.interface.formatNumber(num, {
+			userId: this.authorId || null,
+			channelId: this.channelId || null,
+			guildId: this.guildId || null,
+		});
+	}
+
+	/**
+	 * Format a date based on who/where ran
+	 * @param date Date
+	 * @returns Formatted date
+	 */
+	public async formatDate(date: Date): Promise<string> {
+		return this.interface.formatDate(date, {
+			userId: this.authorId || null,
+			channelId: this.channelId || null,
+			guildId: this.guildId || null,
+		});
+	}
+
+	/**
+	 * Format a translation based on who/where ran
 	 * @param key Translation key
 	 * @param repl Translation replacements
 	 * @returns Formatted translation or null
 	 */
-	public async getTranslation(key: string, repl?: Record<string, unknown>): Promise<string> {
-		return this.interface.getTranslation(key, repl, {
+	public async formatTranslation(key: string, repl?: Record<string, unknown>): Promise<string> {
+		return this.interface.formatTranslation(key, repl, {
 			userId: this.authorId || null,
 			channelId: this.channelId || null,
 			guildId: this.guildId || null,
@@ -111,7 +137,7 @@ export abstract class CommandContext {
 	 * @returns boolean
 	 */
 	public async confirm(content?: string): Promise<boolean> {
-		if (!content) content = await this.getTranslation('BENTOCORD_PROMPT_CONFIRM') || 'Please confirm you wish to continue [y/n]:';
+		if (!content) content = await this.formatTranslation('BENTOCORD_PROMPT_CONFIRM') || 'Please confirm you wish to continue [y/n]:';
 		return this.prompt<boolean>(content, async input => {
 			if (/^true|t|yes|y|1$/i.exec(input)) return true;
 
@@ -126,7 +152,7 @@ export abstract class CommandContext {
 	 * @returns Message/Interaction
 	 */
 	public async createTranslatedResponse(key: string, repl?: Record<string, unknown>): Promise<unknown> {
-		const content = await this.getTranslation(key, repl);
+		const content = await this.formatTranslation(key, repl);
 		return this.createResponse({ content });
 	}
 
@@ -137,7 +163,7 @@ export abstract class CommandContext {
 	 * @returns Message/Interaction
 	 */
 	public async editTranslatedResponse(key: string, repl?: Record<string, unknown>): Promise<unknown> {
-		const content = await this.getTranslation(key, repl);
+		const content = await this.formatTranslation(key, repl);
 		return this.editResponse({ content });
 	}
 

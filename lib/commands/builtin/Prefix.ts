@@ -31,12 +31,12 @@ export class PrefixCommand implements CommandEntity {
 		if (options.prefix) return this.set(ctx, options.prefix);
 
 		const prefix = await this.interface.getPrefix(ctx.guild.id);
-		return ctx.createResponse(await ctx.getTranslation('BENTOCORD_PREFIX', { prefix }) || `Current prefix is \`${prefix}\``);
+		return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_PREFIX', { prefix }) || `Current prefix is \`${prefix}\``);
 	}
 
 	private async set(ctx: CommandContext, prefix: string) {
 		await this.interface.setPrefix(ctx.guild.id, prefix);
 
-		return ctx.createResponse(await ctx.getTranslation('BENTOCORD_PREFIX_SET', { prefix }) || `Prefix has been set to \`${prefix}\``);
+		return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_PREFIX_SET', { prefix }) || `Prefix has been set to \`${prefix}\``);
 	}
 }
