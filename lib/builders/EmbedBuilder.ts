@@ -18,61 +18,61 @@ export class EmbedBuilder {
 	public footer: EmbedFooter;
 	public timestamp: number;
 
-	public setTitle(title: string): EmbedBuilder {
+	public setTitle(title: string): this {
 		this.title = title;
 
 		return this;
 	}
 
-	public setDescription(description: string): EmbedBuilder {
+	public setDescription(description: string): this {
 		this.description = description;
 
 		return this;
 	}
 
-	public setUrl(url: string): EmbedBuilder {
+	public setUrl(url: string): this {
 		this.url = url;
 
 		return this;
 	}
 
-	public setColor(color: number): EmbedBuilder {
+	public setColor(color: number): this {
 		this.color = color;
 
 		return this;
 	}
 
-	public setAuthor(name: string, url?: string, iconUrl?: string): EmbedBuilder {
+	public setAuthor(name: string, url?: string, iconUrl?: string): this {
 		this.author = { name, url, icon_url: iconUrl };
 
 		return this;
 	}
 
-	public addField(name: string, value?: string, inline: boolean = false): EmbedBuilder {
+	public addField(name: string, value?: string, inline: boolean = false): this {
 		this.fields.push({ name, value, inline });
 
 		return this;
 	}
 
-	public setThumbnail(url: string): EmbedBuilder {
+	public setThumbnail(url: string): this {
 		this.thumbnail = { url };
 
 		return this;
 	}
 
-	public setImage(url: string): EmbedBuilder {
+	public setImage(url: string): this {
 		this.image = { url };
 
 		return this;
 	}
 
-	public setFooter(text: string, iconUrl?: string): EmbedBuilder {
+	public setFooter(text: string, iconUrl?: string): this {
 		this.footer = { text, icon_url: iconUrl };
 
 		return this;
 	}
 
-	public setTimestamp(timestamp: number | Date = Date.now()): EmbedBuilder {
+	public setTimestamp(timestamp: number | Date = Date.now()): this {
 		if (timestamp instanceof Date) timestamp = timestamp.getTime();
 		this.timestamp = timestamp;
 
