@@ -16,7 +16,7 @@ export class EmbedBuilder {
 	public thumbnail: EmbedMedia;
 
 	public footer: EmbedFooter;
-	public timestamp: number;
+	public timestamp: string | Date;
 
 	public setTitle(title: string): this {
 		this.title = title;
@@ -72,8 +72,7 @@ export class EmbedBuilder {
 		return this;
 	}
 
-	public setTimestamp(timestamp: number | Date = Date.now()): this {
-		if (timestamp instanceof Date) timestamp = timestamp.getTime();
+	public setTimestamp(timestamp: (string | Date) = new Date()): this {
 		this.timestamp = timestamp;
 
 		return this;
