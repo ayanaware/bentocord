@@ -130,7 +130,7 @@ export class Prompt<T = string> {
 		this.refresh();
 
 		// successful result
-		if (result) return this.resolve(result);
+		if (typeof result != null) return this.resolve(result);
 
 		if (this.attempt++ >= 3) {
 			const canceled = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_MAX_ATTEMPTS') || 'Max invalid attempts reached.';

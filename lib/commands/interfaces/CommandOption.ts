@@ -39,8 +39,11 @@ export interface CommandOptionChoice {
 	value: string | number;
 }
 
-export interface SubCommandOption extends Omit<CommandOption, 'choices'|'options'> {
+export interface SubCommandOption extends Omit<CommandOption, 'choices'|'options'|'name'> {
 	type: OptionType.SUB_COMMAND;
+
+	/** Subcommand name, only first element registered to discord slash commands */
+	name: string | Array<string>;
 
 	/** Nested Options */
 	options: Array<CommandOption>;
@@ -49,8 +52,11 @@ export interface SubCommandOption extends Omit<CommandOption, 'choices'|'options
 	suppressors: Array<SuppressorDefinition>;
 }
 
-export interface SubCommandGroupOption extends Omit<CommandOption, 'choices'> {
+export interface SubCommandGroupOption extends Omit<CommandOption, 'choices'|'name'> {
 	type: OptionType.SUB_COMMAND_GROUP;
+
+	/** SubcommandGroup name, only first element registered to discord slash commands */
+	name: string | Array<string>;
 
 	/** Nested Options */
 	options: Array<SubCommandOption>;

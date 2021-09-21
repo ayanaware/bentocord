@@ -429,8 +429,12 @@ export class CommandManager implements Component {
 
 		if (!options) options = [];
 		// drop SubCommandGroupOption & SubCommandOption special types
-		for (const option of options as Array<CommandOption>) {
-			const appOption: ApplicationCommandOption = { type: null, name: option.name.toLowerCase(), description: option.description || '' };
+		for (const option of options) {
+			let name = option.name;
+			if (Array.isArray(name)) name = name[0];
+			name = name.toLowerCase();
+
+			const appOption: ApplicationCommandOption = { type: null, name, description: option.description };
 
 			// Handle Special Subcommand & SubcommandGroup OptionTypes
 			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {
@@ -497,20 +501,27 @@ export class CommandManager implements Component {
 		if (!optionData) optionData = [];
 
 		for (const option of options) {
-			const data = optionData.find(d => d.name.toLowerCase() === option.name.toLowerCase());
-
 			// Handle SubCommand & SubCommandGroup
 			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {
-				if (!data) continue;
 				const subOption = option as AnySubCommandOption;
+
+				let names: string | Array<string> = subOption.name;
+				if (!Array.isArray(names)) names = [names];
+				const final = names;
+				const primary = final[0];
+
+				const subOptionData = optionData.find(d => final.some(f => f.toLowerCase() === d.name.toLowerCase()));
+				if (!subOptionData) continue;
 
 				// process suppressors
 				const suppressed = await this.executeSuppressors(ctx, subOption);
 				if (suppressed) throw new Error(`Suppressor \`${suppressed.name}\` halted execution: ${suppressed.message}`);
 
-				collector = { ...collector, [option.name]: await this.processInteractionOptions(ctx, subOption.options, data.options) };
+				collector = { ...collector, [primary]: await this.processInteractionOptions(ctx, subOption.options, subOptionData.options) };
 				break;
 			}
+
+			const data = optionData.find(d => d.name.toLowerCase() === option.name.toLowerCase());
 
 			const value: string = data?.value.toString();
 			collector = { ...collector, [option.name]: await this.resolveOption(ctx, option, value) };
@@ -542,13 +553,17 @@ export class CommandManager implements Component {
 		for (const option of options) {
 			if (option.type === OptionType.SUB_COMMAND_GROUP || option.type === OptionType.SUB_COMMAND) {
 				const subOption = option as AnySubCommandOption;
+				let names = subOption.name;
+				if (!Array.isArray(names)) names = [names];
+				const final = names;
+				const primary = final[0];
 
-				subNames.push(subOption.name);
+				subNames.push(primary);
 
 				// phrase is a single element
 				const phrase = output.phrases[index];
 				// validate arg matches subcommand or group name
-				if (!phrase || subOption.name !== phrase.value) continue;
+				if (!phrase || names.every(n => n.toLowerCase() !== phrase.value.toLowerCase())) continue;
 
 				index++;
 
@@ -557,7 +572,7 @@ export class CommandManager implements Component {
 				if (suppressed) throw new Error(`Suppressor \`${suppressed.name}\` halted execution: ${suppressed.message}`);
 
 				// process nested option
-				collector = { ...collector, [option.name]: await this.processTextOptions(ctx, subOption.options, output, index) };
+				collector = { ...collector, [primary]: await this.processTextOptions(ctx, subOption.options, output, index) };
 				subNames = []; // collected successfully
 				break;
 			}
@@ -596,7 +611,13 @@ export class CommandManager implements Component {
 		}
 
 		if (useSub) {
-			const subOption = options.find(o => o.name.toLowerCase() === useSub.toLowerCase()) as AnySubCommandOption;
+			const subOption = options.find(o => {
+				let name = o.name;
+				if (!Array.isArray(name)) name = [name];
+
+				return name.some(n => n.toLowerCase() === useSub.toLowerCase());
+			}) as AnySubCommandOption;
+
 			if (subOption) collector = { ...collector, [useSub]: await this.processTextOptions(ctx, subOption.options, output, index) };
 		}
 

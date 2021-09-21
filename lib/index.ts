@@ -24,3 +24,5 @@ export * from './commands/interfaces/entity/SuppressorEntity';
 export * from './discord/Discord';
 export * from './discord/constants/DiscordEvent';
 export * from './discord/constants/DiscordPermission';
+
+export * from './interfaces/Translateable';
