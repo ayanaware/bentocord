@@ -46,7 +46,7 @@ export interface SubCommandOption extends Omit<CommandOption, 'choices'|'options
 	name: string | Array<string>;
 
 	/** Nested Options */
-	options: Array<CommandOption>;
+	options?: Array<CommandOption>;
 
 	/** Suppressors */
 	suppressors?: Array<SuppressorDefinition>;
