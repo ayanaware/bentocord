@@ -49,7 +49,7 @@ export interface SubCommandOption extends Omit<CommandOption, 'choices'|'options
 	options: Array<CommandOption>;
 
 	/** Suppressors */
-	suppressors: Array<SuppressorDefinition>;
+	suppressors?: Array<SuppressorDefinition>;
 }
 
 export interface SubCommandGroupOption extends Omit<CommandOption, 'choices'|'name'> {
@@ -62,7 +62,7 @@ export interface SubCommandGroupOption extends Omit<CommandOption, 'choices'|'na
 	options: Array<SubCommandOption>;
 
 	/** Suppressors */
-	suppressors: Array<SuppressorDefinition>;
+	suppressors?: Array<SuppressorDefinition>;
 }
 
 export type AnyCommandOption = CommandOption | SubCommandOption | SubCommandGroupOption;
