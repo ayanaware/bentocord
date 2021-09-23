@@ -1,5 +1,5 @@
-import { Translateable } from '..';
 import { CommandContext } from '../commands/CommandContext';
+import { Translateable } from '../interfaces/Translateable';
 
 import { EmbedBuilder } from './EmbedBuilder';
 
