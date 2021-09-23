@@ -26,6 +26,6 @@ export class GuildResolver implements Resolver<Guild> {
 		if (guild.id === input) return true;
 
 		// handle name
-		return guild.name.toLowerCase().includes(input.toLowerCase());
+		return guild.name.toLocaleLowerCase().includes(input.toLocaleLowerCase());
 	}
 }

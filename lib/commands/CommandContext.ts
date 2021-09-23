@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import { EntityAPI } from '@ayanaware/bento';
 
 import { APIApplicationCommandInteraction, InteractionResponseType } from 'discord-api-types';
@@ -17,9 +18,14 @@ import {
 
 import { BentocordInterface } from '../BentocordInterface';
 import { Discord } from '../discord/Discord';
+import { DiscordPermission } from '../discord/constants/DiscordPermission';
+import { Translateable } from '../interfaces/Translateable';
+import { PromptValidate } from '../prompt/Prompt';
+import { PromptManager } from '../prompt/PromptManager';
+import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
+import { PaginationOptions } from '../prompt/prompts/PaginationPrompt';
 
 import type { CommandManager } from './CommandManager';
-import { PromptChoice, PromptValidate } from './Prompt';
 import { INTERACTION_MESSAGE, INTERACTION_RESPONSE } from './constants/API';
 import type { Command } from './interfaces/Command';
 
@@ -51,6 +57,7 @@ export abstract class CommandContext {
 	public readonly discord: Discord;
 
 	public readonly manager: CommandManager;
+	public readonly promptManager: PromptManager;
 
 	public responseId: string;
 
@@ -63,6 +70,7 @@ export abstract class CommandContext {
 		// Entities
 		this.discord = this.api.getEntity(Discord);
 		this.interface = this.api.getEntity(BentocordInterface);
+		this.promptManager = this.api.getEntity(PromptManager);
 	}
 
 	/**
@@ -113,38 +121,74 @@ export abstract class CommandContext {
 	}
 
 	/**
+	 * Check if the author has a Discord permission
+	 * @param permission DiscordPermission
+	 */
+	public hasPermission(permission: DiscordPermission): boolean {
+		if (!this.channel || !this.guild) return false;
+		const channel = this.channel as TextChannel;
+
+		return channel.permissionsOf(this.authorId).has(permission) || false;
+	}
+
+	/**
+	 * Check if the application has a Discord permission
+	 * @param permission DiscordPermission
+	 */
+	public selfHasPermission(permission: DiscordPermission): boolean {
+		if (!this.channel || !this.guild) return false;
+		const channel = this.channel as TextChannel;
+		const selfId = this.discord.client.user.id;
+		if (!selfId) return;
+
+		return channel.permissionsOf(selfId).has(permission) || false;
+	}
+
+	/**
 	 * Prompt command author for additional input
 	 * @param options PromptOptions
 	 * @param content Message to display
 	 * @param validate Validate their input
 	 * @returns Validated input
 	 */
-	public async prompt<T = string>(content: string, validate: PromptValidate<T>): Promise<T> {
-		return this.manager.prompt<T>(this, content, validate);
-	}
-
-	/**
-	 * Prompt command author to select a choice
-	 * @param choices Array of PromptChoice
-	 * @param content Optional Extra details about what they are selecting
-	 * @returns Selected PromptChoice value
-	 */
-	public async choose<T = string>(choices: Array<PromptChoice<T>>, content?: string): Promise<T> {
-		return this.manager.choose<T>(this, choices, content);
+	public async prompt<T = string>(content: string | Translateable, validate?: PromptValidate<T>): Promise<T> {
+		return this.promptManager.createPrompt<T>(this, content, validate);
 	}
 
 	/**
 	 * Prompt command author for extra confirmation
-	 * @param content Optional message detailing what they are confirming
+	 * @param content details about what they are confirming
 	 * @returns boolean
 	 */
-	public async confirm(content?: string): Promise<boolean> {
+	public async confirm(content?: string | Translateable): Promise<boolean> {
 		if (!content) content = await this.formatTranslation('BENTOCORD_PROMPT_CONFIRM') || 'Please confirm you wish to continue [y/n]:';
 		return this.prompt<boolean>(content, async input => {
 			if (/^true|t|yes|y|1$/i.exec(input)) return true;
 
 			return false;
 		});
+	}
+
+	/**
+	 * Show a pagination UI
+	 * @param items Array of items
+	 * @param content details about what they are seeing
+	 * @param options PaginationOptions
+	 * @returns
+	 */
+	public async pagination(items: Array<string | Translateable>, content?: string | Translateable, options?: PaginationOptions): Promise<void> {
+		return this.promptManager.createPagination(this, items, content, options);
+	}
+
+	/**
+	 * Prompt command author to select a choice
+	 * @param choices Array of PromptChoice
+	 * @param content details about what they are choosing
+	 * @param options PagiantionOptions
+	 * @returns Selected PromptChoice value
+	 */
+	public async choice<T = string>(choices: Array<PromptChoice<T>>, content?: string | Translateable, options?: PaginationOptions): Promise<T> {
+		return this.promptManager.createChoicePrompt<T>(this, choices, content, options);
 	}
 
 	/**

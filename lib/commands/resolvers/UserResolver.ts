@@ -40,7 +40,7 @@ export class UserResolver implements Resolver<User|Member> {
 		const username = match[1];
 		const discrim = match[2] || null;
 
-		if (user.username.toLowerCase().includes(username.toLowerCase())) {
+		if (user.username.toLocaleLowerCase().includes(username.toLocaleLowerCase())) {
 			if (discrim) return user.discriminator === discrim;
 			return true;
 		}

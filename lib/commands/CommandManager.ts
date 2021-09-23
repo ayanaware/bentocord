@@ -17,6 +17,7 @@ import { BentocordInterface } from '../BentocordInterface';
 import { BentocordVariable } from '../BentocordVariable';
 import { Discord } from '../discord/Discord';
 import { DiscordEvent } from '../discord/constants/DiscordEvent';
+import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
 
 import { CommandContext, InteractionCommandContext, MessageCommandContext } from './CommandContext';
 import { APPLICATION_COMMANDS, APPLICATION_GUILD_COMMANDS } from './constants/API';
@@ -187,7 +188,7 @@ export class CommandManager implements Component {
 
 		if (definition.aliases.length < 1) throw new Error('At least one alias must be defined');
 		// ensure all aliases are lowercase
-		definition.aliases = definition.aliases.map(a => a.toLowerCase());
+		definition.aliases = definition.aliases.map(a => a.toLocaleLowerCase());
 
 		// first alias is primary alias
 		const primary = definition.aliases[0];
@@ -230,7 +231,7 @@ export class CommandManager implements Component {
 	 * @returns Command
 	 */
 	public findCommand(alias: string): Command {
-		if (alias) alias = alias.toLowerCase();
+		if (alias) alias = alias.toLocaleLowerCase();
 
 		// convert alias to primary alias
 		const primary = this.aliases.get(alias);
@@ -414,7 +415,7 @@ export class CommandManager implements Component {
 		for (const option of options) {
 			let name = option.name;
 			if (Array.isArray(name)) name = name[0];
-			name = name.toLowerCase();
+			name = name.toLocaleLowerCase();
 
 			const appOption: ApplicationCommandOption = { type: null, name, description: option.description };
 
@@ -492,7 +493,7 @@ export class CommandManager implements Component {
 				const final = names;
 				const primary = final[0];
 
-				const subOptionData = optionData.find(d => final.some(f => f.toLowerCase() === d.name.toLowerCase()));
+				const subOptionData = optionData.find(d => final.some(f => f.toLocaleLowerCase() === d.name.toLocaleLowerCase()));
 				if (!subOptionData) continue;
 
 				// process suppressors
@@ -503,7 +504,7 @@ export class CommandManager implements Component {
 				break;
 			}
 
-			const data = optionData.find(d => d.name.toLowerCase() === option.name.toLowerCase());
+			const data = optionData.find(d => d.name.toLocaleLowerCase() === option.name.toLocaleLowerCase());
 
 			const value: string = data?.value.toString();
 			collector = { ...collector, [option.name]: await this.resolveOption(ctx, option, value) };
@@ -545,7 +546,7 @@ export class CommandManager implements Component {
 				// phrase is a single element
 				const phrase = output.phrases[index];
 				// validate arg matches subcommand or group name
-				if (!phrase || names.every(n => n.toLowerCase() !== phrase.value.toLowerCase())) continue;
+				if (!phrase || names.every(n => n.toLocaleLowerCase() !== phrase.value.toLocaleLowerCase())) continue;
 
 				index++;
 
@@ -560,7 +561,7 @@ export class CommandManager implements Component {
 			}
 
 			let value: string;
-			const textOption = output.options.find(o => o.key.toLowerCase() === option.name.toLowerCase());
+			const textOption = output.options.find(o => o.key.toLocaleLowerCase() === option.name.toLocaleLowerCase());
 			if (textOption) {
 				value = textOption.value;
 			} else {
@@ -586,7 +587,7 @@ export class CommandManager implements Component {
 			}
 
 			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_SUBCOMMAND') || 'Please select a subcommand:';
-			const choice = await this.choose(ctx, choices, content);
+			const choice = await ctx.choice(choices, content);
 			useSub = choice;
 		} else {
 			useSub = subNames[0];
@@ -597,7 +598,7 @@ export class CommandManager implements Component {
 				let name = o.name;
 				if (!Array.isArray(name)) name = [name];
 
-				return name.some(n => n.toLowerCase() === useSub.toLowerCase());
+				return name.some(n => n.toLocaleLowerCase() === useSub.toLocaleLowerCase());
 			}) as AnySubCommandOption;
 
 			if (subOption) collector = { ...collector, [useSub]: await this.processTextOptions(ctx, subOption.options, output, index) };
@@ -617,7 +618,7 @@ export class CommandManager implements Component {
 		if (inputs.length < 1 && (typeof option.required !== 'boolean' || option.required) && typeof option.choices === 'undefined') {
 			const type = this.getTypePreview(option);
 			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_OPTION', { option: option.name, type }) || `Please provide an input for option \`${option.name}\` of type \`${type}\`:`;
-			const input = await this.prompt(ctx, content, async s => s);
+			const input = await ctx.prompt(content);
 
 			inputs = option.array ? input.split(/,\s?/gi) : [input];
 			inputs = inputs.filter(i => !!i);
@@ -646,7 +647,7 @@ export class CommandManager implements Component {
 					choices.push({ value: item, name: display, match });
 				}
 
-				result = await this.choose<T>(ctx, choices);
+				result = await ctx.choice<T>(choices);
 			}
 
 			// either single element array or reducer failed
@@ -671,7 +672,7 @@ export class CommandManager implements Component {
 			const findChoice = choices.find(c => out && (c.value === out.toString() || c.value === parseInt(out.toString(), 10)));
 			if (!findChoice) {
 				const content = await ctx.formatTranslation('BENTOCORD_PROMPT_CHOICE_OPTION', { option: option.name }) || `Please select one of the following choices for option \`${option.name}\``;
-				out = await this.choose<T>(ctx, choices.map(c => ({ name: c.name, value: c.value as unknown as T })), content);
+				out = await ctx.choice<T>(choices.map(c => ({ name: c.name, value: c.value as unknown as T, match: [c.name] })), content);
 			}
 		}
 
@@ -680,40 +681,6 @@ export class CommandManager implements Component {
 
 		// TODO: Transform function
 		return out;
-	}
-
-	public async prompt<T = string>(ctx: CommandContext, content: string, validate: PromptValidate<T>): Promise<T> {
-		const key = `${ctx.channelId}.${ctx.authorId}`;
-		if (this.prompts.has(key)) {
-			const message = await ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_NEW') || 'New prompt was opened.';
-			await this.prompts.get(key).cancel(message);
-		}
-
-		const prompt = new Prompt<T>(ctx);
-		this.prompts.set(key, prompt);
-
-		const result = await prompt.prompt(content, validate);
-
-		this.prompts.delete(key);
-
-		return result;
-	}
-
-	public async choose<T = unknown>(ctx: CommandContext, choices: Array<PromptChoice<T>>, content?: string): Promise<T> {
-		const key = `${ctx.channelId}.${ctx.authorId}`;
-		if (this.prompts.has(key)) {
-			const message = await ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_NEW') || 'New prompt was opened.';
-			await this.prompts.get(key).cancel(message);
-		}
-
-		const prompt = new Prompt<T>(ctx);
-		this.prompts.set(key, prompt);
-
-		const result = await prompt.choose(choices, content);
-
-		this.prompts.delete(key);
-
-		return result;
 	}
 
 	@Subscribe(Discord, DiscordEvent.SHARD_READY)

@@ -38,6 +38,6 @@ export class EmojiResolver implements Resolver<Emoji> {
 		// handle name
 		input = input.replace(/:/g, '');
 
-		return emoji.name.toLowerCase().includes(input.toLowerCase());
+		return emoji.name.toLocaleLowerCase().includes(input.toLocaleLowerCase());
 	}
 }

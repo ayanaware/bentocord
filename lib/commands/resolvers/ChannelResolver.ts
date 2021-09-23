@@ -32,6 +32,6 @@ export class ChannelResolver implements Resolver<AnyGuildChannel> {
 
 		// handle name
 		input = input.replace(/^#/, '');
-		return channel.name.toLowerCase().includes(input.toLowerCase());
+		return channel.name.toLocaleLowerCase().includes(input.toLocaleLowerCase());
 	}
 }

@@ -33,6 +33,6 @@ export class RoleResolver implements Resolver<Role> {
 		// handle name
 		input = input.replace(/^@/, '');
 
-		return role.name.toLowerCase().includes(input.toLowerCase());
+		return role.name.toLocaleLowerCase().includes(input.toLocaleLowerCase());
 	}
 }

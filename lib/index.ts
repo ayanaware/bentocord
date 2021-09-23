@@ -9,7 +9,6 @@ export * from './builders/LocalizedEmbedBuilder';
 
 export * from './commands/CommandManager';
 export * from './commands/CommandContext';
-export * from './commands/Prompt';
 export * from './commands/constants/OptionType';
 export * from './commands/constants/SuppressorType';
 export * from './commands/interfaces/Command';
@@ -26,3 +25,8 @@ export * from './discord/constants/DiscordEvent';
 export * from './discord/constants/DiscordPermission';
 
 export * from './interfaces/Translateable';
+
+export * from './prompt/Prompt';
+export * from './prompt/PromptManager';
+export * from './prompt/prompts/PaginationPrompt';
+export * from './prompt/prompts/ChoicePrompt';

@@ -1,9 +1,10 @@
-import { Emoji } from 'eris';
+import { Emoji, Message } from 'eris';
 
 import { CodeblockBuilder } from '../../builders/CodeblockBuilder';
-import { CommandContext } from '../../commands/CommandContext';
+import type { CommandContext } from '../../commands/CommandContext';
+import { DiscordPermission } from '../../discord/constants/DiscordPermission';
 import { Translateable } from '../../interfaces/Translateable';
-import { Prompt } from '../Prompt';
+import { Prompt, PROMPT_CLOSE } from '../Prompt';
 
 export interface PaginationOptions {
 	/** How many items will be showed per page */
@@ -24,14 +25,13 @@ export enum PaginationControls {
 	PREV = '<',
 }
 
-export class PaginationPrompt extends Prompt {
+export class PaginationPrompt<T = void> extends Prompt<T> {
 	public itemsPerPage = 10;
 	public currentPage = 0;
 	public language: string;
 
 	private readonly items: Array<string | Translateable> = [];
-
-	private header: string;
+	private content: string;
 
 	public constructor(ctx: CommandContext, items: Array<string | Translateable>, options: PaginationOptions = {}) {
 		super(ctx);
@@ -51,16 +51,17 @@ export class PaginationPrompt extends Prompt {
 		return this.maxPage === 1;
 	}
 
-	public async open(header: string | Translateable): Promise<void> {
-		if (typeof header === 'object') header = await this.ctx.formatTranslation(header.key, header.repl);
-		this.header = header;
+	public async open(content: string | Translateable): Promise<T> {
+		if (typeof content === 'object') content = await this.ctx.formatTranslation(content.key, content.repl);
+		this.content = content;
 
 		await this.render();
 
-		// not a single page add reactions
-		if (!this.isSinglePage) await this.addReactions();
-
-		return this.start();
+		// not a single page add reactions & start prompt
+		if (!this.isSinglePage) {
+			await this.addReactions();
+			return this.start();
+		}
 	}
 
 	protected async render(): Promise<void> {
@@ -86,11 +87,23 @@ export class PaginationPrompt extends Prompt {
 		}
 
 		let content = cbb.render();
-		if (this.header) content = `${this.header}\n${content}`;
+		if (this.content) content = `${this.content}\n${content}`;
+
+		// is more then one page show navigation info
+		if (!this.isSinglePage) {
+			const usage = await this.ctx.formatTranslation('BENTOCORD_PAGINATION_NAVIGATION') || 'Type `<` or `>` to switch pages, `x` to close, or `p<number>` to jump to a page (ex. `p10`).';
+			content += usage;
+
+			// if no manage message complain :P
+			if (!this.ctx.selfHasPermission(DiscordPermission.MANAGE_MESSAGES)) {
+				const missing = await this.ctx.formatTranslation('BENTOCORD_PROMPT_MISSING_PERMISSION', { permission: 'MANAGE_MESSAGES' }) || 'It doesn\'t look like I have the `MANAGE_MESSAGE` Discord permission. Please grant it for a better experience.';
+				content += `\n${missing}`;
+			}
+		}
 
 		await this.ctx.createResponse({ content });
 
-		this.content = content;
+		this.sent = content;
 	}
 
 	protected async addReactions(): Promise<void> {
@@ -107,9 +120,17 @@ export class PaginationPrompt extends Prompt {
 		} catch { /* Failed */ }
 	}
 
-	public async handleResponse(input: string): Promise<void> {
-		const close = ['exit', 'cancel', 'c', ':q'].some(c => c.toLowerCase() === input.toLowerCase());
-		if (close) return this.resolve();
+	public async handleResponse(input: string, message?: Message): Promise<void> {
+		if (this.isSinglePage) return;
+
+		const close = PROMPT_CLOSE.some(c => c.toLocaleLowerCase() === input.toLocaleLowerCase());
+		if (close) {
+			this.resolve();
+
+			await this.deleteMessage(message);
+
+			return;
+		}
 
 		switch (input) {
 			case PaginationControls.EMOJI_NEXT:
@@ -135,10 +156,16 @@ export class PaginationPrompt extends Prompt {
 			}
 		}
 
-		return this.render();
+		// Refresh timeout as they just interacted
+		this.refresh();
+
+		await Promise.all([this.render(), this.deleteMessage(message)]);
 	}
 
-	public async handleReaction(emoji: Emoji): Promise<void> {
+	public async handleReaction(message: Message, emoji: Emoji): Promise<void> {
+		if (this.isSinglePage) return;
+		if (message.id !== this.ctx.responseId) return;
+
 		switch (emoji.name) {
 			case PaginationControls.EMOJI_NEXT: {
 				this.currentPage++;
@@ -156,6 +183,9 @@ export class PaginationPrompt extends Prompt {
 			}
 		}
 
-		return this.render();
+		// Refresh timeout as they just interacted
+		this.refresh();
+
+		await Promise.all([this.render(), this.deleteReaction(emoji)]);
 	}
 }
