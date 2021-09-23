@@ -52,6 +52,8 @@ export abstract class CommandContext {
 
 	public readonly manager: CommandManager;
 
+	public responseId: string;
+
 	public constructor(manager: CommandManager, command: Command) {
 		this.manager = manager;
 		this.api = manager.api;
@@ -241,7 +243,9 @@ export class InteractionCommandContext extends CommandContext {
 		};
 
 		const client = this.discord.client;
-		await client.requestHandler.request('POST', INTERACTION_RESPONSE(this.interaction.id, this.interaction.token), false, content as any);
+		const result = await client.requestHandler.request('POST', INTERACTION_RESPONSE(this.interaction.id, this.interaction.token), false, content as any) as Record<string, unknown>;
+		console.log(result);
+		this.responseId = result?.id as string;
 		this.hasResponded = true;
 	}
 
@@ -274,8 +278,6 @@ export class MessageCommandContext extends CommandContext {
 	public type: 'message' = 'message';
 
 	public message: Message;
-
-	private responseId: string = null;
 
 	public constructor(manager: CommandManager, command: Command, message: Message) {
 		super(manager, command);

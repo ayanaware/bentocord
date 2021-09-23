@@ -1,8 +1,9 @@
 import { CommandContext } from '../commands/CommandContext';
+import { Translateable } from '../interfaces/Translateable';
 
 import { CodeblockLineItem, CodeblockBuilder } from './CodeblockBuilder';
 
-export type LocalizedLineItem = string | { key: string, repl?: Record<string, unknown> };
+export type LocalizedLineItem = string | Translateable;
 
 export class LocalizedCodeblockBuilder extends CodeblockBuilder {
 	private readonly ctx: CommandContext;
@@ -11,6 +12,16 @@ export class LocalizedCodeblockBuilder extends CodeblockBuilder {
 		super(language);
 
 		this.ctx = ctx;
+	}
+
+	public async setTranslatedHeader(key: string, repl?: Record<string, unknown>): Promise<void> {
+		const translated = await this.ctx.formatTranslation(key, repl);
+		return this.setHeader(translated);
+	}
+
+	public async setTranslatedFooter(key: string, repl?: Record<string, unknown>): Promise<void> {
+		const translated = await this.ctx.formatTranslation(key, repl);
+		return this.setFooter(translated);
 	}
 
 	public async addTranslatedLine(item: LocalizedLineItem, value?: LocalizedLineItem | CodeblockLineItem): Promise<LocalizedCodeblockBuilder> {

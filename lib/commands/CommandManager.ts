@@ -19,7 +19,6 @@ import { Discord } from '../discord/Discord';
 import { DiscordEvent } from '../discord/constants/DiscordEvent';
 
 import { CommandContext, InteractionCommandContext, MessageCommandContext } from './CommandContext';
-import { Prompt, PromptChoice, PromptValidate } from './Prompt';
 import { APPLICATION_COMMANDS, APPLICATION_GUILD_COMMANDS } from './constants/API';
 import { OptionType } from './constants/OptionType';
 import { SuppressorType } from './constants/SuppressorType';
@@ -61,8 +60,6 @@ export class CommandManager implements Component {
 	private readonly resolvers: Map<OptionType | string, Resolver<unknown>> = new Map();
 	private readonly suppressors: Map<SuppressorType | string, Suppressor> = new Map();
 
-	private readonly prompts: Map<string, Prompt<any>> = new Map();
-
 	private selfId: string = null;
 
 	private readonly testPrefix = 'test-';
@@ -74,21 +71,6 @@ export class CommandManager implements Component {
 
 		// Load built-in suppressors
 		Suppressors.forEach(suppressor => this.addSuppressor(suppressor));
-
-		// Create Reply Command for prompts
-		this.addCommand({
-			definition: {
-				aliases: ['r'],
-				description: 'Reply to a pending prompt',
-				options: [{ type: OptionType.STRING, name: 'response', rest: true }],
-			},
-			execute: async (ctx: CommandContext, { response }: { response: string }) => {
-				if (ctx.type === 'interaction') await ctx.acknowledge();
-
-				await ctx.deleteResponse();
-				return this.handlePrompt(ctx.channelId, ctx.authorId, response, (ctx as MessageCommandContext).message || null);
-			},
-		});
 	}
 
 	public async onUnload(): Promise<void> {
@@ -734,21 +716,6 @@ export class CommandManager implements Component {
 		return result;
 	}
 
-	private async handlePrompt(channelId: string, userId: string, input: string, message?: Message) {
-		const key = `${channelId}.${userId}`;
-		const prompt = this.prompts.get(key);
-		if (!prompt) return;
-
-		// Prune message based replies
-		if (message) {
-			try {
-				await message.delete();
-			} catch { /* Failed */ }
-		}
-
-		return prompt.handleResponse(input);
-	}
-
 	@Subscribe(Discord, DiscordEvent.SHARD_READY)
 	@Subscribe(Discord, DiscordEvent.SHARD_RESUME)
 	private async refreshSelfId() {
@@ -823,14 +790,7 @@ export class CommandManager implements Component {
 		const matches = new RegExp(build, 'si').exec(raw);
 
 		// message is not a command
-		if (!matches) {
-			// send message content to prompt if one exists
-			const channelId = message.channel.id;
-			const userId = message.author.id;
-			if (this.prompts.has(`${channelId}.${userId}`)) await this.handlePrompt(channelId, userId, message.content, message);
-
-			return;
-		}
+		if (!matches) return;
 		const name = matches.groups.name;
 		const args = matches.groups.args;
 

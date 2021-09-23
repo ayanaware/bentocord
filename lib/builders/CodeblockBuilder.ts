@@ -4,10 +4,25 @@ export type CodeblockLineItem = string | number | boolean;
 export class CodeblockBuilder {
 	public language: string;
 
+	private header: string;
+	private footer: string;
+
 	private readonly lines: Array<CodeblockLine> = [];
 
 	public constructor(language?: string) {
 		this.language = language;
+	}
+
+	public setLanguage(language: string): void {
+		this.language = language;
+	}
+
+	public setHeader(header: string): void {
+		this.header = header;
+	}
+
+	public setFooter(footer: string): void {
+		this.footer = footer;
 	}
 
 	public addLine(item: CodeblockLineItem, value?: CodeblockLineItem): CodeblockBuilder {
@@ -23,9 +38,11 @@ export class CodeblockBuilder {
 
 		// add language
 		if (this.language) render += `${this.language}`;
-
 		// add newline after top and/or language
 		render += '\n';
+
+		// add header
+		if (this.header) render += `${this.header}\n`;
 
 		// resolve lines
 		const paddingSize = this.lines.reduce((a, line) =>
@@ -37,6 +54,9 @@ export class CodeblockBuilder {
 			if (line.key) render += `${line.key.toString().padStart(paddingSize)} : `;
 			render += `${line.value.toString()}\n`;
 		}
+
+		// add footer
+		if (this.footer) render += `${this.footer}\n`;
 
 		// add bottom
 		render += '```';
