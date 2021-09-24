@@ -7,14 +7,17 @@ import { Translateable } from '../../interfaces/Translateable';
 import { Prompt, PROMPT_CLOSE } from '../Prompt';
 
 export interface PaginationOptions {
+	/** Code block language to use */
+	language?: string;
+
 	/** How many items will be showed per page */
 	itemsPerPage?: number;
 
 	/** Ensures this item is visible at open, for example if it would be on page 2, page 2 will be shown */
-	visibleItemIndex?: number;
+	focused?: number;
 
-	/** Code block language to use */
-	language?: string;
+	/** Works in tandum with focused, add string above and/or below the focused index */
+	flare?: { above?: string | Translateable, below?: string | Translateable, offset?: number };
 }
 
 export enum PaginationControls {
@@ -26,21 +29,26 @@ export enum PaginationControls {
 }
 
 export class PaginationPrompt<T = void> extends Prompt<T> {
+	public language: string;
+
 	public itemsPerPage = 10;
 	public currentPage = 0;
-	public language: string;
+
+	private readonly options: PaginationOptions;
 
 	protected content: string;
 	private readonly items: Array<string | Translateable> = [];
 
 	public constructor(ctx: CommandContext, items: Array<string | Translateable>, options: PaginationOptions = {}) {
 		super(ctx);
-
 		this.items = items;
 
-		this.itemsPerPage = options.itemsPerPage || this.itemsPerPage;
-		this.currentPage = Math.ceil(options.visibleItemIndex / this.itemsPerPage) - 1 || 0;
+		this.options = options;
+
 		this.language = options.language;
+
+		this.itemsPerPage = options.itemsPerPage || this.itemsPerPage;
+		this.currentPage = Math.ceil(options.focused / this.itemsPerPage) - 1 || 0;
 	}
 
 	public get maxPage(): number {
@@ -72,7 +80,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 		// constrain
 		if (this.currentPage < 0) this.currentPage = 0;
-		else if (this.currentPage > this.maxPage) this.currentPage = this.maxPage;
+		else if (this.currentPage > this.maxPage) this.currentPage = this.maxPage - 1;
 
 		const header = await this.ctx.formatTranslation('BENTOCORD_PAGINATION_PAGE', { page: this.currentPage + 1, max: this.maxPage }) || `[Page ${this.currentPage + 1}/${this.maxPage}]`;
 		cbb.setHeader(header);
@@ -84,9 +92,27 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 			if (!item) continue;
 
 			// attempt to translate
-			if (typeof item === 'object') item = await this.ctx.formatTranslation(item.key, item.repl) || item.toString();
+			if (typeof item === 'object') item = await this.ctx.formatTranslation(item.key, item.repl) || item.key;
+
+			const focused = this.options.focused || null;
+			// above flare
+			const flare = this.options.flare || {};
+			let above = flare.above;
+			if (!isNaN(focused) && i === focused && above) {
+				if (typeof above === 'object') above = await this.ctx.formatTranslation(above.key, above.repl) || above.key;
+				if (flare.offset > 0) above = above.padStart(flare.offset);
+				cbb.addLine(above);
+			}
 
 			cbb.addLine(i + 1, item);
+
+			// below flare
+			let below = flare.below;
+			if (!isNaN(focused) && i === focused && below) {
+				if (typeof below === 'object') below = await this.ctx.formatTranslation(below.key, below.repl) || below.key;
+				if (flare.offset > 0) below = below.padStart(flare.offset);
+				cbb.addLine(below);
+			}
 		}
 
 		let content = cbb.render();
@@ -161,12 +187,11 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 			}
 
 			default: {
-				const matches = /^p(\d+)/.exec(input);
+				const matches = /^p\s?(\d+)/.exec(input);
 				if (!matches) return;
 
 				const page = parseInt(matches[1], 10);
 				if (isNaN(page)) return;
-
 				this.currentPage = page - 1; // zero index gang :>
 			}
 		}
