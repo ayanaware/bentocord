@@ -51,7 +51,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		this.language = options.language;
 
 		this.itemsPerPage = options.itemsPerPage || this.itemsPerPage;
-		if (typeof options.focused === 'number') this.currentPage = Math.ceil(options.focused / this.itemsPerPage) || 0;
+		if (typeof options.focused === 'number') this.currentPage = Math.ceil(options.focused / this.itemsPerPage) - 1 || 0;
 	}
 
 	public get maxPage(): number {
@@ -93,8 +93,11 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		if (this.currentPage < 0) this.currentPage = 0;
 		else if (this.currentPage >= this.maxPage) this.currentPage = this.maxPage - 1;
 
-		const header = await this.ctx.formatTranslation('BENTOCORD_PAGINATION_PAGE', { page: this.currentPage + 1, max: this.maxPage }) || `[Page ${this.currentPage + 1}/${this.maxPage}]`;
-		cbb.setHeader(header);
+		// only add page header if more then 1 page
+		if (!this.isSinglePage) {
+			const header = await this.ctx.formatTranslation('BENTOCORD_PAGINATION_PAGE', { page: this.currentPage + 1, total: this.maxPage }) || `[Page ${this.currentPage + 1}/${this.maxPage}]`;
+			cbb.setHeader(header);
+		}
 
 		const start = this.currentPage * this.itemsPerPage;
 		const end = (this.currentPage + 1) * this.itemsPerPage;

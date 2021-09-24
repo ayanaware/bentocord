@@ -70,7 +70,7 @@ export class Tokenizer {
 		if (this.quoteState) return false;
 
 		// options are words followed by : or =
-		const option = this.match(/^([a-z0-9]+)[:=]\s?[^/]{2}/);
+		const option = this.match(/^([a-z0-9]+)[:=]\s?[^/]/);
 		if (!option) return false;
 
 		this.addAndShiftToken(TokenType.OPTION, option[0]);
