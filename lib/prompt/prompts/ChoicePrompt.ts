@@ -2,6 +2,7 @@ import { Message } from 'eris';
 
 import type { CommandContext } from '../../commands/CommandContext';
 import { Translateable } from '../../interfaces/Translateable';
+import { PROMPT_CLOSE } from '../Prompt';
 
 import { PaginationOptions, PaginationPrompt } from './PaginationPrompt';
 
@@ -53,6 +54,13 @@ export class ChoicePrompt<T> extends PaginationPrompt<T> {
 	}
 
 	public async handleResponse(input: string, message?: Message): Promise<void> {
+		const close = PROMPT_CLOSE.some(c => c.toLocaleLowerCase() === input.toLocaleLowerCase());
+		if (close) {
+			this.deleteMessage(message).catch(() => { /* no-op */ });
+
+			return this.close();
+		}
+
 		for (const choice of this.choices) {
 			if (!Array.isArray(choice.match)) continue;
 			if (choice.match.some(m => m.toLocaleLowerCase() === input.toLocaleLowerCase())) {

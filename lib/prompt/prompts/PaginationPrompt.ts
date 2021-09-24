@@ -81,7 +81,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		}
 	}
 
-	public async close(reason: string | Translateable): Promise<void> {
+	public async close(reason?: string | Translateable): Promise<void> {
 		this.removeReactions().catch(() => { /* no-op */ });
 		return super.close(reason);
 	}
