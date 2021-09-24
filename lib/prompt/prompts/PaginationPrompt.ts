@@ -169,6 +169,16 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		const selfId = this.ctx.discord.client.user.id;
 		if (!messageId || !channel || !selfId) return;
 
+		// if we have manage message, just yeet all the reactions
+		if (this.ctx.selfHasPermission(DiscordPermission.MANAGE_MESSAGES)) {
+			try {
+				await this.ctx.discord.client.removeMessageReactions(channel.id, messageId);
+			} catch { /* Failed */ }
+
+			return;
+		}
+
+		// No manage message delete our reactions
 		try {
 			await Promise.all([
 				channel.removeMessageReaction(messageId, PaginationControls.EMOJI_FIRST, selfId),
@@ -177,7 +187,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 				channel.removeMessageReaction(messageId, PaginationControls.EMOJI_LAST, selfId),
 				channel.removeMessageReaction(messageId, PaginationControls.EMOJI_CLOSE, selfId),
 			]);
-		} catch { /* Failed */}
+		} catch { /* Failed */ }
 	}
 
 	public async handleResponse(input: string, message?: Message): Promise<void> {
@@ -257,7 +267,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 			case PaginationControls.EMOJI_CLOSE: {
 				this.resolve();
-				this.removeReactions().catch(() => { /* no-op */ });
+				Promise.all([this.deleteReaction(emoji), this.removeReactions()]).catch(() => { /* no-op */ });
 				return;
 			}
 		}

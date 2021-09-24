@@ -2,8 +2,8 @@ import { Logger } from '@ayanaware/logger-api';
 
 import { Emoji, Message } from 'eris';
 
-import { DiscordPermission } from '..';
 import type { CommandContext } from '../commands/CommandContext';
+import { DiscordPermission } from '../discord/constants/DiscordPermission';
 import { Translateable } from '../interfaces/Translateable';
 
 export type PromptValidate<T> = (input: string) => Promise<T>;
