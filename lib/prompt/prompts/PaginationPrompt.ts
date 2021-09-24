@@ -167,7 +167,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 				const page = parseInt(matches[1], 10);
 				if (isNaN(page)) return;
 
-				this.currentPage = page;
+				this.currentPage = page - 1; // zero index gang :>
 			}
 		}
 
