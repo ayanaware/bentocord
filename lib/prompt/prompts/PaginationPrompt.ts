@@ -52,7 +52,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		this.language = options.language;
 
 		this.itemsPerPage = options.itemsPerPage || this.itemsPerPage;
-		this.currentPage = Math.ceil(options.focused / this.itemsPerPage) - 1 || 0;
+		this.currentPage = Math.ceil(options.focused / this.itemsPerPage) - 1;
 	}
 
 	public get maxPage(): number {
@@ -104,7 +104,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 			// attempt to translate
 			if (typeof item === 'object') item = await this.ctx.formatTranslation(item.key, item.repl) || item.key;
 
-			const focused = this.options.focused || null;
+			const focused = this.options.focused;
 			// above flare
 			const flare = this.options.flare || {};
 			let above = flare.above;
@@ -257,6 +257,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 			case PaginationControls.EMOJI_CLOSE: {
 				this.resolve();
+				this.removeReactions().catch(() => { /* no-op */ });
 				return;
 			}
 		}
