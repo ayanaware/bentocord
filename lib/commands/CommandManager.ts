@@ -593,7 +593,9 @@ export class CommandManager implements Component {
 		if (promptSubs.length > 1) {
 			const choices: Array<PromptChoice<string>> = [];
 			for (const sub of promptSubs) {
-				const primary = sub.name[0];
+				let names: string | Array<string> = sub.name;
+				if (!Array.isArray(names)) names = [names];
+				const primary = names[0];
 
 				let description = sub.description;
 				if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl) || description.backup;
@@ -604,8 +606,8 @@ export class CommandManager implements Component {
 			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_SUBCOMMAND') || 'Please select a subcommand:';
 			const choice = await ctx.choice(choices, content);
 			useSub = choice;
-		} else {
-			useSub = promptSubs[0].name[0];
+		} else if (promptSubs.length === 1) {
+			useSub = promptSubs[0]?.name[0];
 		}
 
 		if (useSub) {
