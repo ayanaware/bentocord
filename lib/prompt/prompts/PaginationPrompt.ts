@@ -17,7 +17,7 @@ export interface PaginationOptions {
 	focused?: number;
 
 	/** Works in tandum with focused, add string above and/or below the focused index */
-	flare?: { above?: string | Translateable, below?: string | Translateable, offset?: number };
+	flare?: { above?: string | Translateable, below?: string | Translateable, padStart?: number };
 }
 
 export enum PaginationControls {
@@ -52,7 +52,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		this.language = options.language;
 
 		this.itemsPerPage = options.itemsPerPage || this.itemsPerPage;
-		this.currentPage = Math.ceil(options.focused / this.itemsPerPage) - 1;
+		this.currentPage = Math.ceil(options.focused / this.itemsPerPage) - 1 || 0;
 	}
 
 	public get maxPage(): number {
@@ -85,6 +85,11 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		this.resolve();
 	}
 
+	public async close(reason: string | Translateable): Promise<void> {
+		this.removeReactions().catch(() => { /* no-op */ });
+		return super.close(reason);
+	}
+
 	protected async render(): Promise<void> {
 		const cbb = new CodeblockBuilder(this.language);
 
@@ -110,7 +115,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 			let above = flare.above;
 			if (!isNaN(focused) && i === focused && above) {
 				if (typeof above === 'object') above = await this.ctx.formatTranslation(above.key, above.repl) || above.key;
-				if (flare.offset > 0) above = above.padStart(flare.offset);
+				if (flare.padStart > 0) above = above.padStart(flare.padStart);
 				cbb.addLine(above);
 			}
 
@@ -120,7 +125,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 			let below = flare.below;
 			if (!isNaN(focused) && i === focused && below) {
 				if (typeof below === 'object') below = await this.ctx.formatTranslation(below.key, below.repl) || below.key;
-				if (flare.offset > 0) below = below.padStart(flare.offset);
+				if (flare.padStart > 0) below = below.padStart(flare.padStart);
 				cbb.addLine(below);
 			}
 		}
