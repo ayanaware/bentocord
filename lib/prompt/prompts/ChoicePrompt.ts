@@ -33,6 +33,13 @@ export class ChoicePrompt<T> extends PaginationPrompt<T> {
 		this.choices = choices;
 	}
 
+	protected async timeout(): Promise<void> {
+		this.removeReactions().catch(() => { /* no-op */ });
+
+		const reason = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_TIMEOUT') || 'You took too much time to respond.';
+		return this.close(reason);
+	}
+
 	public async open(content: string | Translateable): Promise<T> {
 		if (typeof content === 'object') content = await this.ctx.formatTranslation(content.key, content.repl);
 		this.content = content;
@@ -49,10 +56,9 @@ export class ChoicePrompt<T> extends PaginationPrompt<T> {
 		for (const choice of this.choices) {
 			if (!Array.isArray(choice.match)) continue;
 			if (choice.match.some(m => m.toLocaleLowerCase() === input.toLocaleLowerCase())) {
-				this.resolve(choice.value);
+				Promise.all([this.removeReactions(), this.deleteMessage(message)]).catch(() => { /* no-op */ });
 
-				await Promise.all([this.removeReactions(), this.deleteMessage(message)]);
-				return;
+				return this.resolve(choice.value);
 			}
 		}
 

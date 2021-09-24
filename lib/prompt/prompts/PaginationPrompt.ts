@@ -21,11 +21,15 @@ export interface PaginationOptions {
 }
 
 export enum PaginationControls {
+	EMOJI_FIRST = '🇫',
 	EMOJI_NEXT = '➡',
 	EMOJI_PREV = '⬅',
+	EMOJI_LAST = '🇱',
 	EMOJI_CLOSE = '🇽',
+	FIRST = 'f',
 	NEXT = '>',
 	PREV = '<',
+	LAST = 'l',
 }
 
 export class PaginationPrompt<T = void> extends Prompt<T> {
@@ -59,6 +63,12 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		return this.maxPage === 1;
 	}
 
+	protected async timeout(): Promise<void> {
+		this.removeReactions().catch(() => { /* no-op */ });
+
+		this.resolve();
+	}
+
 	public async open(content: string | Translateable): Promise<T> {
 		if (typeof content === 'object') content = await this.ctx.formatTranslation(content.key, content.repl);
 		this.content = content;
@@ -67,7 +77,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 		// not a single page add reactions & start prompt
 		if (!this.isSinglePage) {
-			await this.addReactions();
+			this.addReactions().catch(() => { /* no-op */ });
 			return this.start();
 		}
 
@@ -80,7 +90,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 		// constrain
 		if (this.currentPage < 0) this.currentPage = 0;
-		else if (this.currentPage > this.maxPage) this.currentPage = this.maxPage - 1;
+		else if (this.currentPage >= this.maxPage) this.currentPage = this.maxPage - 1;
 
 		const header = await this.ctx.formatTranslation('BENTOCORD_PAGINATION_PAGE', { page: this.currentPage + 1, max: this.maxPage }) || `[Page ${this.currentPage + 1}/${this.maxPage}]`;
 		cbb.setHeader(header);
@@ -131,7 +141,6 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		}
 
 		await this.ctx.createResponse({ content });
-
 		this.sent = content;
 	}
 
@@ -140,10 +149,15 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		if (!messageId || !this.ctx.channel) return;
 		const channel = this.ctx.channel;
 
+		// verify we have permission first
+		if (!this.ctx.selfHasPermission(DiscordPermission.ADD_REACTIONS)) return;
+
 		try {
 			await Promise.all([
+				channel.addMessageReaction(messageId, PaginationControls.EMOJI_FIRST),
 				channel.addMessageReaction(messageId, PaginationControls.EMOJI_PREV),
 				channel.addMessageReaction(messageId, PaginationControls.EMOJI_NEXT),
+				channel.addMessageReaction(messageId, PaginationControls.EMOJI_LAST),
 				channel.addMessageReaction(messageId, PaginationControls.EMOJI_CLOSE),
 			]);
 		} catch { /* Failed */ }
@@ -157,8 +171,10 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 		try {
 			await Promise.all([
+				channel.removeMessageReaction(messageId, PaginationControls.EMOJI_FIRST, selfId),
 				channel.removeMessageReaction(messageId, PaginationControls.EMOJI_PREV, selfId),
 				channel.removeMessageReaction(messageId, PaginationControls.EMOJI_NEXT, selfId),
+				channel.removeMessageReaction(messageId, PaginationControls.EMOJI_LAST, selfId),
 				channel.removeMessageReaction(messageId, PaginationControls.EMOJI_CLOSE, selfId),
 			]);
 		} catch { /* Failed */}
@@ -167,13 +183,19 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	public async handleResponse(input: string, message?: Message): Promise<void> {
 		const close = PROMPT_CLOSE.some(c => c.toLocaleLowerCase() === input.toLocaleLowerCase());
 		if (close) {
-			this.resolve();
+			Promise.all([this.removeReactions(), this.deleteMessage(message)]).catch(() => { /* no-op */ });
 
-			await Promise.all([this.removeReactions(), this.deleteMessage(message)]);
+			this.resolve();
 			return;
 		}
 
 		switch (input) {
+			case PaginationControls.EMOJI_FIRST:
+			case PaginationControls.FIRST: {
+				this.currentPage = 0;
+				break;
+			}
+
 			case PaginationControls.EMOJI_NEXT:
 			case PaginationControls.NEXT: {
 				this.currentPage++;
@@ -183,6 +205,12 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 			case PaginationControls.EMOJI_PREV:
 			case PaginationControls.PREV: {
 				this.currentPage--;
+				break;
+			}
+
+			case PaginationControls.EMOJI_LAST:
+			case PaginationControls.LAST: {
+				this.currentPage = this.maxPage - 1;
 				break;
 			}
 
@@ -199,7 +227,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		// Refresh timeout as they just interacted
 		this.refresh();
 
-		await Promise.all([this.render(), this.deleteMessage(message)]);
+		Promise.all([this.render(), this.deleteMessage(message)]).catch(() => { /* no-op */ });
 	}
 
 	public async handleReaction(message: Message, emoji: Emoji): Promise<void> {
@@ -207,6 +235,11 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		if (message.id !== this.ctx.responseId) return;
 
 		switch (emoji.name) {
+			case PaginationControls.EMOJI_FIRST: {
+				this.currentPage = 0;
+				break;
+			}
+
 			case PaginationControls.EMOJI_NEXT: {
 				this.currentPage++;
 				break;
@@ -214,6 +247,11 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 			case PaginationControls.EMOJI_PREV: {
 				this.currentPage--;
+				break;
+			}
+
+			case PaginationControls.EMOJI_LAST: {
+				this.currentPage = this.maxPage - 1;
 				break;
 			}
 
@@ -226,6 +264,6 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		// Refresh timeout as they just interacted
 		this.refresh();
 
-		await Promise.all([this.render(), this.deleteReaction(emoji)]);
+		Promise.all([this.render(), this.deleteReaction(emoji)]).catch(() => { /* no-op */ });
 	}
 }

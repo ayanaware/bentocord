@@ -2,6 +2,7 @@ import { Logger } from '@ayanaware/logger-api';
 
 import { Emoji, Message } from 'eris';
 
+import { DiscordPermission } from '..';
 import type { CommandContext } from '../commands/CommandContext';
 import { Translateable } from '../interfaces/Translateable';
 
@@ -50,12 +51,18 @@ export class Prompt<T = string> {
 	}
 
 	protected async deleteMessage(message?: Message): Promise<void> {
+		// verify we have permission first
+		if (!this.ctx.selfHasPermission(DiscordPermission.MANAGE_MESSAGES)) return;
+
 		try {
 			if (message) await message.delete();
 		} catch { /* Failed */ }
 	}
 
 	protected async deleteReaction(emoji: Emoji): Promise<void> {
+		// verify we have permission first
+		if (!this.ctx.selfHasPermission(DiscordPermission.MANAGE_MESSAGES)) return;
+
 		try {
 			await this.ctx.channel.removeMessageReaction(this.ctx.responseId, emoji.name, this.userId);
 		} catch { /* Failed */ }
@@ -112,7 +119,7 @@ export class Prompt<T = string> {
 	}
 
 	public async handleResponse(input: string, message?: Message): Promise<void> {
-		void this.deleteMessage(message);
+		this.deleteMessage(message).catch(() => { /* no-op */ });
 
 		const close = PROMPT_CLOSE.some(c => c.toLocaleLowerCase() === input.toLocaleLowerCase());
 		if (close) return this.close();
