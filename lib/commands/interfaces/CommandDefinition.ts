@@ -1,4 +1,5 @@
 import type { DiscordPermission } from '../../discord/constants/DiscordPermission';
+import { Translateable } from '../../interfaces/Translateable';
 import type { CommandContext } from '../CommandContext';
 
 import type { AnyCommandOption } from './CommandOption';
@@ -8,7 +9,7 @@ export interface CommandDefinition {
 	/** Command Aliases; First will be used for slash command name */
 	aliases: Array<string>;
 	/** Command Description */
-	description: string;
+	description: string | Translateable;
 
 	/** Command Options */
 	options?: Array<AnyCommandOption>;

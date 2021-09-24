@@ -70,7 +70,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	}
 
 	public async open(content: string | Translateable): Promise<T> {
-		if (typeof content === 'object') content = await this.ctx.formatTranslation(content.key, content.repl);
+		if (typeof content === 'object') content = await this.ctx.formatTranslation(content.key, content.repl) || content.backup;
 		this.content = content;
 
 		await this.render();

@@ -30,7 +30,7 @@ export class LocalizedCodeblockBuilder extends CodeblockBuilder {
 
 		if (value !== undefined) {
 			let valueTranslated: CodeblockLineItem;
-			if (typeof value === 'object') valueTranslated = await this.ctx.formatTranslation(value.key, value.repl);
+			if (typeof value === 'object') valueTranslated = await this.ctx.formatTranslation(value.key, value.repl) || value.backup;
 			else valueTranslated = value;
 
 			this.addLine(itemTranslated, valueTranslated);

@@ -1,3 +1,4 @@
+import { Translateable } from '../../interfaces/Translateable';
 import type { OptionType } from '../constants/OptionType';
 
 import type { SuppressorDefinition } from './Suppressor';
@@ -10,7 +11,7 @@ export interface CommandOption<T = unknown> {
 	name: string;
 
 	/** Option description */
-	description?: string;
+	description?: string | Translateable;
 
 	/** Expect user to input array and always return array */
 	array?: boolean;

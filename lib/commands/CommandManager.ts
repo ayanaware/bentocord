@@ -387,10 +387,13 @@ export class CommandManager implements Component {
 		const applicationId = this.discord.application.id;
 		if (!applicationId) throw new Error('Failed to find application_id');
 
+		let description = definition.description;
+		if (typeof description === 'object') description = await this.interface.formatTranslation(description.key, description.repl) || description.backup;
+
 		const appCommand: ApplicationCommand = {
 			type: ApplicationCommandType.ChatInput,
 			name: definition.aliases[0],
-			description: definition.description,
+			description,
 
 			// eslint-disable-next-line @typescript-eslint/naming-convention
 			application_id: applicationId,
@@ -419,7 +422,11 @@ export class CommandManager implements Component {
 			if (Array.isArray(name)) name = name[0];
 			name = name.toLocaleLowerCase();
 
-			const appOption: ApplicationCommandOption = { type: null, name, description: option.description };
+			// support translated descriptions
+			let description = option.description;
+			if (typeof description === 'object') description = await this.interface.formatTranslation(description.key, description.repl) || description.backup;
+
+			const appOption: ApplicationCommandOption = { type: null, name, description };
 
 			// Handle Special Subcommand & SubcommandGroup OptionTypes
 			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {
@@ -534,7 +541,7 @@ export class CommandManager implements Component {
 
 		if (!options) options = [];
 
-		let subNames = [];
+		let promptSubs: Array<AnySubCommandOption> = [];
 		for (const option of options) {
 			if (option.type === OptionType.SUB_COMMAND_GROUP || option.type === OptionType.SUB_COMMAND) {
 				const subOption = option as AnySubCommandOption;
@@ -543,7 +550,8 @@ export class CommandManager implements Component {
 				const final = names;
 				const primary = final[0];
 
-				subNames.push(primary);
+				// track this suboption for prompt
+				promptSubs.push(subOption);
 
 				// phrase is a single element
 				const phrase = output.phrases[index];
@@ -558,7 +566,7 @@ export class CommandManager implements Component {
 
 				// process nested option
 				collector = { ...collector, [primary]: await this.processTextOptions(ctx, subOption.options, output, index) };
-				subNames = []; // collected successfully
+				promptSubs = []; // collected successfully
 				break;
 			}
 
@@ -582,17 +590,22 @@ export class CommandManager implements Component {
 
 		// Prompt for subcommand option
 		let useSub: string = null;
-		if (subNames.length > 1) {
+		if (promptSubs.length > 1) {
 			const choices: Array<PromptChoice<string>> = [];
-			for (const subName of subNames) {
-				choices.push({ value: subName, name: subName, match: [subName] });
+			for (const sub of promptSubs) {
+				const primary = sub.name[0];
+
+				let description = sub.description;
+				if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl) || description.backup;
+
+				choices.push({ value: primary, name: `${primary} - ${description}`, match: [primary] });
 			}
 
 			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_SUBCOMMAND') || 'Please select a subcommand:';
 			const choice = await ctx.choice(choices, content);
 			useSub = choice;
 		} else {
-			useSub = subNames[0];
+			useSub = promptSubs[0].name[0];
 		}
 
 		if (useSub) {

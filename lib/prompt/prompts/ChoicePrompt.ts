@@ -41,7 +41,7 @@ export class ChoicePrompt<T> extends PaginationPrompt<T> {
 	}
 
 	public async open(content: string | Translateable): Promise<T> {
-		if (typeof content === 'object') content = await this.ctx.formatTranslation(content.key, content.repl);
+		if (typeof content === 'object') content = await this.ctx.formatTranslation(content.key, content.repl) || content.backup;
 		this.content = content;
 
 		await this.render();
