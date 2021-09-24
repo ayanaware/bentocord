@@ -80,9 +80,6 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 			this.addReactions().catch(() => { /* no-op */ });
 			return this.start();
 		}
-
-		// was single page just go ahead and resolve
-		this.resolve();
 	}
 
 	public async close(reason: string | Translateable): Promise<void> {
@@ -101,7 +98,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		cbb.setHeader(header);
 
 		const start = this.currentPage * this.itemsPerPage;
-		const end = (this.currentPage + 1) * this.itemsPerPage - 1;
+		const end = (this.currentPage + 1) * this.itemsPerPage;
 		for (let i = start; i < end; i++) {
 			let item = this.items[i];
 			if (!item) continue;

@@ -113,7 +113,7 @@ export class Prompt<T = string> {
 			content = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED') || 'Prompt has been closed.';
 		}
 
-		this.reject(reason);
+		if (this.reject) this.reject(reason);
 
 		await this.ctx.createResponse({ content });
 	}
