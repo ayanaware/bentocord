@@ -30,6 +30,19 @@ export class ChoicePrompt<T> extends PaginationPrompt<T> {
 		}
 
 		super(ctx, items, options);
+		this.choices = choices;
+	}
+
+	public async open(content: string | Translateable): Promise<T> {
+		if (typeof content === 'object') content = await this.ctx.formatTranslation(content.key, content.repl);
+		this.content = content;
+
+		await this.render();
+
+		// not a single page add reactions
+		if (!this.isSinglePage) await this.addReactions();
+
+		return this.start();
 	}
 
 	public async handleResponse(input: string, message?: Message): Promise<void> {
@@ -38,8 +51,7 @@ export class ChoicePrompt<T> extends PaginationPrompt<T> {
 			if (choice.match.some(m => m.toLocaleLowerCase() === input.toLocaleLowerCase())) {
 				this.resolve(choice.value);
 
-				await this.deleteMessage(message);
-
+				await Promise.all([this.removeReactions(), this.deleteMessage(message)]);
 				return;
 			}
 		}

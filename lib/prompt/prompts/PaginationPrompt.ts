@@ -30,8 +30,8 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	public currentPage = 0;
 	public language: string;
 
+	protected content: string;
 	private readonly items: Array<string | Translateable> = [];
-	private content: string;
 
 	public constructor(ctx: CommandContext, items: Array<string | Translateable>, options: PaginationOptions = {}) {
 		super(ctx);
@@ -62,6 +62,9 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 			await this.addReactions();
 			return this.start();
 		}
+
+		// was single page just go ahead and resolve
+		this.resolve();
 	}
 
 	protected async render(): Promise<void> {
@@ -120,15 +123,27 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		} catch { /* Failed */ }
 	}
 
-	public async handleResponse(input: string, message?: Message): Promise<void> {
-		if (this.isSinglePage) return;
+	protected async removeReactions(): Promise<void> {
+		const messageId = this.ctx.responseId;
+		const channel = this.ctx.channel;
+		const selfId = this.ctx.discord.client.user.id;
+		if (!messageId || !channel || !selfId) return;
 
+		try {
+			await Promise.all([
+				channel.removeMessageReaction(messageId, PaginationControls.EMOJI_NEXT, selfId),
+				channel.removeMessageReaction(messageId, PaginationControls.EMOJI_PREV, selfId),
+				channel.removeMessageReaction(messageId, PaginationControls.EMOJI_CLOSE, selfId),
+			]);
+		} catch { /* Failed */}
+	}
+
+	public async handleResponse(input: string, message?: Message): Promise<void> {
 		const close = PROMPT_CLOSE.some(c => c.toLocaleLowerCase() === input.toLocaleLowerCase());
 		if (close) {
 			this.resolve();
 
-			await this.deleteMessage(message);
-
+			await Promise.all([this.removeReactions(), this.deleteMessage(message)]);
 			return;
 		}
 

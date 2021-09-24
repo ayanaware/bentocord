@@ -15,7 +15,7 @@ export class PromptManager implements Component {
 	public name = '@ayanaware/bentocord:PromptManager';
 	public api!: ComponentAPI;
 
-	private readonly prompts: Map<string, Prompt<any>>;
+	private readonly prompts: Map<string, Prompt<any>> = new Map();
 
 	private getKey(ctx: CommandContext) {
 		return `${ctx.channelId}.${ctx.authorId}`;

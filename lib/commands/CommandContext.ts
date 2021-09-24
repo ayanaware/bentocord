@@ -19,11 +19,11 @@ import {
 import { BentocordInterface } from '../BentocordInterface';
 import { Discord } from '../discord/Discord';
 import { DiscordPermission } from '../discord/constants/DiscordPermission';
-import { Translateable } from '../interfaces/Translateable';
-import { PromptValidate } from '../prompt/Prompt';
-import { PromptManager } from '../prompt/PromptManager';
-import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
-import { PaginationOptions } from '../prompt/prompts/PaginationPrompt';
+import type { Translateable } from '../interfaces/Translateable';
+import type { PromptValidate } from '../prompt/Prompt';
+import type { PromptManager } from '../prompt/PromptManager';
+import type { PromptChoice } from '../prompt/prompts/ChoicePrompt';
+import type { PaginationOptions } from '../prompt/prompts/PaginationPrompt';
 
 import type { CommandManager } from './CommandManager';
 import { INTERACTION_MESSAGE, INTERACTION_RESPONSE } from './constants/API';
@@ -61,16 +61,16 @@ export abstract class CommandContext {
 
 	public responseId: string;
 
-	public constructor(manager: CommandManager, command: Command) {
+	public constructor(manager: CommandManager, promptManager: PromptManager, command: Command) {
 		this.manager = manager;
 		this.api = manager.api;
 
 		this.command = command;
+		this.promptManager = promptManager;
 
 		// Entities
 		this.discord = this.api.getEntity(Discord);
 		this.interface = this.api.getEntity(BentocordInterface);
-		this.promptManager = this.api.getEntity(PromptManager);
 	}
 
 	/**
@@ -228,8 +228,8 @@ export class InteractionCommandContext extends CommandContext {
 
 	private hasResponded = false;
 
-	public constructor(manager: CommandManager, command: Command, interaction: APIApplicationCommandInteraction) {
-		super(manager, command);
+	public constructor(manager: CommandManager, promptManager: PromptManager, command: Command, interaction: APIApplicationCommandInteraction) {
+		super(manager, promptManager, command);
 		this.interaction = interaction;
 
 		const client = this.discord.client;
@@ -267,8 +267,10 @@ export class InteractionCommandContext extends CommandContext {
 
 		const client = this.discord.client;
 		await client.requestHandler.request('POST', INTERACTION_RESPONSE(this.interaction.id, this.interaction.token), false, response);
-
 		this.hasResponded = true;
+
+		const message = await client.requestHandler.request('GET', INTERACTION_MESSAGE(this.interaction.application_id, this.interaction.token, '@original'), false) as { id?: string };
+		this.responseId = message.id;
 	}
 
 	public async createResponse(response: string | ResponseContent): Promise<unknown> {
@@ -287,10 +289,12 @@ export class InteractionCommandContext extends CommandContext {
 		};
 
 		const client = this.discord.client;
-		const result = await client.requestHandler.request('POST', INTERACTION_RESPONSE(this.interaction.id, this.interaction.token), false, content as any) as Record<string, unknown>;
-		console.log(result);
-		this.responseId = result?.id as string;
+
+		await client.requestHandler.request('POST', INTERACTION_RESPONSE(this.interaction.id, this.interaction.token), false, content as any) as Record<string, unknown>;
 		this.hasResponded = true;
+
+		const message = await client.requestHandler.request('GET', INTERACTION_MESSAGE(this.interaction.application_id, this.interaction.token, '@original'), false) as { id?: string };
+		this.responseId = message.id;
 	}
 
 	public async editResponse(response: string | ResponseContent): Promise<unknown> {
@@ -306,14 +310,14 @@ export class InteractionCommandContext extends CommandContext {
 		};
 
 		const client = this.discord.client;
-		await client.requestHandler.request('PATCH', INTERACTION_MESSAGE(this.discord.application.id, this.interaction.token, '@original'), true, content);
+		await client.requestHandler.request('PATCH', INTERACTION_MESSAGE(this.interaction.application_id, this.interaction.token, '@original'), true, content);
 	}
 
 	public async deleteResponse(): Promise<void> {
 		if (!this.hasResponded) return;
 
 		const client = this.discord.client;
-		await client.requestHandler.request('DELETE', INTERACTION_MESSAGE(this.discord.application.id, this.interaction.token, '@original'));
+		await client.requestHandler.request('DELETE', INTERACTION_MESSAGE(this.interaction.application_id, this.interaction.token, '@original'));
 	}
 }
 
@@ -323,8 +327,8 @@ export class MessageCommandContext extends CommandContext {
 
 	public message: Message;
 
-	public constructor(manager: CommandManager, command: Command, message: Message) {
-		super(manager, command);
+	public constructor(manager: CommandManager, promptManager: PromptManager, command: Command, message: Message) {
+		super(manager, promptManager, command);
 
 		this.message = message;
 

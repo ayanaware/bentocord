@@ -17,6 +17,7 @@ import { BentocordInterface } from '../BentocordInterface';
 import { BentocordVariable } from '../BentocordVariable';
 import { Discord } from '../discord/Discord';
 import { DiscordEvent } from '../discord/constants/DiscordEvent';
+import { PromptManager } from '../prompt/PromptManager';
 import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
 
 import { CommandContext, InteractionCommandContext, MessageCommandContext } from './CommandContext';
@@ -55,6 +56,8 @@ export class CommandManager implements Component {
 	@Inject() private readonly interface: BentocordInterface;
 	@Inject() private readonly discord: Discord;
 
+	@Inject() private readonly promptManager: PromptManager;
+
 	private readonly commands: Map<string, Command> = new Map();
 	private readonly aliases: Map<string, string> = new Map();
 
@@ -64,7 +67,6 @@ export class CommandManager implements Component {
 	private selfId: string = null;
 
 	private readonly testPrefix = 'test-';
-	promptManager: any;
 
 	public async onLoad(): Promise<void> {
 		// Load built-in resolvers
@@ -618,7 +620,7 @@ export class CommandManager implements Component {
 		if (inputs.length < 1 && (typeof option.required !== 'boolean' || option.required) && typeof option.choices === 'undefined') {
 			const type = this.getTypePreview(option);
 			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_OPTION', { option: option.name, type }) || `Please provide an input for option \`${option.name}\` of type \`${type}\`:`;
-			const input = await ctx.prompt(content);
+			const input = await ctx.prompt<string>(content, async (s: string) => s);
 
 			inputs = option.array ? input.split(/,\s?/gi) : [input];
 			inputs = inputs.filter(i => !!i);
@@ -709,7 +711,7 @@ export class CommandManager implements Component {
 		const definition = command.definition;
 		if (typeof definition.registerSlash === 'boolean' && !definition.registerSlash) return; // slash disabled
 
-		const ctx = new InteractionCommandContext(this, command, interaction);
+		const ctx = new InteractionCommandContext(this, this.promptManager, command, interaction);
 		try {
 			// process suppressors
 			const suppressed = await this.executeSuppressors(ctx, definition);
@@ -770,7 +772,7 @@ export class CommandManager implements Component {
 		if (definition.disablePrefix) return;
 
 		// CommandContext
-		const ctx = new MessageCommandContext(this, command, message);
+		const ctx = new MessageCommandContext(this, this.promptManager, command, message);
 		try {
 			// process suppressors
 			const suppressed = await this.executeSuppressors(ctx, definition);

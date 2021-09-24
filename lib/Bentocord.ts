@@ -6,6 +6,8 @@ import { BentocordInterface } from './BentocordInterface';
 import { BentocordVariable } from './BentocordVariable';
 import { CommandManager } from './commands/CommandManager';
 import { Discord } from './discord/Discord';
+import { PromptManager } from './prompt/PromptManager';
+import { ReplyCommand } from './prompt/commands/Reply';
 
 export class Bentocord implements Plugin {
 	public name = '@ayanaware/bentocord';
@@ -33,6 +35,8 @@ export class Bentocord implements Plugin {
 		await entityManager.addComponents([
 			Discord,
 			CommandManager,
+			PromptManager,
+			ReplyCommand,
 		]);
 
 		// Load built-in commands
