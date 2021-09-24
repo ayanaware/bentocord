@@ -115,7 +115,11 @@ export class Prompt<T = string> {
 
 		if (this.reject) this.reject(reason);
 
-		await this.ctx.createResponse({ content });
+		try {
+			await this.ctx.createResponse({ content });
+		} catch (e) {
+			log.error(`Failed to show prompt close message: ${e}.`);
+		}
 	}
 
 	public async handleResponse(input: string, message?: Message): Promise<void> {

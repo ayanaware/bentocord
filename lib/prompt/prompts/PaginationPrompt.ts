@@ -46,13 +46,12 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	public constructor(ctx: CommandContext, items: Array<string | Translateable>, options: PaginationOptions = {}) {
 		super(ctx);
 		this.items = items;
-
 		this.options = options;
 
 		this.language = options.language;
 
 		this.itemsPerPage = options.itemsPerPage || this.itemsPerPage;
-		this.currentPage = Math.ceil(options.focused / this.itemsPerPage) - 1 || 0;
+		if (typeof options.focused === 'number') this.currentPage = Math.ceil(options.focused / this.itemsPerPage) || 0;
 	}
 
 	public get maxPage(): number {
