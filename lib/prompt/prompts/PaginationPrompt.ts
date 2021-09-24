@@ -116,8 +116,8 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 		try {
 			await Promise.all([
-				channel.addMessageReaction(messageId, PaginationControls.EMOJI_NEXT),
 				channel.addMessageReaction(messageId, PaginationControls.EMOJI_PREV),
+				channel.addMessageReaction(messageId, PaginationControls.EMOJI_NEXT),
 				channel.addMessageReaction(messageId, PaginationControls.EMOJI_CLOSE),
 			]);
 		} catch { /* Failed */ }
@@ -131,8 +131,8 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 		try {
 			await Promise.all([
-				channel.removeMessageReaction(messageId, PaginationControls.EMOJI_NEXT, selfId),
 				channel.removeMessageReaction(messageId, PaginationControls.EMOJI_PREV, selfId),
+				channel.removeMessageReaction(messageId, PaginationControls.EMOJI_NEXT, selfId),
 				channel.removeMessageReaction(messageId, PaginationControls.EMOJI_CLOSE, selfId),
 			]);
 		} catch { /* Failed */}
