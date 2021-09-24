@@ -17,6 +17,16 @@ export class PromptManager implements Component {
 
 	private readonly prompts: Map<string, Prompt<any>> = new Map();
 
+	public async onUnload(): Promise<void> {
+		// close all prompts onUnload
+		for (const prompt of this.prompts.values()) {
+			try {
+				const reason = await prompt.ctx.formatTranslation('BENTOCORD_PROMPTMANAGER_UNLOAD') || 'The manager is unloading.';
+				await prompt.close(reason);
+			} catch { /* Failed */ }
+		}
+	}
+
 	private getKey(ctx: CommandContext) {
 		return `${ctx.channelId}.${ctx.authorId}`;
 	}
