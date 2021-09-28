@@ -48,7 +48,7 @@ export class ChoicePrompt<T> extends PaginationPrompt<T> {
 		await this.render();
 
 		// not a single page add reactions
-		if (!this.isSinglePage) await this.addReactions();
+		if (!this.isSinglePage) this.addReactions().catch(() => { /* no-op */ });
 
 		return this.start();
 	}
