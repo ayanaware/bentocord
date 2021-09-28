@@ -73,7 +73,7 @@ export class Tokenizer {
 		const option = this.match(/^([a-z0-9]+)[:=]\s?[^/]/);
 		if (!option) return false;
 
-		this.addAndShiftToken(TokenType.OPTION, option[0]);
+		this.addAndShiftToken(TokenType.OPTION, option[0].slice(0, -1));
 
 		return true;
 	}
