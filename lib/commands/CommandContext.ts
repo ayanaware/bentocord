@@ -160,13 +160,9 @@ export abstract class CommandContext {
 	 * @param content details about what they are confirming
 	 * @returns boolean
 	 */
-	public async confirm(content?: string | Translateable): Promise<boolean> {
+	public async confirm(content?: string | Translateable, items?: Array<string | Translateable>): Promise<boolean> {
 		if (!content) content = await this.formatTranslation('BENTOCORD_PROMPT_CONFIRM') || 'Please confirm you wish to continue [y/n]:';
-		return this.prompt<boolean>(content, async input => {
-			if (/^true|t|yes|y|1$/i.exec(input)) return true;
-
-			return false;
-		});
+		return this.promptManager.createConfirmPrompt(this, content, items);
 	}
 
 	/**

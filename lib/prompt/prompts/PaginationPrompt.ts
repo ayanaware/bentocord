@@ -43,9 +43,9 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	protected content: string;
 	private readonly items: Array<string | Translateable> = [];
 
-	public constructor(ctx: CommandContext, items: Array<string | Translateable>, options: PaginationOptions = {}) {
+	public constructor(ctx: CommandContext, items?: Array<string | Translateable>, options: PaginationOptions = {}) {
 		super(ctx);
-		this.items = items;
+		this.items = items || [];
 		this.options = options;
 
 		this.language = options.language;
@@ -87,6 +87,13 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	}
 
 	protected async render(): Promise<void> {
+		// handle zero item paginations
+		if (this.items.length === 0) {
+			await this.ctx.createResponse({ content: this.content });
+			this.sent = this.content;
+			return;
+		}
+
 		const cbb = new CodeblockBuilder(this.language);
 
 		// constrain

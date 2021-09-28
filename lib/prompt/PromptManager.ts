@@ -9,6 +9,7 @@ import { Translateable } from '../interfaces/Translateable';
 
 import { PromptValidate, Prompt } from './Prompt';
 import { ChoicePrompt, PromptChoice } from './prompts/ChoicePrompt';
+import { ConfirmPrompt } from './prompts/ConfirmPrompt';
 import { PaginationOptions, PaginationPrompt } from './prompts/PaginationPrompt';
 
 export class PromptManager implements Component {
@@ -75,6 +76,19 @@ export class PromptManager implements Component {
 
 		const key = this.getKey(ctx);
 		const prompt = new ChoicePrompt<T>(ctx, choices, options);
+		this.prompts.set(key, prompt);
+
+		const result = await prompt.open(content);
+		this.prompts.delete(key);
+
+		return result;
+	}
+
+	public async createConfirmPrompt(ctx: CommandContext, content?: string | Translateable, items?: Array<string | Translateable>, options?: PaginationOptions): Promise<boolean> {
+		await this.closePrompt(ctx);
+
+		const key = this.getKey(ctx);
+		const prompt = new ConfirmPrompt(ctx, items, options);
 		this.prompts.set(key, prompt);
 
 		const result = await prompt.open(content);
