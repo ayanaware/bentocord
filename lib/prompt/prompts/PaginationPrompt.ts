@@ -55,7 +55,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	}
 
 	public get maxPage(): number {
-		return Math.ceil(this.items.length / this.itemsPerPage);
+		return Math.ceil(this.items.length / this.itemsPerPage) || 1;
 	}
 
 	public get isSinglePage(): boolean {
