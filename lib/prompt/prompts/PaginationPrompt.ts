@@ -18,6 +18,9 @@ export interface PaginationOptions {
 
 	/** Works in tandum with focused, add string above and/or below the focused index */
 	flare?: { above?: string | Translateable, below?: string | Translateable, padStart?: number };
+
+	/** When this pagination is closed should we resovle or reject */
+	resolveOnClose?: boolean;
 }
 
 export enum PaginationControls {
@@ -33,8 +36,6 @@ export enum PaginationControls {
 }
 
 export class PaginationPrompt<T = void> extends Prompt<T> {
-	public language: string;
-
 	public itemsPerPage = 10;
 	public currentPage = 0;
 
@@ -46,9 +47,9 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	public constructor(ctx: CommandContext, items?: Array<string | Translateable>, options: PaginationOptions = {}) {
 		super(ctx);
 		this.items = items || [];
-		this.options = options;
-
-		this.language = options.language;
+		this.options = Object.assign({
+			resolveOnClose: true,
+		} as PaginationOptions, options);
 
 		this.itemsPerPage = options.itemsPerPage || this.itemsPerPage;
 		if (typeof options.focused === 'number') this.currentPage = Math.ceil(options.focused / this.itemsPerPage) - 1 || 0;
@@ -63,9 +64,8 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	}
 
 	protected async timeout(): Promise<void> {
-		this.removeReactions().catch(() => { /* no-op */ });
-
-		this.resolve();
+		const reason = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_TIMEOUT') || 'You took too much time to respond.';
+		return this.close(reason);
 	}
 
 	public async open(content: string | Translateable): Promise<T> {
@@ -83,6 +83,10 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 	public async close(reason?: string | Translateable): Promise<void> {
 		this.removeReactions().catch(() => { /* no-op */ });
+
+		const resolveOnClose = this.options.resolveOnClose;
+		if (typeof resolveOnClose === 'boolean' && resolveOnClose) return this.resolve();
+
 		return super.close(reason);
 	}
 
@@ -94,7 +98,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 			return;
 		}
 
-		const cbb = new CodeblockBuilder(this.language);
+		const cbb = new CodeblockBuilder(this.options.language);
 
 		// constrain
 		if (this.currentPage < 0) this.currentPage = 0;
