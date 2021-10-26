@@ -5,6 +5,11 @@ import { FSEntityLoader, Plugin, PluginAPI } from '@ayanaware/bento';
 import { BentocordInterface } from './BentocordInterface';
 import { BentocordVariable } from './BentocordVariable';
 import { CommandManager } from './commands/CommandManager';
+import { AdvancedCommand } from './commands/builtin/Advanced';
+import { BentoCommand } from './commands/builtin/Bento';
+import { PingCommand } from './commands/builtin/Ping';
+import { PrefixCommand } from './commands/builtin/Prefix';
+import { SetGameCommand } from './commands/builtin/SetGame';
 import { Discord } from './discord/Discord';
 import { PromptManager } from './prompt/PromptManager';
 import { ReplyCommand } from './prompt/commands/Reply';
@@ -41,18 +46,14 @@ export class Bentocord implements Plugin {
 
 		// Load built-in commands
 		const loadBuiltin = this.api.getVariable<boolean>({ name: BentocordVariable.BENTOCORD_BUILTIN_COMMANDS, default: true });
-		if (loadBuiltin) {
-			// get prexisting FSEntityLoader, or create one just for us
-			this.fsel = entityManager.getPlugin(FSEntityLoader);
-			if (!this.fsel) {
-				this.fsel = new (class extends FSEntityLoader {
-					name = '@ayanaware/bentocord:FSEntityLoader';
-				})();
+		if (!loadBuiltin) return;
 
-				await entityManager.addPlugin(this.fsel);
-			}
-
-			return this.fsel.addDirectory([__dirname, 'commands', 'builtin']);
-		}
+		await entityManager.addComponents([
+			AdvancedCommand,
+			BentoCommand,
+			PingCommand,
+			PrefixCommand,
+			SetGameCommand,
+		]);
 	}
 }
