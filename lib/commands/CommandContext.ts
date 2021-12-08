@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { EntityAPI } from '@ayanaware/bento';
 
-import { APIApplicationCommandInteraction, InteractionResponseType } from 'discord-api-types';
 import {
 	AllowedMentions,
 	BaseData,
+	CommandInteraction,
 	EmbedOptions,
 	Guild,
 	GuildTextableChannel,
@@ -22,11 +22,10 @@ import { DiscordPermission } from '../discord/constants/DiscordPermission';
 import type { Translateable } from '../interfaces/Translateable';
 import type { PromptValidate } from '../prompt/Prompt';
 import type { PromptManager } from '../prompt/PromptManager';
+import type { PaginationOptions } from '../prompt/pagination/Pagination';
 import type { PromptChoice } from '../prompt/prompts/ChoicePrompt';
-import type { PaginationOptions } from '../prompt/prompts/PaginationPrompt';
 
 import type { CommandManager } from './CommandManager';
-import { INTERACTION_MESSAGE, INTERACTION_RESPONSE } from './constants/API';
 import type { Command } from './interfaces/Command';
 
 export interface ResponseContent {
@@ -218,102 +217,72 @@ export abstract class CommandContext {
 
 export class InteractionCommandContext extends CommandContext {
 	public type: 'interaction' = 'interaction';
-	public interaction: APIApplicationCommandInteraction;
+	public interaction: CommandInteraction;
 
 	public channel?: GuildTextableChannel;
 
-	private hasResponded = false;
-
-	public constructor(manager: CommandManager, promptManager: PromptManager, command: Command, interaction: APIApplicationCommandInteraction) {
+	public constructor(manager: CommandManager, promptManager: PromptManager, command: Command, interaction: CommandInteraction) {
 		super(manager, promptManager, command);
 		this.interaction = interaction;
 
 		const client = this.discord.client;
 
-		this.channelId = interaction.channel_id;
+		this.channelId = interaction.channel.id;
 
-		if (interaction.guild_id) {
+		if (interaction.guildID) {
 			this.authorId = interaction.member.user.id;
 			this.author = new User(interaction.member.user as unknown as BaseData, client);
 
-			this.guildId = interaction.guild_id;
+			this.guildId = interaction.guildID;
 
-			const guild = client.guilds.get(interaction.guild_id);
+			const guild = client.guilds.get(interaction.guildID);
 			if (guild) this.guild = guild;
 
 			const member = guild.members.get(this.authorId);
 			if (member) this.member = member;
 
-			const channel = guild.channels.get(interaction.channel_id) as GuildTextableChannel;
+			const channel = guild.channels.get(interaction.guildID) as GuildTextableChannel;
 			if (channel) this.channel = channel;
 		} else {
 			this.authorId = interaction.user.id;
 			this.author = new User(interaction.user as unknown as BaseData, client);
 
-			this.channel = client.getChannel(interaction.channel_id) as TextChannel;
+			this.channel = client.getChannel(interaction.guildID) as TextChannel;
 		}
 	}
 
 	public async acknowledge(): Promise<void> {
-		if (this.hasResponded) return;
+		if (this.interaction.acknowledged) return;
 
-		const response = {
-			type: InteractionResponseType.DeferredChannelMessageWithSource,
-		};
+		await this.interaction.acknowledge();
 
-		const client = this.discord.client;
-		await client.requestHandler.request('POST', INTERACTION_RESPONSE(this.interaction.id, this.interaction.token), false, response);
-		this.hasResponded = true;
-
-		const message = await client.requestHandler.request('GET', INTERACTION_MESSAGE(this.interaction.application_id, this.interaction.token, '@original'), false) as { id?: string };
+		const message = await this.interaction.getOriginalMessage();
 		this.responseId = message.id;
 	}
 
 	public async createResponse(response: string | ResponseContent): Promise<unknown> {
-		if (this.hasResponded) return this.editResponse(response);
+		if (this.interaction.acknowledged) return this.editResponse(response);
 
 		if (typeof response === 'string') response = { content: response };
-		// TODO: handle allowed_mentions
 
-		const content = {
-			type: InteractionResponseType.ChannelMessageWithSource,
-			data: {
-				content: response.content,
-				embeds: response.embeds,
-				allowed_mentions: response.allowedMentions,
-			},
-		};
+		await this.interaction.createMessage(response);
 
-		const client = this.discord.client;
-
-		await client.requestHandler.request('POST', INTERACTION_RESPONSE(this.interaction.id, this.interaction.token), false, content as any) as Record<string, unknown>;
-		this.hasResponded = true;
-
-		const message = await client.requestHandler.request('GET', INTERACTION_MESSAGE(this.interaction.application_id, this.interaction.token, '@original'), false) as { id?: string };
+		const message = await this.interaction.getOriginalMessage();
 		this.responseId = message.id;
 	}
 
 	public async editResponse(response: string | ResponseContent): Promise<unknown> {
-		if (!this.hasResponded) return this.createResponse(response);
+		if (!this.interaction.acknowledged) return this.createResponse(response);
 
 		if (typeof response === 'string') response = { content: response };
-		// TODO: handle allowed_mentions
 
-		const content = {
-			content: response.content,
-			embeds: response.embeds,
-			allowed_mentions: response.allowedMentions,
-		};
-
-		const client = this.discord.client;
-		await client.requestHandler.request('PATCH', INTERACTION_MESSAGE(this.interaction.application_id, this.interaction.token, '@original'), true, content);
+		return this.interaction.editOriginalMessage(response);
 	}
 
 	public async deleteResponse(): Promise<void> {
-		if (!this.hasResponded) return;
+		if (!this.interaction.acknowledged) return;
 
-		const client = this.discord.client;
-		await client.requestHandler.request('DELETE', INTERACTION_MESSAGE(this.interaction.application_id, this.interaction.token, '@original'));
+		return this.interaction.deleteOriginalMessage();
 	}
 }
 

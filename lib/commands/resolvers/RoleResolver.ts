@@ -1,5 +1,4 @@
-import { ApplicationCommandOptionType } from 'discord-api-types';
-import { Role } from 'eris';
+import { Constants, Role } from 'eris';
 
 import { CommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
@@ -8,7 +7,7 @@ import { Resolver } from '../interfaces/Resolver';
 
 export class RoleResolver implements Resolver<Role> {
 	public option = OptionType.ROLE;
-	public convert = ApplicationCommandOptionType.Role;
+	public convert = Constants.ApplicationCommandOptionTypes.ROLE;
 
 	public async reduce(ctx: CommandContext, option: CommandOption<Role>, role: Role): Promise<{ display: string, extra?: string }> {
 		return { display: `@${role.name}`, extra: role.id };

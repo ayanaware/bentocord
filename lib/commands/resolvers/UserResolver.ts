@@ -1,5 +1,4 @@
-import { ApplicationCommandOptionType } from 'discord-api-types';
-import { Collection, Member, User } from 'eris';
+import { Collection, Constants, Member, User } from 'eris';
 
 import { CommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
@@ -8,7 +7,7 @@ import { Resolver } from '../interfaces/Resolver';
 
 export class UserResolver implements Resolver<User|Member> {
 	public option = OptionType.USER;
-	public convert = ApplicationCommandOptionType.User;
+	public convert = Constants.ApplicationCommandOptionTypes.USER;
 
 	public async reduce(ctx: CommandContext, option: CommandOption, user: User | Member): Promise<{ display: string, extra?: string }> {
 		let display = `${user.username}#${user.discriminator}`;

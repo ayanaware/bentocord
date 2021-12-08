@@ -3,15 +3,7 @@ import * as util from 'util';
 import { Component, ComponentAPI, Inject, Subscribe, Variable } from '@ayanaware/bento';
 import { Logger } from '@ayanaware/logger-api';
 
-import {
-	APIApplicationCommandOption,
-	APIChatInputApplicationCommandInteraction,
-	APIChatInputApplicationCommandInteractionData,
-	ApplicationCommandOptionType,
-	ApplicationCommandType,
-	InteractionType,
-} from 'discord-api-types';
-import { GuildChannel, Message } from 'eris';
+import { AnyInteraction, ApplicationCommand, ApplicationCommandOption, ApplicationCommandOptions, ApplicationCommandOptionsSubCommand, ApplicationCommandOptionsSubCommandGroup, ApplicationCommandOptionsWithValue, ApplicationCommandStructure, ChatInputApplicationCommand, CommandInteraction, Constants, GuildChannel, Interaction, InteractionDataOptions, InteractionDataOptionsSubCommand, InteractionDataOptionsSubCommandGroup, InteractionDataOptionsWithValue, Message } from 'eris';
 
 import { BentocordInterface } from '../BentocordInterface';
 import { BentocordVariable } from '../BentocordVariable';
@@ -28,8 +20,6 @@ import type { Command } from './interfaces/Command';
 import type { AnyCommandOption, AnySubCommandOption, CommandOption } from './interfaces/CommandOption';
 import type { Resolver } from './interfaces/Resolver';
 import type { Suppressor, SuppressorOption } from './interfaces/Suppressor';
-import type { ApplicationCommand, ApplicationCommandOption } from './interfaces/discord/ApplicationCommand';
-import type { InteractionDataOption } from './interfaces/discord/Interaction';
 import type { CommandEntity } from './interfaces/entity/CommandEntity';
 import type { ResolverEntity } from './interfaces/entity/ResolverEntity';
 import type { SuppressorEntity } from './interfaces/entity/SuppressorEntity';
@@ -44,6 +34,8 @@ export interface SyncOptions {
 	/** Register in this guild or globally */
 	guildId?: string;
 }
+
+const { ApplicationCommandTypes, ApplicationCommandOptionTypes } = Constants;
 
 const log = Logger.get(null);
 export class CommandManager implements Component {
@@ -383,28 +375,19 @@ export class CommandManager implements Component {
 
 		if (typeof definition.registerSlash === 'boolean' && !definition.registerSlash) throw new Error(`${name}: Command "${definition.aliases[0]}" has disabled slash conversion`);
 
-		// infer application_id
-		const applicationId = this.discord.application.id;
-		if (!applicationId) throw new Error('Failed to find application_id');
-
 		let description = definition.description;
 		if (typeof description === 'object') description = await this.interface.formatTranslation(description.key, description.repl) || description.backup;
 
-		const appCommand: ApplicationCommand = {
-			type: ApplicationCommandType.ChatInput,
+		const appCommand: ApplicationCommandStructure = {
+			type: ApplicationCommandTypes.CHAT_INPUT,
 			name: definition.aliases[0],
 			description,
-
-			// eslint-disable-next-line @typescript-eslint/naming-convention
-			application_id: applicationId,
-			// eslint-disable-next-line @typescript-eslint/naming-convention
-			default_permission: true,
 		};
 
 		// convert options
 		if (Array.isArray(definition.options)) appCommand.options = await this.convertOptions(definition.options);
 
-		return appCommand;
+		return appCommand as ApplicationCommand;
 	}
 
 	/**
@@ -412,11 +395,10 @@ export class CommandManager implements Component {
 	 * @param options Array of CommandOptions
 	 * @returns ApplicationCommandOption Structure
 	 */
-	private async convertOptions(options: Array<AnyCommandOption>) {
-		const collector: Array<APIApplicationCommandOption> = [];
+	private async convertOptions(options: Array<AnyCommandOption>): Promise<Array<ApplicationCommandOptions>> {
+		const collector: Array<ApplicationCommandOptions> = [];
 
 		if (!options) options = [];
-		// drop SubCommandGroupOption & SubCommandOption special types
 		for (const option of options) {
 			let name = option.name;
 			if (Array.isArray(name)) name = name[0];
@@ -426,35 +408,44 @@ export class CommandManager implements Component {
 			let description = option.description;
 			if (typeof description === 'object') description = await this.interface.formatTranslation(description.key, description.repl) || description.backup;
 
-			const appOption: ApplicationCommandOption = { type: null, name, description };
 
 			// Handle Special Subcommand & SubcommandGroup OptionTypes
 			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {
-				appOption.type = option.type === OptionType.SUB_COMMAND ? ApplicationCommandOptionType.Subcommand : ApplicationCommandOptionType.SubcommandGroup;
-				appOption.options = await this.convertOptions(option.options);
+				const subOption: ApplicationCommandOptionsSubCommand | ApplicationCommandOptionsSubCommandGroup = {
+					type: option.type === OptionType.SUB_COMMAND ? ApplicationCommandOptionTypes.SUB_COMMAND : ApplicationCommandOptionTypes.SUB_COMMAND_GROUP,
+					name,
+					description,
+				};
 
-				collector.push(appOption);
+				subOption.options = await this.convertOptions(option.options) as Array<ApplicationCommandOptionsSubCommand | ApplicationCommandOptionsWithValue>;
+				collector.push(subOption);
 
 				continue;
 			}
 
 			// Convert to Discord ApplicationCommandOptionType
 			const resolver = this.resolvers.get(option.type);
-			appOption.type = resolver ? resolver.convert : ApplicationCommandOptionType.String;
+
+
+			const appOption: ApplicationCommandOption<any> = {
+				type: resolver ? resolver.convert : ApplicationCommandOptionTypes.STRING,
+				name,
+				description,
+			};
 
 			// Prepend type information to description
 			const typeInfo = this.getTypePreview(option);
 			appOption.description = `${typeInfo} ${appOption.description}`;
 
 			// Bentocord Array support
-			if (option.array) appOption.type = ApplicationCommandOptionType.String;
+			if (option.array) appOption.type = ApplicationCommandOptionTypes.STRING;
 
 			// choices support
 			if (option.choices) {
 				let choices = option.choices;
 				if (typeof choices === 'function') choices = await choices();
 
-				appOption.choices = choices;
+				(appOption as any).choices = choices;
 			}
 
 			// required support
@@ -482,11 +473,11 @@ export class CommandManager implements Component {
 		return typeBuild;
 	}
 
-	public async fufillInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, data: APIChatInputApplicationCommandInteractionData): Promise<Record<string, unknown>> {
+	public async fufillInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, data: CommandInteraction['data']): Promise<Record<string, unknown>> {
 		return this.processInteractionOptions(ctx, options, data.options);
 	}
 
-	private async processInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, optionData: Array<InteractionDataOption>) {
+	private async processInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, optionData: Array<InteractionDataOptions>) {
 		let collector: Record<string, unknown> = {};
 
 		if (!options) options = [];
@@ -502,7 +493,7 @@ export class CommandManager implements Component {
 				const final = names;
 				const primary = final[0];
 
-				const subOptionData = optionData.find(d => final.some(f => f.toLocaleLowerCase() === d.name.toLocaleLowerCase()));
+				const subOptionData = optionData.find(d => final.some(f => f.toLocaleLowerCase() === d.name.toLocaleLowerCase())) as InteractionDataOptionsSubCommand | InteractionDataOptionsSubCommandGroup;
 				if (!subOptionData) continue;
 
 				// process suppressors
@@ -513,7 +504,7 @@ export class CommandManager implements Component {
 				break;
 			}
 
-			const data = optionData.find(d => d.name.toLocaleLowerCase() === option.name.toLocaleLowerCase());
+			const data = optionData.find(d => d.name.toLocaleLowerCase() === option.name.toLocaleLowerCase()) as InteractionDataOptionsWithValue;
 
 			const value: string = data?.value.toString();
 			collector = { ...collector, [option.name]: await this.resolveOption(ctx, option, value) };
@@ -668,9 +659,9 @@ export class CommandManager implements Component {
 			}
 
 			// either single element array or reducer failed
-			if (Array.isArray(result)) result = result[0];
+			if (Array.isArray(result)) result = result[0] as any;
 
-			if (result != null) value.push(result);
+			if (result != null) value.push(result as any);
 		}
 
 		let out: T | Array<T> = value;
@@ -707,15 +698,13 @@ export class CommandManager implements Component {
 		if (self.id) this.selfId = self.id;
 	}
 
-	@Subscribe(Discord, DiscordEvent.RAW_WS)
-	private async handleInteractionCreate(pkt: { op: number, t?: string, d?: Record<string, unknown> }) {
-		if (pkt.op !== 0 || pkt.t !== 'INTERACTION_CREATE') return; // Limit to Interaction Create
-
+	@Subscribe(Discord, DiscordEvent.INTERACTION_CREATE)
+	private async handleInteractionCreate(interaction: AnyInteraction) {
 		// Only handle APPLICATION_COMMAND interactions
-		const interaction = pkt.d as unknown as APIChatInputApplicationCommandInteraction;
-		if (interaction.type !== InteractionType.ApplicationCommand) return;
+		if (interaction.type !== Constants.InteractionTypes.APPLICATION_COMMAND) return;
+		interaction = interaction as CommandInteraction;
 
-		const data = interaction.data;
+		const data = interaction.data as CommandInteraction['data']
 
 		let command = this.findCommand(data.name);
 		if (!command) {

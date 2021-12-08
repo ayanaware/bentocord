@@ -302,6 +302,14 @@ export enum DiscordEvent {
 	 */
 	USER_UPDATE = 'userUpdate',
 
+	// INTERACTION
+
+	/**
+	 * Fired when an interaction is created
+	 * @param interaction Interaction
+	 */
+	INTERACTION_CREATE = 'interactionCreate',
+
 	// VOICE
 
 	/**

@@ -28,5 +28,5 @@ export * from './interfaces/Translateable';
 
 export * from './prompt/Prompt';
 export * from './prompt/PromptManager';
-export * from './prompt/prompts/PaginationPrompt';
+export * from './prompt/pagination/Pagination';
 export * from './prompt/prompts/ChoicePrompt';

@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionType } from 'discord-api-types';
+import { Constants } from 'eris';
 
 import { CommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
@@ -7,7 +7,7 @@ import { Resolver } from '../interfaces/Resolver';
 
 export class StringResolver implements Resolver<string> {
 	public option = OptionType.STRING;
-	public convert = ApplicationCommandOptionType.String;
+	public convert = Constants.ApplicationCommandOptionTypes.STRING;
 
 	public async resolve(ctx: CommandContext, option: CommandOption, input: string): Promise<string> {
 		return input;

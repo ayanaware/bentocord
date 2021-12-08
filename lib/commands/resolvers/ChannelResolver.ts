@@ -1,5 +1,4 @@
-import { ApplicationCommandOptionType } from 'discord-api-types';
-import { AnyGuildChannel } from 'eris';
+import { AnyGuildChannel, Constants } from 'eris';
 
 import { CommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
@@ -8,7 +7,7 @@ import { Resolver } from '../interfaces/Resolver';
 
 export class ChannelResolver implements Resolver<AnyGuildChannel> {
 	public option = OptionType.CHANNEL;
-	public convert = ApplicationCommandOptionType.Channel;
+	public convert = Constants.ApplicationCommandOptionTypes.CHANNEL;
 
 	public async reduce(ctx: CommandContext, option: CommandOption<AnyGuildChannel>, channel: AnyGuildChannel): Promise<{ display: string, extra?: string }> {
 		return { display: `#${channel.name}`, extra: channel.id };

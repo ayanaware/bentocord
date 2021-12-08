@@ -1,5 +1,4 @@
-import { ApplicationCommandOptionType } from 'discord-api-types';
-import { Emoji } from 'eris';
+import { Constants, Emoji } from 'eris';
 
 import { CommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
@@ -8,7 +7,7 @@ import { Resolver } from '../interfaces/Resolver';
 
 export class EmojiResolver implements Resolver<Emoji> {
 	public option = OptionType.EMOJI;
-	public convert = ApplicationCommandOptionType.String;
+	public convert = Constants.ApplicationCommandOptionTypes.STRING;
 
 	async reduce(ctx: CommandContext, option: CommandOption<Emoji>, emoji: Emoji): Promise<{ display: string, extra?: string }> {
 		return { display: emoji.name };

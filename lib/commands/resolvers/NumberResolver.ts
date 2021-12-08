@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionType } from 'discord-api-types';
+import { Constants } from 'eris';
 
 import { CommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
@@ -7,7 +7,7 @@ import { Resolver } from '../interfaces/Resolver';
 
 export class NumberResolver implements Resolver<number> {
 	public option = OptionType.NUMBER;
-	public convert = ApplicationCommandOptionType.Integer;
+	public convert = Constants.ApplicationCommandOptionTypes.INTEGER;
 
 	public async resolve(ctx: CommandContext, option: CommandOption, text: string): Promise<number> {
 		const value = parseInt(text, 10);
