@@ -5,12 +5,12 @@
 		"build": "rm -rf build && tsc"
 	},
 	"dependencies": {
-		"@ayanaware/bento": "^1.0.0-rc.25",
+		"@ayanaware/bento": "^1.0.0-rc.26",
 		"@ayanaware/bentocord": "../build",
 		"@ayanaware/logger": "^2.0.0-beta.3",
-		"@types/node": "^16.9.6",
-		"eris": "^0.15.1",
-		"typescript": "^4.4.3"
+		"@types/node": "^16.11.12",
+		"eris": "^0.16.1",
+		"typescript": "^4.5.2"
 	},
 	"license": "MIT"
 }

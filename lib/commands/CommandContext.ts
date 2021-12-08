@@ -22,11 +22,11 @@ import { DiscordPermission } from '../discord/constants/DiscordPermission';
 import type { Translateable } from '../interfaces/Translateable';
 import type { PromptValidate } from '../prompt/Prompt';
 import type { PromptManager } from '../prompt/PromptManager';
-import type { PaginationOptions } from '../prompt/pagination/Pagination';
 import type { PromptChoice } from '../prompt/prompts/ChoicePrompt';
 
 import type { CommandManager } from './CommandManager';
 import type { Command } from './interfaces/Command';
+import { PaginationOptions } from '../prompt/prompts/PaginationPrompt';
 
 export interface ResponseContent {
 	content?: string;

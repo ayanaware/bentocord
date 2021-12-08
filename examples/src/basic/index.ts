@@ -2,7 +2,7 @@ import { Application, EntityType } from '@ayanaware/bento';
 import { Bentocord, CommandContext, CommandEntity, CommandManager } from '@ayanaware/bentocord';
 import { CommandOption } from '@ayanaware/bentocord/commands/interfaces/CommandOption';
 import Logger, { LogLevel } from '@ayanaware/logger';
-import { ApplicationCommandOptionType } from 'discord-api-types';
+import { Constants } from 'eris';
 
 Logger.getDefaultTransport().setLevel(LogLevel.DEBUG);
 
@@ -19,7 +19,7 @@ Logger.getDefaultTransport().setLevel(LogLevel.DEBUG);
 
 	cm.addResolver({
 		option: 'pog',
-		convert: ApplicationCommandOptionType.String,
+		convert: Constants.ApplicationCommandOptionTypes.STRING,
 		async resolve(ctx: CommandContext, option: CommandOption, input) {
 			// count how many time pog appears in input
 			return (input.match(/pog/gi) || []).length;
