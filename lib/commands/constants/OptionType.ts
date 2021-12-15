@@ -6,6 +6,8 @@ export enum OptionType {
 	// PRIMITIVES
 	/** boolean */
 	BOOLEAN,
+	/** integer */
+	INTEGER,
 	/** number */
 	NUMBER,
 	/** string */

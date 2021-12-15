@@ -17,7 +17,7 @@ import { APPLICATION_COMMANDS, APPLICATION_GUILD_COMMANDS } from './constants/AP
 import { OptionType } from './constants/OptionType';
 import { SuppressorType } from './constants/SuppressorType';
 import type { Command } from './interfaces/Command';
-import type { AnyCommandOption, AnySubCommandOption, CommandOption } from './interfaces/CommandOption';
+import type { AnyCommandOption, AnySubCommandOption, AnyValueCommandOption, CommandOptionChoice } from './interfaces/CommandOption';
 import type { Resolver } from './interfaces/Resolver';
 import type { Suppressor, SuppressorOption } from './interfaces/Suppressor';
 import type { CommandEntity } from './interfaces/entity/CommandEntity';
@@ -121,7 +121,7 @@ export class CommandManager implements Component {
 		this.resolvers.delete(type);
 	}
 
-	private async executeResolver<T = unknown>(ctx: CommandContext, option: CommandOption<T>, input: string) {
+	private async executeResolver<T = unknown>(ctx: CommandContext, option: AnyValueCommandOption, input: string) {
 		const resolver = this.resolvers.get(option.type) as Resolver<T>;
 		if (!resolver) return null;
 
@@ -288,11 +288,11 @@ export class CommandManager implements Component {
 		const applicationId = this.discord.application.id;
 		if (!applicationId) throw new Error('Failed to infer application_id');
 
-		// Determine route
-		let apiRoute = APPLICATION_COMMANDS(applicationId);
-		if (opts.guildId) apiRoute = APPLICATION_GUILD_COMMANDS(applicationId, opts.guildId);
+		// Get existing commands
+		let existingCommands: Array<ApplicationCommand> = [];
+		if (opts.guildId) existingCommands = await this.discord.client.getGuildCommands(opts.guildId);
+		else existingCommands = await this.discord.client.getCommands();
 
-		const discordCommands = await this.discord.client.requestHandler.request('GET', apiRoute, true) as Array<ApplicationCommand>;
 		const commandIds: Set<string> = new Set();
 
 		const bulkOverwrite: Array<ApplicationCommand> = [];
@@ -300,10 +300,10 @@ export class CommandManager implements Component {
 			if (opts.guildId) command.guild_id = opts.guildId;
 
 			// Update command if it already exists
-			const discordCommand = discordCommands.find(c => c.name === command.name);
-			if (discordCommand && discordCommand.id) {
-				command.id = discordCommand.id;
-				commandIds.add(discordCommand.id); // consumed
+			const existing = existingCommands.find(c => c.name === command.name);
+			if (existing && existing.id) {
+				command.id = existing.id;
+				commandIds.add(existing.id); // consumed
 			}
 
 			bulkOverwrite.push(command);
@@ -311,19 +311,21 @@ export class CommandManager implements Component {
 
 		// Delete is string... Only delete other commands starting with this string
 		if (typeof opts.delete === 'string') {
-			for (const discordCommand of discordCommands) {
-				if (!discordCommand.name.startsWith(opts.delete)) bulkOverwrite.push(discordCommand);
+			for (const existing of existingCommands) {
+				if (!existing.name.startsWith(opts.delete)) bulkOverwrite.push(existing);
 			}
 		} else if ((typeof opts.delete === 'boolean' && !opts.delete) || typeof opts.delete !== 'boolean') {
-			for (const discordCommand of discordCommands) {
-				if (!Array.from(commandIds).includes(discordCommand.id)) {
-					bulkOverwrite.push(discordCommand);
-					commandIds.add(discordCommand.id);
+			for (const existing of existingCommands) {
+				if (!Array.from(commandIds).includes(existing.id)) {
+					bulkOverwrite.push(existing);
+					commandIds.add(existing.id);
 				}
 			}
 		}
 
-		return this.discord.client.requestHandler.request('PUT', apiRoute, true, bulkOverwrite as any);
+		// Bulk Update
+		if (opts.guildId) return this.discord.client.bulkEditGuildCommands(opts.guildId, bulkOverwrite);
+		else return this.discord.client.bulkEditCommands(bulkOverwrite);
 	}
 
 	/**
@@ -441,7 +443,7 @@ export class CommandManager implements Component {
 			if (option.array) appOption.type = ApplicationCommandOptionTypes.STRING;
 
 			// choices support
-			if (option.choices) {
+			if ('choices' in option) {
 				let choices = option.choices;
 				if (typeof choices === 'function') choices = await choices();
 
@@ -460,7 +462,7 @@ export class CommandManager implements Component {
 		return collector;
 	}
 
-	private getTypePreview(option: CommandOption) {
+	private getTypePreview(option: AnyValueCommandOption) {
 		// Prepend type information to description
 		let typeBuild = '[';
 		if (typeof option.type === 'number') typeBuild += OptionType[option.type];
@@ -615,7 +617,7 @@ export class CommandManager implements Component {
 		return collector;
 	}
 
-	private async resolveOption<T = unknown>(ctx: CommandContext, option: CommandOption<T>, raw: string): Promise<T | Array<T>> {
+	private async resolveOption<T = unknown>(ctx: CommandContext, option: AnyValueCommandOption, raw: string): Promise<T | Array<T>> {
 		if (raw === undefined) raw = '';
 
 		// array support
@@ -623,7 +625,7 @@ export class CommandManager implements Component {
 		inputs = inputs.filter(i => !!i);
 
 		// Auto prompt missing data on required option
-		if (inputs.length < 1 && (typeof option.required !== 'boolean' || option.required) && typeof option.choices === 'undefined') {
+		if (inputs.length < 1 && (typeof option.required !== 'boolean' || option.required) && 'choices' in option) {
 			const type = this.getTypePreview(option);
 			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_OPTION', { option: option.name, type }) || `Please provide an input for option \`${option.name}\` of type \`${type}\`:`;
 			const input = await ctx.prompt<string>(content, async (s: string) => s);
@@ -670,14 +672,14 @@ export class CommandManager implements Component {
 		if (!option.array && Array.isArray(out)) out = out[0];
 
 		// default value
-		if ((out == null || (Array.isArray(out) && out.length === 0)) && option.default !== undefined) out = option.default;
+		if ((out == null || (Array.isArray(out) && out.length === 0)) && option.default !== undefined) out = option.default as unknown as T;
 
 		// handle choices
-		if (option.choices) {
+		if ('choices' in option) {
 			let choices = option.choices;
 			if (typeof choices === 'function') choices = await choices();
 
-			const findChoice = choices.find(c => out && (c.value === out.toString() || c.value === parseInt(out.toString(), 10)));
+			const findChoice = (choices as any).find((c: CommandOptionChoice<string | number>) => out && (c.value === out.toString() || c.value === parseInt(out.toString(), 10)));
 			if (!findChoice) {
 				const content = await ctx.formatTranslation('BENTOCORD_PROMPT_CHOICE_OPTION', { option: option.name }) || `Please select one of the following choices for option \`${option.name}\``;
 				out = await ctx.choice<T>(choices.map(c => ({ name: c.name, value: c.value as unknown as T, match: [c.name] })), content);
