@@ -8,6 +8,7 @@ import type { SuppressorDefinition } from './Suppressor';
 export interface CommandDefinition {
 	/** Command Aliases; First will be used for slash command name */
 	aliases: Array<string>;
+
 	/** Command Description */
 	description: string | Translateable;
 
@@ -19,6 +20,9 @@ export interface CommandDefinition {
 
 	/** Should this command be registered as a slash command? */
 	registerSlash?: boolean | undefined;
+
+	/** Register all aliases as seperate slash commands */
+	slashAliases?: boolean | undefined;
 
 	/** Disable execution via message w/ prefix */
 	disablePrefix?: boolean;

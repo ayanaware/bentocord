@@ -1,4 +1,5 @@
 import { AnyGuildChannel, Emoji, Guild, Member, Role, User } from 'eris';
+
 import { Translateable } from '../../interfaces/Translateable';
 import type { OptionType } from '../constants/OptionType';
 
@@ -38,12 +39,12 @@ export interface CommandOptionValue<T extends OptionType, U = unknown> extends C
 	limit?: number;
 }
 
-export interface CommandOptionChoice<T extends unknown> {
+export interface CommandOptionChoice<T> {
 	name: string;
 	value: T;
 }
 
-export type CommandOptionChoiceCallable<T extends unknown> = Array<CommandOptionChoice<T>> | (() => Promise<Array<CommandOptionChoice<T>>>);
+export type CommandOptionChoiceCallable<T> = Array<CommandOptionChoice<T>> | (() => Promise<Array<CommandOptionChoice<T>>>);
 
 // SUBCOMMAND GROUP
 export interface CommandOptionSubCommandGroup extends CommandOption<OptionType.SUB_COMMAND_GROUP> {
@@ -74,72 +75,46 @@ export type CommandOptionInteger = CommandOptionIntegerWithChoices | CommandOpti
 
 export interface CommandOptionIntegerWithChoices extends CommandOptionValue<OptionType.INTEGER, number> {
 	/** Array of Integer choices */
-	choices: CommandOptionChoiceCallable<number>;
-
-	// ** autocomplete not allowed with choices */
-	autocomplete?: false;
+	choices?: CommandOptionChoiceCallable<number>;
 }
 
 export interface CommandOptionIntegerWithMinMax extends CommandOptionValue<OptionType.INTEGER, number> {
 	min?: number;
 	max?: number;
-
-	/** Autocomplete not allowed with min max */
-	autocomplete?: false;
 }
 
 export interface CommandOptionIntegerWithAutocomplete extends CommandOptionValue<OptionType.INTEGER, number> {
-	autocomplete: true;
-
-	//** Choices not allowed with autocomplete */
-	choices?: never;
+	autocomplete?: true;
 }
-
 
 // NUMBER
 export type CommandOptionNumber = CommandOptionNumberWithChoices | CommandOptionNumberWithMinMax | CommandOptionNumberWithAutocomplete;
 
 export interface CommandOptionNumberWithChoices extends CommandOptionValue<OptionType.NUMBER, number> {
 	/** Array of Number choices */
-	choices: CommandOptionChoiceCallable<number>;
-
-	// ** autocomplete not allowed with choices */
-	autocomplete?: false;
+	choices?: CommandOptionChoiceCallable<number>;
 }
 
 export interface CommandOptionNumberWithMinMax extends CommandOptionValue<OptionType.NUMBER, number> {
 	min?: number;
 	max?: number;
-
-	/** Autocomplete not allowed with min max */
-	autocomplete?: false;
 }
 
 export interface CommandOptionNumberWithAutocomplete extends CommandOptionValue<OptionType.NUMBER, number> {
-	autocomplete: true;
-
-	//** Choices not allowed with autocomplete */
-	choices?: never;
+	autocomplete?: true;
 }
-
 
 // STRING
 export type CommandOptionString = CommandOptionStringWithChoices | CommandOptionStringWithAutocomplete;
 
 export interface CommandOptionStringWithChoices extends CommandOptionValue<OptionType.STRING, string> {
 	// ** array of string choices */
-	choices: CommandOptionChoiceCallable<string>;
-
-	/** Autocomplete not allowed with choices */
-	autocomplete?: false;
+	choices?: CommandOptionChoiceCallable<string>;
 }
 
 export interface CommandOptionStringWithAutocomplete extends CommandOptionValue<OptionType.STRING, string> {
 	/** Autocomplete */
-	autocomplete: boolean;
-
-	/** Choices not allowed with autocomplete */
-	choices?: never;
+	autocomplete?: true;
 }
 
 // DISCORD

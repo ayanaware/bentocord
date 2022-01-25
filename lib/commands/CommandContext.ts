@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import { EntityAPI } from '@ayanaware/bento';
 
 import {
@@ -23,10 +22,10 @@ import type { Translateable } from '../interfaces/Translateable';
 import type { PromptValidate } from '../prompt/Prompt';
 import type { PromptManager } from '../prompt/PromptManager';
 import type { PromptChoice } from '../prompt/prompts/ChoicePrompt';
+import { PaginationOptions } from '../prompt/prompts/PaginationPrompt';
 
 import type { CommandManager } from './CommandManager';
 import type { Command } from './interfaces/Command';
-import { PaginationOptions } from '../prompt/prompts/PaginationPrompt';
 
 export interface ResponseContent {
 	content?: string;
@@ -40,6 +39,8 @@ export abstract class CommandContext {
 
 	public readonly command: Command;
 	public type: 'message' | 'interaction';
+
+	public alias: string;
 
 	public authorId: string;
 	public author: User;

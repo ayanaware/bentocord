@@ -20,7 +20,7 @@ export class SetGameCommand implements CommandEntity {
 		description: 'Set Discord Activity',
 		options: [
 			{ type: OptionType.STRING, name: 'message', description: 'activity name', rest: true },
-			{ type: OptionType.NUMBER, name: 'type', description: 'activity type', choices: [
+			{ type: OptionType.INTEGER, name: 'type', description: 'activity type', choices: [
 				{ name: 'playing', value: 0 },
 				{ name: 'streaming', value: 1 },
 				{ name: 'listening', value: 2 },

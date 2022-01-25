@@ -3,7 +3,24 @@ import * as util from 'util';
 import { Component, ComponentAPI, Inject, Subscribe, Variable } from '@ayanaware/bento';
 import { Logger } from '@ayanaware/logger-api';
 
-import { AnyInteraction, ApplicationCommand, ApplicationCommandOption, ApplicationCommandOptions, ApplicationCommandOptionsSubCommand, ApplicationCommandOptionsSubCommandGroup, ApplicationCommandOptionsWithValue, ApplicationCommandStructure, ChatInputApplicationCommand, CommandInteraction, Constants, GuildChannel, Interaction, InteractionDataOptions, InteractionDataOptionsSubCommand, InteractionDataOptionsSubCommandGroup, InteractionDataOptionsWithValue, Message } from 'eris';
+import {
+	AnyInteraction,
+	ApplicationCommand,
+	ApplicationCommandOption,
+	ApplicationCommandOptions,
+	ApplicationCommandOptionsSubCommand,
+	ApplicationCommandOptionsSubCommandGroup,
+	ApplicationCommandOptionsWithValue,
+	ApplicationCommandStructure,
+	CommandInteraction,
+	Constants,
+	GuildChannel,
+	InteractionDataOptions,
+	InteractionDataOptionsSubCommand,
+	InteractionDataOptionsSubCommandGroup,
+	InteractionDataOptionsWithValue,
+	Message,
+} from 'eris';
 
 import { BentocordInterface } from '../BentocordInterface';
 import { BentocordVariable } from '../BentocordVariable';
@@ -13,11 +30,10 @@ import { PromptManager } from '../prompt/PromptManager';
 import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
 
 import { CommandContext, InteractionCommandContext, MessageCommandContext } from './CommandContext';
-import { APPLICATION_COMMANDS, APPLICATION_GUILD_COMMANDS } from './constants/API';
 import { OptionType } from './constants/OptionType';
 import { SuppressorType } from './constants/SuppressorType';
 import type { Command } from './interfaces/Command';
-import type { AnyCommandOption, AnySubCommandOption, AnyValueCommandOption, CommandOptionChoice } from './interfaces/CommandOption';
+import type { AnyCommandOption, AnySubCommandOption, AnyValueCommandOption, CommandOptionChoiceCallable } from './interfaces/CommandOption';
 import type { Resolver } from './interfaces/Resolver';
 import type { Suppressor, SuppressorOption } from './interfaces/Suppressor';
 import type { CommandEntity } from './interfaces/entity/CommandEntity';
@@ -58,6 +74,7 @@ export class CommandManager implements Component {
 
 	private selfId: string = null;
 
+	private testSynced = false;
 	private readonly testPrefix = 'test-';
 
 	public async onLoad(): Promise<void> {
@@ -66,15 +83,6 @@ export class CommandManager implements Component {
 
 		// Load built-in suppressors
 		Suppressors.forEach(suppressor => this.addSuppressor(suppressor));
-	}
-
-	public async onUnload(): Promise<void> {
-		// Remove reply command
-		this.removeCommand('r');
-	}
-
-	public async onVerify(): Promise<void> {
-		return this.syncTestGuildCommands();
 	}
 
 	public async onChildLoad(entity: CommandEntity | ResolverEntity | SuppressorEntity): Promise<void> {
@@ -325,7 +333,7 @@ export class CommandManager implements Component {
 
 		// Bulk Update
 		if (opts.guildId) return this.discord.client.bulkEditGuildCommands(opts.guildId, bulkOverwrite);
-		else return this.discord.client.bulkEditCommands(bulkOverwrite);
+		return this.discord.client.bulkEditCommands(bulkOverwrite);
 	}
 
 	/**
@@ -358,7 +366,15 @@ export class CommandManager implements Component {
 			const definition = command.definition;
 			if (!definition || typeof definition.registerSlash === 'boolean' && !definition.registerSlash) continue;
 
-			collector.push(await this.convertCommand(definition.aliases[0]));
+			const [first, ...rest] = definition.aliases;
+			collector.push(await this.convertCommand(first));
+
+			// slash top-level alias support
+			if (rest.length > 0 && definition.slashAliases) {
+				for (const alias of rest) {
+					collector.push(await this.convertCommand(alias));
+				}
+			}
 		}
 
 		return collector;
@@ -410,7 +426,6 @@ export class CommandManager implements Component {
 			let description = option.description;
 			if (typeof description === 'object') description = await this.interface.formatTranslation(description.key, description.repl) || description.backup;
 
-
 			// Handle Special Subcommand & SubcommandGroup OptionTypes
 			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {
 				const subOption: ApplicationCommandOptionsSubCommand | ApplicationCommandOptionsSubCommandGroup = {
@@ -427,7 +442,6 @@ export class CommandManager implements Component {
 
 			// Convert to Discord ApplicationCommandOptionType
 			const resolver = this.resolvers.get(option.type);
-
 
 			const appOption: ApplicationCommandOption<any> = {
 				type: resolver ? resolver.convert : ApplicationCommandOptionTypes.STRING,
@@ -447,6 +461,8 @@ export class CommandManager implements Component {
 				let choices = option.choices;
 				if (typeof choices === 'function') choices = await choices();
 
+				// Temp
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 				(appOption as any).choices = choices;
 			}
 
@@ -488,9 +504,7 @@ export class CommandManager implements Component {
 		for (const option of options) {
 			// Handle SubCommand & SubCommandGroup
 			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {
-				const subOption = option as AnySubCommandOption;
-
-				let names: string | Array<string> = subOption.name;
+				let names: string | Array<string> = option.name;
 				if (!Array.isArray(names)) names = [names];
 				const final = names;
 				const primary = final[0];
@@ -499,10 +513,10 @@ export class CommandManager implements Component {
 				if (!subOptionData) continue;
 
 				// process suppressors
-				const suppressed = await this.executeSuppressors(ctx, subOption);
+				const suppressed = await this.executeSuppressors(ctx, option);
 				if (suppressed) throw new Error(`Suppressor \`${suppressed.name}\` halted execution: ${suppressed.message}`);
 
-				collector = { ...collector, [primary]: await this.processInteractionOptions(ctx, subOption.options, subOptionData.options) };
+				collector = { ...collector, [primary]: await this.processInteractionOptions(ctx, option.options, subOptionData.options) };
 				break;
 			}
 
@@ -636,10 +650,16 @@ export class CommandManager implements Component {
 
 		const value: Array<T> = [];
 		for (const input of inputs) {
-			let result = await this.executeResolver<T>(ctx, option, input);
+			const result = await this.executeResolver<T>(ctx, option, input);
 
 			// Reduce Choose Prompt
-			if (Array.isArray(result) && result.length > 1) {
+			if (Array.isArray(result)) {
+				if (result.length === 1) {
+					// single element array
+					value.push(result[0]);
+					continue;
+				}
+
 				const resolver = this.resolvers.get(option.type) as Resolver<T>;
 
 				const choices: Array<PromptChoice<T>> = [];
@@ -657,13 +677,13 @@ export class CommandManager implements Component {
 					choices.push({ value: item, name: display, match });
 				}
 
-				result = await ctx.choice<T>(choices);
+				const choice = await ctx.choice<T>(choices);
+				value.push(choice);
+
+				continue;
 			}
 
-			// either single element array or reducer failed
-			if (Array.isArray(result)) result = result[0] as any;
-
-			if (result != null) value.push(result as any);
+			if (result != null) value.push(result);
 		}
 
 		let out: T | Array<T> = value;
@@ -676,13 +696,13 @@ export class CommandManager implements Component {
 
 		// handle choices
 		if ('choices' in option) {
-			let choices = option.choices;
+			let choices: CommandOptionChoiceCallable<unknown> = option.choices;
 			if (typeof choices === 'function') choices = await choices();
 
-			const findChoice = (choices as any).find((c: CommandOptionChoice<string | number>) => out && (c.value === out.toString() || c.value === parseInt(out.toString(), 10)));
+			const findChoice = choices.find(c => out && (c.value === out.toString() || c.value === parseInt(out.toString(), 10)));
 			if (!findChoice) {
 				const content = await ctx.formatTranslation('BENTOCORD_PROMPT_CHOICE_OPTION', { option: option.name }) || `Please select one of the following choices for option \`${option.name}\``;
-				out = await ctx.choice<T>(choices.map(c => ({ name: c.name, value: c.value as unknown as T, match: [c.name] })), content);
+				out = await ctx.choice<T>(choices.map(c => ({ name: c.name, value: c.value as T, match: [c.name] })), content);
 			}
 		}
 
@@ -695,9 +715,14 @@ export class CommandManager implements Component {
 
 	@Subscribe(Discord, DiscordEvent.SHARD_READY)
 	@Subscribe(Discord, DiscordEvent.SHARD_RESUME)
-	private async refreshSelfId() {
+	private async handleShardStateChange() {
 		const self = await this.discord.client.getSelf();
 		if (self.id) this.selfId = self.id;
+
+		if (!this.testSynced) {
+			await this.syncTestGuildCommands();
+			this.testSynced = true;
+		}
 	}
 
 	@Subscribe(Discord, DiscordEvent.INTERACTION_CREATE)
@@ -706,7 +731,7 @@ export class CommandManager implements Component {
 		if (interaction.type !== Constants.InteractionTypes.APPLICATION_COMMAND) return;
 		interaction = interaction as CommandInteraction;
 
-		const data = interaction.data as CommandInteraction['data']
+		const data = interaction.data;
 
 		let command = this.findCommand(data.name);
 		if (!command) {
@@ -718,6 +743,8 @@ export class CommandManager implements Component {
 		if (typeof definition.registerSlash === 'boolean' && !definition.registerSlash) return; // slash disabled
 
 		const ctx = new InteractionCommandContext(this, this.promptManager, command, interaction);
+		ctx.alias = data.name;
+
 		try {
 			// process suppressors
 			const suppressed = await this.executeSuppressors(ctx, definition);
@@ -779,6 +806,8 @@ export class CommandManager implements Component {
 
 		// CommandContext
 		const ctx = new MessageCommandContext(this, this.promptManager, command, message);
+		ctx.alias = name;
+
 		try {
 			// process suppressors
 			const suppressed = await this.executeSuppressors(ctx, definition);

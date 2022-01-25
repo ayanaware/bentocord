@@ -17,7 +17,7 @@ export class PrefixCommand implements CommandEntity {
 		aliases: ['prefix'],
 		description: 'Set command prefix',
 		options: [
-			{ type: OptionType.STRING, name: 'prefix', description: 'new prefix', required: false },
+			{ type: OptionType.STRING, name: 'prefix', description: 'new prefix'},
 		],
 
 		suppressors: [SuppressorType.GUILD, SuppressorType.GUILD_ADMIN],

@@ -1,11 +1,11 @@
+import { ApplicationCommandOptionsWithValue } from 'eris';
+
 import type { CommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
 
-import type { AnyValueCommandOption, CommandOptionValue } from './CommandOption';
+import type { AnyValueCommandOption } from './CommandOption';
 
-import { ApplicationCommandOptionsWithValue } from 'eris';
-
-export interface Resolver<T> {
+export interface Resolver<T = unknown> {
 	/** Bentocord Option Type */
 	option: OptionType | string;
 

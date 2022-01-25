@@ -1,4 +1,5 @@
 import { Constants } from 'eris';
+
 import { CommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
 import { CommandOptionBoolean } from '../interfaces/CommandOption';

@@ -5,6 +5,7 @@ import { FSEntityLoader, Plugin, PluginAPI } from '@ayanaware/bento';
 import { BentocordInterface } from './BentocordInterface';
 import { BentocordVariable } from './BentocordVariable';
 import { CommandManager } from './commands/CommandManager';
+import { HelpManager } from './commands/HelpManager';
 import { AdvancedCommand } from './commands/builtin/Advanced';
 import { BentoCommand } from './commands/builtin/Bento';
 import { PingCommand } from './commands/builtin/Ping';
@@ -39,8 +40,9 @@ export class Bentocord implements Plugin {
 
 		await entityManager.addComponents([
 			Discord,
-			CommandManager,
 			PromptManager,
+			CommandManager,
+			HelpManager,
 			ReplyCommand,
 		]);
 
