@@ -27,6 +27,8 @@ import { PaginationOptions } from '../prompt/prompts/PaginationPrompt';
 import type { CommandManager } from './CommandManager';
 import type { Command } from './interfaces/Command';
 
+export type AnyCommandContext = MessageCommandContext | InteractionCommandContext;
+
 export interface ResponseContent {
 	content?: string;
 	embeds?: Array<EmbedOptions>;

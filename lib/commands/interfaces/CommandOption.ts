@@ -17,7 +17,7 @@ export interface CommandOption<T extends OptionType | string> {
 	name: string | Array<string>;
 
 	/** The description of the option */
-	description: string | Translateable;
+	description?: string | Translateable;
 }
 
 export interface CommandOptionValue<T extends OptionType, U = unknown> extends CommandOption<T> {
@@ -48,6 +48,9 @@ export type CommandOptionChoiceCallable<T> = Array<CommandOptionChoice<T>> | (()
 
 // SUBCOMMAND GROUP
 export interface CommandOptionSubCommandGroup extends CommandOption<OptionType.SUB_COMMAND_GROUP> {
+	/** The description of the option */
+	description: string | Translateable;
+
 	/** The subcommands of the option */
 	options: Array<CommandOptionSubCommand>;
 
@@ -57,8 +60,11 @@ export interface CommandOptionSubCommandGroup extends CommandOption<OptionType.S
 
 // SUBCOMMAND
 export interface CommandOptionSubCommand extends CommandOption<OptionType.SUB_COMMAND> {
+	/** The description of the option */
+	description: string | Translateable;
+
 	/** The subcommands of the option */
-	options: Array<AnyValueCommandOption>;
+	options?: Array<AnyValueCommandOption>;
 
 	/** Any suppressors to execute */
 	suppressors?: Array<SuppressorDefinition>;

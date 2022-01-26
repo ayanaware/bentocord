@@ -426,6 +426,9 @@ export class CommandManager implements Component {
 			let description = option.description;
 			if (typeof description === 'object') description = await this.interface.formatTranslation(description.key, description.repl) || description.backup;
 
+			// handle no description
+			if (!description) description = name;
+
 			// Handle Special Subcommand & SubcommandGroup OptionTypes
 			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {
 				const subOption: ApplicationCommandOptionsSubCommand | ApplicationCommandOptionsSubCommandGroup = {
