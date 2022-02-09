@@ -55,6 +55,8 @@ export abstract class CommandContext {
 
 	public member?: Member;
 
+	public message?: Message;
+
 	public readonly interface: BentocordInterface;
 	public readonly discord: Discord;
 
@@ -216,6 +218,8 @@ export abstract class CommandContext {
 	public abstract createResponse(response: string | ResponseContent): Promise<unknown>;
 	public abstract editResponse(response: string | ResponseContent): Promise<unknown>;
 	public abstract deleteResponse(): Promise<void>;
+
+	public abstract deleteExecutionMessage(): Promise<void>;
 }
 
 export class InteractionCommandContext extends CommandContext {
@@ -260,6 +264,7 @@ export class InteractionCommandContext extends CommandContext {
 		await this.interaction.acknowledge();
 
 		const message = await this.interaction.getOriginalMessage();
+		this.message = message;
 		this.responseId = message.id;
 	}
 
@@ -271,6 +276,7 @@ export class InteractionCommandContext extends CommandContext {
 		await this.interaction.createMessage(response);
 
 		const message = await this.interaction.getOriginalMessage();
+		this.message = message;
 		this.responseId = message.id;
 	}
 
@@ -279,13 +285,32 @@ export class InteractionCommandContext extends CommandContext {
 
 		if (typeof response === 'string') response = { content: response };
 
-		return this.interaction.editOriginalMessage(response);
+		if (!this.responseId) {
+			// create a new message
+			const msg = await this.interaction.createFollowup(response);
+			this.responseId = msg.id;
+
+			return msg;
+		}
+
+		return this.interaction.editMessage(this.responseId, response);
 	}
 
 	public async deleteResponse(): Promise<void> {
 		if (!this.interaction.acknowledged) return;
 
-		return this.interaction.deleteOriginalMessage();
+		await this.interaction.deleteMessage(this.responseId);
+		this.responseId = null;
+	}
+
+	public async deleteExecutionMessage(): Promise<void> {
+		if (!this.message) await this.acknowledge();
+
+		try {
+			await this.message.delete();
+		} catch { /* NO-OP */ }
+
+		if (this.message.id === this.responseId) this.responseId = null;
 	}
 }
 
@@ -355,5 +380,11 @@ export class MessageCommandContext extends CommandContext {
 		if (!this.responseId) return;
 
 		return this.channel.deleteMessage(this.responseId);
+	}
+
+	public async deleteExecutionMessage(): Promise<void> {
+		try {
+			await this.message.delete();
+		} catch { /* NO-OP */ }
 	}
 }

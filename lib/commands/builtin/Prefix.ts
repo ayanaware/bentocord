@@ -17,7 +17,7 @@ export class PrefixCommand implements CommandEntity {
 		aliases: ['prefix'],
 		description: 'Set command prefix',
 		options: [
-			{ type: OptionType.STRING, name: 'prefix', description: 'new prefix'},
+			{ type: OptionType.STRING, name: 'prefix', description: 'new prefix', required: false },
 		],
 
 		suppressors: [SuppressorType.GUILD, SuppressorType.GUILD_ADMIN],
@@ -25,17 +25,17 @@ export class PrefixCommand implements CommandEntity {
 		registerSlash: false,
 	};
 
-	@Inject() private readonly interface: BentocordInterface;
+	@Inject() private readonly commandManager: CommandManager;
 
 	public async execute(ctx: CommandContext, options: { prefix?: string }): Promise<unknown> {
 		if (options.prefix) return this.set(ctx, options.prefix);
 
-		const prefix = await this.interface.getPrefix(ctx.guild.id);
+		const prefix = await this.commandManager.getPrefix(ctx.guild.id);
 		return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_PREFIX', { prefix }) || `Current prefix is \`${prefix}\``);
 	}
 
 	private async set(ctx: CommandContext, prefix: string) {
-		await this.interface.setPrefix(ctx.guild.id, prefix);
+		await this.commandManager.setPrefix(ctx.guild.id, prefix);
 
 		return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_PREFIX_SET', { prefix }) || `Prefix has been set to \`${prefix}\``);
 	}

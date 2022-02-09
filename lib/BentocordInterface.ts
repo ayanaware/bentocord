@@ -44,7 +44,7 @@ export class BentocordInterface implements Plugin {
 		return this.prefixes.get(snowflake);
 	}
 
-	public async setPrefix(prefix: string, snowflake: string): Promise<void> {
+	public async setPrefix(snowflake: string, prefix: string): Promise<void> {
 		if (prefix == null) {
 			this.prefixes.delete(snowflake);
 

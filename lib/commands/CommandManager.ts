@@ -280,6 +280,20 @@ export class CommandManager implements Component {
 		}
 	}
 
+	public async getPrefix(snowflake?: string): Promise<string> {
+		let prefix = this.defaultPrefix;
+		if (snowflake) {
+			const customPrefix = await this.interface.getPrefix(snowflake);
+			if (customPrefix) prefix = customPrefix;
+		}
+
+		return prefix;
+	}
+
+	public async setPrefix(snowflake: string, prefix: string): Promise<void> {
+		return this.interface.setPrefix(snowflake, prefix);
+	}
+
 	/**
 	 * Sync Slash Commands with Discord
 	 * @param commandsIn Array of ApplicationCommand
@@ -367,12 +381,14 @@ export class CommandManager implements Component {
 			if (!definition || typeof definition.registerSlash === 'boolean' && !definition.registerSlash) continue;
 
 			const [first, ...rest] = definition.aliases;
-			collector.push(await this.convertCommand(first));
+			const cmd = await this.convertCommand(first);
+			collector.push(cmd);
 
 			// slash top-level alias support
 			if (rest.length > 0 && definition.slashAliases) {
 				for (const alias of rest) {
-					collector.push(await this.convertCommand(alias));
+					const aliasCmd = { ...cmd, name: alias };
+					collector.push(aliasCmd);
 				}
 			}
 		}
@@ -642,7 +658,7 @@ export class CommandManager implements Component {
 		inputs = inputs.filter(i => !!i);
 
 		// Auto prompt missing data on required option
-		if (inputs.length < 1 && (typeof option.required !== 'boolean' || option.required) && 'choices' in option) {
+		if (inputs.length < 1 && (typeof option.required !== 'boolean' || option.required)) {
 			const type = this.getTypePreview(option);
 			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_OPTION', { option: option.name, type }) || `Please provide an input for option \`${option.name}\` of type \`${type}\`:`;
 			const input = await ctx.prompt<string>(content, async (s: string) => s);
