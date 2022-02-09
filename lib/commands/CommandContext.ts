@@ -304,13 +304,12 @@ export class InteractionCommandContext extends CommandContext {
 	}
 
 	public async deleteExecutionMessage(): Promise<void> {
-		if (!this.message) await this.acknowledge();
+		if (!this.interaction.acknowledged) await this.acknowledge();
 
 		try {
-			await this.message.delete();
+			await this.interaction.deleteOriginalMessage();
+			this.responseId = null;
 		} catch { /* NO-OP */ }
-
-		if (this.message.id === this.responseId) this.responseId = null;
 	}
 }
 
