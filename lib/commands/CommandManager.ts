@@ -44,6 +44,8 @@ import { Tokenizer } from './internal/Tokenizer';
 import { Resolvers } from './resolvers';
 import { Suppressors } from './supressors';
 
+const { ApplicationCommandTypes, ApplicationCommandOptionTypes } = Constants;
+
 export interface SyncOptions {
 	/** Should unspecified commands be removed */
 	delete?: boolean | string;
@@ -51,7 +53,25 @@ export interface SyncOptions {
 	guildId?: string;
 }
 
-const { ApplicationCommandTypes, ApplicationCommandOptionTypes } = Constants;
+export enum CommandManagerEvent {
+	/**
+	 * Fired when a command is successfully executed
+	 * @param command Command
+	 * @param context CommandContext
+	 * @param options Options
+	 * @param mili Milliseconds
+	 */
+	COMMAND_SUCCESS = 'commandSuccess',
+
+	/**
+	 * Fired when a command throws an error
+	 * @param command Command
+	 * @param context CommandContext
+	 * @param options Options
+	 * @param error Error
+	 */
+	COMMAND_FAILURE = 'commandFailure',
+}
 
 const log = Logger.get(null);
 export class CommandManager implements Component {
@@ -269,9 +289,17 @@ export class CommandManager implements Component {
 		try {
 			// TODO: Use Typescript metadata to ensure .execute() and options match
 
+			const start = process.hrtime();
 			await command.execute(ctx, options);
-			log.debug(`Command "${primary}" executed by "${ctx.author.id}"`);
+			const end = process.hrtime(start);
+
+			const nano = end[0] * 1e9 + end[1];
+			const mili = nano / 1e6;
+
+			this.api.emit(CommandManagerEvent.COMMAND_SUCCESS, command, ctx, options, mili);
+			log.debug(`Command "${primary}" executed by "${ctx.author.id}", took ${mili}ms`);
 		} catch (e) {
+			this.api.emit(CommandManagerEvent.COMMAND_FAILURE, command, ctx, options, e);
 			log.error(`Command ${primary}.execute() error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
