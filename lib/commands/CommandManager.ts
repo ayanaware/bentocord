@@ -686,7 +686,7 @@ export class CommandManager implements Component {
 		inputs = inputs.filter(i => !!i);
 
 		// Auto prompt missing data on required option
-		if (inputs.length < 1 && (typeof option.required !== 'boolean' || option.required)) {
+		if (inputs.length < 1 && (typeof option.required !== 'boolean' || option.required) && !('choices' in option)) {
 			const type = this.getTypePreview(option);
 			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_OPTION', { option: option.name, type }) || `Please provide an input for option \`${option.name}\` of type \`${type}\`:`;
 			const input = await ctx.prompt<string>(content, async (s: string) => s);
