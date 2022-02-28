@@ -812,7 +812,7 @@ export class CommandManager implements Component {
 	}
 
 	@Subscribe(Discord, DiscordEvent.MESSAGE_CREATE)
-	private async handleMessageCreate(message: Message) {
+	public async handleMessageCreate(message: Message) {
 		// Deny messages without content, channel, or author
 		if (!message.content || !message.channel || !message.author) return;
 
@@ -844,7 +844,10 @@ export class CommandManager implements Component {
 		const args = matches.groups.args;
 
 		const command = this.findCommand(name);
-		if (!command) return; // command not found
+		if (!command) {
+			if (message.guildID && !message.author.bot) return this.interface.resolveAlias(name, args, message);
+			return; // command not found
+		}
 
 		const definition = command.definition;
 

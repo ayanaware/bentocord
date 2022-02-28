@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Plugin, PluginAPI, Variable } from '@ayanaware/bento';
 
+import { Message } from 'eris';
+
 import { BentocordVariable } from './BentocordVariable';
 
 export interface MessageSnowflakes {
@@ -121,6 +123,10 @@ export class BentocordInterface implements Plugin {
 			}
 		}
 
+		return null;
+	}
+
+	public async resolveAlias(name: string, args: string, message: Message): Promise<void> {
 		return null;
 	}
 }
