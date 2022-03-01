@@ -68,18 +68,32 @@ export class BentocordInterface implements Plugin {
 		return null;
 	}
 
-	public async getPermission(permission: string, scope?: string, guildId?: string): Promise<boolean> {
+	/**
+	 * Get the permission for a given snowflake.
+	 * @param permission The permission to check.
+	 * @param scope The scope to check.
+	 * @param snowflake The snowflake to check (usually guildId or userId)
+	 * @returns Whether the permission is allowed.
+	 */
+	public async getPermission(permission: string, scope?: string, snowflake?: string): Promise<boolean> {
 		let key = `${permission}`;
 		if (scope) key = `${scope}.${key}`;
-		if (guildId) key = `${guildId}.${key}`;
+		if (snowflake) key = `${snowflake}.${key}`;
 
 		return this.permissions.get(key) || null;
 	}
 
-	public async setPermission(permission: string, value: boolean, scope?: string, guildId?: string): Promise<void> {
+	/**
+	 * Set the permission for a given snowflake.
+	 * @param permission The permission to set.
+	 * @param value Whether the permission is allowed.
+	 * @param scope The scope to set.
+	 * @param snowflake The snowflake to set (usually guildId or userId)
+	 */
+	public async setPermission(permission: string, value: boolean, scope?: string, snowflake?: string): Promise<void> {
 		let key = `${permission}`;
 		if (scope) key = `${scope}.${key}`;
-		if (guildId) key = `${guildId}.${key}`;
+		if (snowflake) key = `${snowflake}.${key}`;
 
 		if (value == null) {
 			this.permissions.delete(key);
@@ -100,7 +114,7 @@ export class BentocordInterface implements Plugin {
 		if (snowflakes.userId && await this.isOwner(snowflakes.userId)) return [true, 'owner'];
 
 		// Global User Check
-		const userCheck = await this.getPermission(permission, snowflakes.userId);
+		const userCheck = await this.getPermission(permission, null, snowflakes.userId);
 		if (typeof userCheck === 'boolean') return [userCheck, 'user'];
 
 		// Guild Checks

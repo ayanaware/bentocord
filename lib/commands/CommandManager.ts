@@ -543,7 +543,7 @@ export class CommandManager implements Component {
 		return typeBuild;
 	}
 
-	private async checkCommandPermission(ctx: CommandContext, path: Array<string>, all = false): Promise<boolean> {
+	private async checkPermission(ctx: CommandContext, path: Array<string>): Promise<boolean> {
 		const permCtx: MessageSnowflakes = { userId: ctx.authorId, channelId: ctx.channelId };
 		if (ctx.guild) {
 			permCtx.guildId = ctx.guildId;
@@ -559,7 +559,7 @@ export class CommandManager implements Component {
 			if (check) return true;
 
 			// explicit deny
-			const content = await ctx.formatTranslation('BENTOCORD_PERMISSION_DENIED', { permission, where }) || `Permission \`${permission}\` has been denied on \`${where}\`.`;
+			const content = await ctx.formatTranslation('BENTOCORD_PERMISSION_DENIED', { permission, where }) || `Permission \`${permission}\` has been denied on the \`${where}\` level.`;
 			await ctx.createResponse(content);
 
 			return false;
@@ -592,7 +592,7 @@ export class CommandManager implements Component {
 
 				// check permission
 				const subPath = [...path, primary];
-				if (!await this.checkCommandPermission(ctx, subPath)) throw NON_ERROR_HALT;
+				if (!await this.checkPermission(ctx, subPath)) throw NON_ERROR_HALT;
 
 				// process suppressors
 				const suppressed = await this.executeSuppressors(ctx, option);
@@ -651,7 +651,7 @@ export class CommandManager implements Component {
 
 				// check permission
 				const subPath = [...path, primary];
-				if (!await this.checkCommandPermission(ctx, subPath)) throw NON_ERROR_HALT;
+				if (!await this.checkPermission(ctx, subPath)) throw NON_ERROR_HALT;
 
 				// process suppressors
 				const suppressed = await this.executeSuppressors(ctx, subOption);
@@ -718,7 +718,7 @@ export class CommandManager implements Component {
 
 			// check permission
 			const subPath = [...path, primary];
-			if (!await this.checkCommandPermission(ctx, subPath)) throw NON_ERROR_HALT;
+			if (!await this.checkPermission(ctx, subPath)) throw NON_ERROR_HALT;
 
 			if (subOption) collector = { ...collector, [useSub]: await this.processTextOptions(ctx, subOption.options, output, index, subPath) };
 		}
@@ -840,10 +840,13 @@ export class CommandManager implements Component {
 		const ctx = new InteractionCommandContext(this, this.promptManager, command, interaction);
 		ctx.alias = data.name;
 
+		// all permission check
+		if (!await this.checkPermission(ctx, ['all'])) return;
+
 		try {
 			// Check permissions
 			const primary = definition.aliases[0];
-			if (!await this.checkCommandPermission(ctx, [primary])) return;
+			if (!await this.checkPermission(ctx, [primary])) return;
 
 			// process suppressors
 			const suppressed = await this.executeSuppressors(ctx, definition);
@@ -914,10 +917,13 @@ export class CommandManager implements Component {
 		const ctx = new MessageCommandContext(this, this.promptManager, command, message);
 		ctx.alias = name;
 
+		// all permission check
+		if (!await this.checkPermission(ctx, ['all'])) return;
+
 		try {
 			// Check permissions
 			const primary = definition.aliases[0];
-			if (!await this.checkCommandPermission(ctx, [primary])) return;
+			if (!await this.checkPermission(ctx, [primary])) return;
 
 			// process suppressors
 			const suppressed = await this.executeSuppressors(ctx, definition);
