@@ -68,17 +68,17 @@ export class BentocordInterface implements Plugin {
 		return null;
 	}
 
-	public async getPermission(permission: string, snowflake?: string, guildId?: string): Promise<boolean> {
+	public async getPermission(permission: string, scope?: string, guildId?: string): Promise<boolean> {
 		let key = `${permission}`;
-		if (snowflake) key = `${snowflake}.${key}`;
+		if (scope) key = `${scope}.${key}`;
 		if (guildId) key = `${guildId}.${key}`;
 
 		return this.permissions.get(key) || null;
 	}
 
-	public async setPermission(permission: string, value: boolean, snowflake?: string, guildId?: string): Promise<void> {
+	public async setPermission(permission: string, value: boolean, scope?: string, guildId?: string): Promise<void> {
 		let key = `${permission}`;
-		if (snowflake) key = `${snowflake}.${key}`;
+		if (scope) key = `${scope}.${key}`;
 		if (guildId) key = `${guildId}.${key}`;
 
 		if (value == null) {
@@ -90,40 +90,65 @@ export class BentocordInterface implements Plugin {
 		this.permissions.set(key, value);
 	}
 
-	public async resolvePermission(permission: string, snowflakes?: MessageSnowflakes): Promise<boolean> {
-		if (snowflakes.userId && await this.isOwner(snowflakes.userId)) return true;
+	/**
+	 * Checks permission for a given context (guild, channel, user)
+	 * @param permission Permission to check
+	 * @param snowflakes Snowflakes of the context
+	 * @returns Tuple with [state, where] boolean if explicitly set, otherwise null
+	 */
+	public async checkPermission(permission: string, snowflakes?: MessageSnowflakes): Promise<[boolean, string]> {
+		if (snowflakes.userId && await this.isOwner(snowflakes.userId)) return [true, 'owner'];
 
 		// Global User Check
 		const userCheck = await this.getPermission(permission, snowflakes.userId);
-		if (typeof userCheck === 'boolean') return userCheck;
+		if (typeof userCheck === 'boolean') return [userCheck, 'user'];
 
 		// Guild Checks
 		if (snowflakes.guildId) {
-			const checks: Array<Array<string | Array<string>>> = [
-				[snowflakes.userId, snowflakes.guildId], // User in Guild
-				[snowflakes.channelId, snowflakes.guildId], // Channel in Guild
-				[snowflakes.roleIds, snowflakes.guildId], // RoleId in Guild
-				[null, snowflakes.guildId], // Guild Wide
-			];
+			const guildId = snowflakes.guildId;
+			const checks: Record<string, Array<string | Array<string>>> = {
+				// Advanced Permissions
+				memberChannel: [snowflakes.userId, snowflakes.channelId], // Member (UserId) in Channel
+				roleChannel: [snowflakes.roleIds, snowflakes.channelId], // Role in Channel
 
-			for (const check of checks) {
-				if (typeof check[1] !== 'string') continue;
+				// General Permissions
+				member: [snowflakes.userId], // Member (UserId)
+				role: [snowflakes.roleIds], // RoleId
+				channel: [snowflakes.channelId], // ChannelId
+				guild: [null], // Guild Wide
+			};
 
-				// Handle roleIds
-				if (typeof check[0] === 'object' && Array.isArray(check[0])) {
-					for (const roleId of check[0]) {
-						const v = await this.getPermission(permission, roleId, check[1]);
-						if (typeof v === 'boolean') return v;
+			// Some Explications of this insanity:
+			// - We loop over each check, and lookup the permission value.
+			// - In most cases `scope` is just the direct snowflake (e.g. userId, roleId, channelId)
+			// - However for advanced permissions, we append the remaining snowflakes (e.g. userId.channelId)
+			// This results in a ordered list of checks of decreasing specificity.
+			// Currently our checks, in order, are: User in Channel, Role in Channel, User, Role, Channel, Guild
+			for (const [name, check] of Object.entries(checks)) {
+				const [first, ...rest] = check;
+
+				// handle roleIds Array
+				if (Array.isArray(first)) {
+					for (const roleId of first) {
+						let roleScope = roleId;
+						if (rest.length) roleScope += `.${rest.join('.')}`;
+
+						const v = await this.getPermission(permission, roleScope, guildId);
+						if (typeof v === 'boolean') return [v, name];
 					}
+
 					continue;
 				}
 
-				const value = await this.getPermission(permission, check[0], check[1]);
-				if (typeof value === 'boolean') return value;
+				let scope = first;
+				if (rest.length) scope += `.${rest.join('.')}`;
+
+				const value = await this.getPermission(permission, scope, guildId);
+				if (typeof value === 'boolean') return [value, name];
 			}
 		}
 
-		return null;
+		return [null, null];
 	}
 
 	public async resolveAlias(name: string, args: string, message: Message): Promise<void> {

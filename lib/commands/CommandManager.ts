@@ -22,7 +22,7 @@ import {
 	Message,
 } from 'eris';
 
-import { BentocordInterface } from '../BentocordInterface';
+import { BentocordInterface, MessageSnowflakes } from '../BentocordInterface';
 import { BentocordVariable } from '../BentocordVariable';
 import { Discord } from '../discord/Discord';
 import { DiscordEvent } from '../discord/constants/DiscordEvent';
@@ -72,6 +72,11 @@ export enum CommandManagerEvent {
 	 */
 	COMMAND_FAILURE = 'commandFailure',
 }
+
+/**
+ * Used to "bubble up" events as a Command executes, when it isn't really an "error"
+ */
+const NON_ERROR_HALT = '__NON_ERROR_HALT__';
 
 const log = Logger.get(null);
 export class CommandManager implements Component {
@@ -538,11 +543,37 @@ export class CommandManager implements Component {
 		return typeBuild;
 	}
 
+	private async checkCommandPermission(ctx: CommandContext, path: Array<string>, all = false): Promise<boolean> {
+		const permCtx: MessageSnowflakes = { userId: ctx.authorId, channelId: ctx.channelId };
+		if (ctx.guild) {
+			permCtx.guildId = ctx.guildId;
+			permCtx.roleIds = ctx.member.roles;
+		}
+
+		const permission = path.join('.');
+		const [check, where] = await this.interface.checkPermission(permission, permCtx);
+
+		// handle explicit allow/deny
+		if (typeof check === 'boolean') {
+			// explicit allow
+			if (check) return true;
+
+			// explicit deny
+			const content = await ctx.formatTranslation('BENTOCORD_PERMISSION_DENIED', { where }) || `You do not have permission to use this command, Denied on \`${where}\`.`;
+			await ctx.createResponse(content);
+
+			return false;
+		}
+
+		// TODO: Add default permission lookup, used in the case of no explicit allow/deny
+		return true;
+	}
+
 	public async fufillInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, data: CommandInteraction['data']): Promise<Record<string, unknown>> {
 		return this.processInteractionOptions(ctx, options, data.options);
 	}
 
-	private async processInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, optionData: Array<InteractionDataOptions>) {
+	private async processInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, optionData: Array<InteractionDataOptions>, path: Array<string> = []) {
 		let collector: Record<string, unknown> = {};
 
 		if (!options) options = [];
@@ -556,6 +587,10 @@ export class CommandManager implements Component {
 				const final = names;
 				const primary = final[0];
 
+				// check permission
+				const subPath = [...path, primary];
+				if (!await this.checkCommandPermission(ctx, subPath)) throw NON_ERROR_HALT;
+
 				const subOptionData = optionData.find(d => final.some(f => f.toLocaleLowerCase() === d.name.toLocaleLowerCase())) as InteractionDataOptionsSubCommand | InteractionDataOptionsSubCommandGroup;
 				if (!subOptionData) continue;
 
@@ -563,7 +598,7 @@ export class CommandManager implements Component {
 				const suppressed = await this.executeSuppressors(ctx, option);
 				if (suppressed) throw new Error(`Suppressor \`${suppressed.name}\` halted execution: ${suppressed.message}`);
 
-				collector = { ...collector, [primary]: await this.processInteractionOptions(ctx, option.options, subOptionData.options) };
+				collector = { ...collector, [primary]: await this.processInteractionOptions(ctx, option.options, subOptionData.options, subPath) };
 				break;
 			}
 
@@ -590,7 +625,7 @@ export class CommandManager implements Component {
 		return this.processTextOptions(ctx, options, output);
 	}
 
-	private async processTextOptions(ctx: CommandContext, options: Array<AnyCommandOption>, output: ParserOutput, index = 0): Promise<Record<string, unknown>> {
+	private async processTextOptions(ctx: CommandContext, options: Array<AnyCommandOption>, output: ParserOutput, index = 0, path: Array<string> = []): Promise<Record<string, unknown>> {
 		let collector: Record<string, unknown> = {};
 
 		if (!options) options = [];
@@ -603,6 +638,10 @@ export class CommandManager implements Component {
 				if (!Array.isArray(names)) names = [names];
 				const final = names;
 				const primary = final[0];
+
+				// check permission
+				const subPath = [...path, primary];
+				if (!await this.checkCommandPermission(ctx, subPath)) throw NON_ERROR_HALT;
 
 				// track this suboption for prompt
 				promptSubs.push(subOption);
@@ -619,7 +658,7 @@ export class CommandManager implements Component {
 				if (suppressed) throw new Error(`Suppressor \`${suppressed.name}\` halted execution: ${suppressed.message}`);
 
 				// process nested option
-				collector = { ...collector, [primary]: await this.processTextOptions(ctx, subOption.options, output, index) };
+				collector = { ...collector, [primary]: await this.processTextOptions(ctx, subOption.options, output, index, subPath) };
 				promptSubs = []; // collected successfully
 				break;
 			}
@@ -793,6 +832,10 @@ export class CommandManager implements Component {
 		ctx.alias = data.name;
 
 		try {
+			// Check permissions
+			const primary = definition.aliases[0];
+			if (!await this.checkCommandPermission(ctx, [primary])) return;
+
 			// process suppressors
 			const suppressed = await this.executeSuppressors(ctx, definition);
 			if (suppressed) {
@@ -801,8 +844,12 @@ export class CommandManager implements Component {
 			}
 
 			const options = await this.fufillInteractionOptions(ctx, definition.options, data);
+
 			return this.executeCommand(command, ctx, options);
 		} catch (e) {
+			// halt requested (this is lazy, I'll fix it later, probably)
+			if (e === NON_ERROR_HALT) return;
+
 			log.error(`Command "${definition.aliases[0]}" option error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
@@ -859,6 +906,10 @@ export class CommandManager implements Component {
 		ctx.alias = name;
 
 		try {
+			// Check permissions
+			const primary = definition.aliases[0];
+			if (!await this.checkCommandPermission(ctx, [primary])) return;
+
 			// process suppressors
 			const suppressed = await this.executeSuppressors(ctx, definition);
 			if (suppressed) {
@@ -869,6 +920,9 @@ export class CommandManager implements Component {
 			const options = await this.fufillTextOptions(ctx, definition.options, args);
 			return this.executeCommand(command, ctx, options);
 		} catch (e) {
+			// halt requested (this is lazy, I'll fix it later, probably)
+			if (e === NON_ERROR_HALT) return;
+
 			log.error(`Command "${definition.aliases[0]}" error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
