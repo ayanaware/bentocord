@@ -569,8 +569,8 @@ export class CommandManager implements Component {
 		return true;
 	}
 
-	public async fufillInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, data: CommandInteraction['data']): Promise<Record<string, unknown>> {
-		return this.processInteractionOptions(ctx, options, data.options);
+	public async fufillInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, data: CommandInteraction['data'], path: Array<string> = []): Promise<Record<string, unknown>> {
+		return this.processInteractionOptions(ctx, options, data.options, path);
 	}
 
 	private async processInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, optionData: Array<InteractionDataOptions>, path: Array<string> = []) {
@@ -616,13 +616,13 @@ export class CommandManager implements Component {
 	 * @param options Array of CommandOption
 	 * @param input User input
 	 */
-	public async fufillTextOptions(ctx: CommandContext, options: Array<AnyCommandOption>, input: string): Promise<Record<string, unknown>> {
+	public async fufillTextOptions(ctx: CommandContext, options: Array<AnyCommandOption>, input: string, path: Array<string> = []): Promise<Record<string, unknown>> {
 		const tokens = new Tokenizer(input).tokenize();
 
 		// TODO: Build allowedOptions
 		const output = new Parser(tokens).parse();
 
-		return this.processTextOptions(ctx, options, output);
+		return this.processTextOptions(ctx, options, output, 0, path);
 	}
 
 	private async processTextOptions(ctx: CommandContext, options: Array<AnyCommandOption>, output: ParserOutput, index = 0, path: Array<string> = []): Promise<Record<string, unknown>> {
@@ -711,7 +711,16 @@ export class CommandManager implements Component {
 				return name.some(n => n.toLocaleLowerCase() === useSub.toLocaleLowerCase());
 			}) as AnySubCommandOption;
 
-			if (subOption) collector = { ...collector, [useSub]: await this.processTextOptions(ctx, subOption.options, output, index) };
+			let names = subOption.name;
+			if (!Array.isArray(names)) names = [names];
+			const final = names;
+			const primary = final[0];
+
+			// check permission
+			const subPath = [...path, primary];
+			if (!await this.checkCommandPermission(ctx, subPath)) throw NON_ERROR_HALT;
+
+			if (subOption) collector = { ...collector, [useSub]: await this.processTextOptions(ctx, subOption.options, output, index, subPath) };
 		}
 
 		return collector;
@@ -843,7 +852,7 @@ export class CommandManager implements Component {
 				return ctx.createResponse(message);
 			}
 
-			const options = await this.fufillInteractionOptions(ctx, definition.options, data);
+			const options = await this.fufillInteractionOptions(ctx, definition.options, data, [primary]);
 
 			return this.executeCommand(command, ctx, options);
 		} catch (e) {
@@ -917,7 +926,7 @@ export class CommandManager implements Component {
 				return ctx.createResponse(suppressedMessage);
 			}
 
-			const options = await this.fufillTextOptions(ctx, definition.options, args);
+			const options = await this.fufillTextOptions(ctx, definition.options, args, [primary]);
 			return this.executeCommand(command, ctx, options);
 		} catch (e) {
 			// halt requested (this is lazy, I'll fix it later, probably)
