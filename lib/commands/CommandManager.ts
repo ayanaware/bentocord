@@ -559,7 +559,7 @@ export class CommandManager implements Component {
 			if (check) return true;
 
 			// explicit deny
-			const content = await ctx.formatTranslation('BENTOCORD_PERMISSION_DENIED', { where }) || `Permission \`${permission}\` has been denied on \`${where}\`.`;
+			const content = await ctx.formatTranslation('BENTOCORD_PERMISSION_DENIED', { permission, where }) || `Permission \`${permission}\` has been denied on \`${where}\`.`;
 			await ctx.createResponse(content);
 
 			return false;
