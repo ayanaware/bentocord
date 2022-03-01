@@ -76,7 +76,7 @@ export enum CommandManagerEvent {
 /**
  * Used to "bubble up" events as a Command executes, when it isn't really an "error"
  */
-const NON_ERROR_HALT = '__NON_ERROR_HALT__';
+export const NON_ERROR_HALT = '__NON_ERROR_HALT__';
 
 const log = Logger.get(null);
 export class CommandManager implements Component {
@@ -587,12 +587,12 @@ export class CommandManager implements Component {
 				const final = names;
 				const primary = final[0];
 
+				const subOptionData = optionData.find(d => final.some(f => f.toLocaleLowerCase() === d.name.toLocaleLowerCase())) as InteractionDataOptionsSubCommand | InteractionDataOptionsSubCommandGroup;
+				if (!subOptionData) continue;
+
 				// check permission
 				const subPath = [...path, primary];
 				if (!await this.checkCommandPermission(ctx, subPath)) throw NON_ERROR_HALT;
-
-				const subOptionData = optionData.find(d => final.some(f => f.toLocaleLowerCase() === d.name.toLocaleLowerCase())) as InteractionDataOptionsSubCommand | InteractionDataOptionsSubCommandGroup;
-				if (!subOptionData) continue;
 
 				// process suppressors
 				const suppressed = await this.executeSuppressors(ctx, option);
@@ -639,10 +639,6 @@ export class CommandManager implements Component {
 				const final = names;
 				const primary = final[0];
 
-				// check permission
-				const subPath = [...path, primary];
-				if (!await this.checkCommandPermission(ctx, subPath)) throw NON_ERROR_HALT;
-
 				// track this suboption for prompt
 				promptSubs.push(subOption);
 
@@ -652,6 +648,10 @@ export class CommandManager implements Component {
 				if (!phrase || names.every(n => n.toLocaleLowerCase() !== phrase.value.toLocaleLowerCase())) continue;
 
 				index++;
+
+				// check permission
+				const subPath = [...path, primary];
+				if (!await this.checkCommandPermission(ctx, subPath)) throw NON_ERROR_HALT;
 
 				// process suppressors
 				const suppressed = await this.executeSuppressors(ctx, subOption);
@@ -859,7 +859,7 @@ export class CommandManager implements Component {
 	}
 
 	@Subscribe(Discord, DiscordEvent.MESSAGE_CREATE)
-	public async handleMessageCreate(message: Message) {
+	private async handleMessageCreate(message: Message) {
 		// Deny messages without content, channel, or author
 		if (!message.content || !message.channel || !message.author) return;
 
