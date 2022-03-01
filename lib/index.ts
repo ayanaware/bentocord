@@ -26,6 +26,8 @@ export * from './discord/constants/DiscordEvent';
 export * from './discord/constants/DiscordPermission';
 
 export * from './interfaces/Translateable';
+export * from './interfaces/MessageContext';
+export * from './interfaces/PermissionScope';
 
 export * from './prompt/Prompt';
 export * from './prompt/PromptManager';

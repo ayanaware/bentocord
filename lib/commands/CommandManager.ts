@@ -22,10 +22,11 @@ import {
 	Message,
 } from 'eris';
 
-import { BentocordInterface, MessageSnowflakes } from '../BentocordInterface';
+import { BentocordInterface } from '../BentocordInterface';
 import { BentocordVariable } from '../BentocordVariable';
 import { Discord } from '../discord/Discord';
 import { DiscordEvent } from '../discord/constants/DiscordEvent';
+import { MessageContext } from '../interfaces/MessageContext';
 import { PromptManager } from '../prompt/PromptManager';
 import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
 
@@ -544,7 +545,7 @@ export class CommandManager implements Component {
 	}
 
 	private async checkPermission(ctx: CommandContext, path: Array<string>): Promise<boolean> {
-		const permCtx: MessageSnowflakes = { userId: ctx.authorId, channelId: ctx.channelId };
+		const permCtx: MessageContext = { userId: ctx.authorId, channelId: ctx.channelId };
 		if (ctx.guild) {
 			permCtx.guildId = ctx.guildId;
 			permCtx.roleIds = ctx.member.roles;

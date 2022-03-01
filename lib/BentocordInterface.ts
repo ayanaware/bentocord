@@ -4,13 +4,8 @@ import { Plugin, PluginAPI, Variable } from '@ayanaware/bento';
 import { Message } from 'eris';
 
 import { BentocordVariable } from './BentocordVariable';
-
-export interface MessageSnowflakes {
-	userId: string;
-	channelId: string;
-	guildId?: string;
-	roleIds?: Array<string>;
-}
+import { MessageContext } from './interfaces/MessageContext';
+import { PermissionScope, PermissionScopeType } from './interfaces/PermissionScope';
 
 export interface ShardData {
 	/** shardIds, currently MUST be sorted & consecutive. 0, 1, 2. NOT 0, 2, 42 */
@@ -71,13 +66,13 @@ export class BentocordInterface implements Plugin {
 	/**
 	 * Get the permission for a given snowflake.
 	 * @param permission The permission to check.
-	 * @param scope The scope to check.
 	 * @param snowflake The snowflake to check (usually guildId or userId)
+	 * @param scope The scope to check.
 	 * @returns Whether the permission is allowed.
 	 */
-	public async getPermission(permission: string, scope?: string, snowflake?: string): Promise<boolean> {
+	public async getPermission(permission: string, snowflake?: string, scope?: PermissionScope): Promise<boolean> {
 		let key = `${permission}`;
-		if (scope) key = `${scope}.${key}`;
+		if (scope) key = `${scope.scope}.${key}`;
 		if (snowflake) key = `${snowflake}.${key}`;
 
 		return this.permissions.get(key) || null;
@@ -87,12 +82,12 @@ export class BentocordInterface implements Plugin {
 	 * Set the permission for a given snowflake.
 	 * @param permission The permission to set.
 	 * @param value Whether the permission is allowed.
-	 * @param scope The scope to set.
 	 * @param snowflake The snowflake to set (usually guildId or userId)
+	 * @param scope The scope to set.
 	 */
-	public async setPermission(permission: string, value: boolean, scope?: string, snowflake?: string): Promise<void> {
+	public async setPermission(permission: string, value: boolean, snowflake?: string, scope?: PermissionScope): Promise<void> {
 		let key = `${permission}`;
-		if (scope) key = `${scope}.${key}`;
+		if (scope) key = `${scope.scope}.${key}`;
 		if (snowflake) key = `${snowflake}.${key}`;
 
 		if (value == null) {
@@ -110,26 +105,29 @@ export class BentocordInterface implements Plugin {
 	 * @param snowflakes Snowflakes of the context
 	 * @returns Tuple with [state, where] boolean if explicitly set, otherwise null
 	 */
-	public async checkPermission(permission: string, snowflakes?: MessageSnowflakes): Promise<[boolean, string]> {
+	public async checkPermission(permission: string, snowflakes?: MessageContext): Promise<[boolean, string]> {
 		if (snowflakes.userId && await this.isOwner(snowflakes.userId)) return [true, 'owner'];
 
+		// Global Check
+		const globalCheck = await this.getPermission(permission);
+		if (typeof globalCheck === 'boolean') return [globalCheck, 'global'];
+
 		// Global User Check
-		const userCheck = await this.getPermission(permission, null, snowflakes.userId);
+		const userCheck = await this.getPermission(permission, snowflakes.userId);
 		if (typeof userCheck === 'boolean') return [userCheck, 'user'];
 
 		// Guild Checks
 		if (snowflakes.guildId) {
 			const guildId = snowflakes.guildId;
-			const checks: Record<string, Array<string | Array<string>>> = {
+			const checks: Record<PermissionScopeType, Array<string | Array<string>>> = {
 				// Advanced Permissions
-				memberChannel: [snowflakes.userId, snowflakes.channelId], // Member (UserId) in Channel
-				roleChannel: [snowflakes.roleIds, snowflakes.channelId], // Role in Channel
+				[PermissionScopeType.MEMBER_CHANNEL]: [snowflakes.userId, snowflakes.channelId], // Member (UserId) in Channel
+				[PermissionScopeType.ROLE_CHANNEL]: [snowflakes.roleIds, snowflakes.channelId], // Role in Channel
 
 				// General Permissions
-				member: [snowflakes.userId], // Member (UserId)
-				role: [snowflakes.roleIds], // RoleId
-				channel: [snowflakes.channelId], // ChannelId
-				guild: [null], // Guild Wide
+				[PermissionScopeType.MEMBER]: [snowflakes.userId], // Member (UserId)
+				[PermissionScopeType.ROLE]: [snowflakes.roleIds], // RoleId
+				[PermissionScopeType.CHANNEL]: [snowflakes.channelId], // ChannelId
 			};
 
 			// Some Explications of this insanity:
@@ -138,7 +136,7 @@ export class BentocordInterface implements Plugin {
 			// - However for advanced permissions, we append the remaining snowflakes (e.g. userId.channelId)
 			// This results in a ordered list of checks of decreasing specificity.
 			// Currently our checks, in order, are: User in Channel, Role in Channel, User, Role, Channel, Guild
-			for (const [name, check] of Object.entries(checks)) {
+			for (const [type, check] of Object.entries(checks) as Array<[PermissionScopeType, Array<string | Array<string>>]>) {
 				const [first, ...rest] = check;
 
 				// handle roleIds Array
@@ -147,8 +145,8 @@ export class BentocordInterface implements Plugin {
 						let roleScope = roleId;
 						if (rest.length) roleScope += `.${rest.join('.')}`;
 
-						const v = await this.getPermission(permission, roleScope, guildId);
-						if (typeof v === 'boolean') return [v, name];
+						const v = await this.getPermission(permission, guildId, { type, scope: roleScope });
+						if (typeof v === 'boolean') return [v, type];
 					}
 
 					continue;
@@ -157,9 +155,13 @@ export class BentocordInterface implements Plugin {
 				let scope = first;
 				if (rest.length) scope += `.${rest.join('.')}`;
 
-				const value = await this.getPermission(permission, scope, guildId);
-				if (typeof value === 'boolean') return [value, name];
+				const value = await this.getPermission(permission, guildId, { type, scope });
+				if (typeof value === 'boolean') return [value, type];
 			}
+
+			// Guild Wide Check
+			const guildCheck = await this.getPermission(permission, guildId);
+			if (typeof guildCheck === 'boolean') return [guildCheck, 'guild'];
 		}
 
 		return [null, null];
