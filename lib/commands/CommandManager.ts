@@ -327,8 +327,8 @@ export class CommandManager implements Component {
 
 			let path: Array<string> = [];
 			// walk options
-			const walkOptions = (options: Array<AnyCommandOption>) => {
-				for (const option of options) {
+			const walkOptions = (options: Array<AnyCommandOption> = []) => {
+				for (const option of (options ?? [])) {
 					if (option.type !== OptionType.SUB_COMMAND && option.type !== OptionType.SUB_COMMAND_GROUP) continue;
 
 					const primary = this.getSubCommandNames(option)[0];
