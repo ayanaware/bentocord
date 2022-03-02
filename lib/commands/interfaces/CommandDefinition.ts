@@ -15,6 +15,12 @@ export interface CommandDefinition {
 	/** Command Options */
 	options?: Array<AnyCommandOption>;
 
+	/** Use custom permission name, instead of the first element of aliases */
+	permissionName?: string;
+
+	/** Should this permission be granted, and by extension, the command be executable by default (Default is true) */
+	permissionDefault?: boolean;
+
 	/** Discord Permissions this command requires */
 	selfPermissions?: Array<DiscordPermission>;
 

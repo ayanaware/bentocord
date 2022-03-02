@@ -31,6 +31,7 @@ import { PromptManager } from '../prompt/PromptManager';
 import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
 
 import { CommandContext, InteractionCommandContext, MessageCommandContext } from './CommandContext';
+import { CommandManagerEvent } from './constants/CommandManagerEvent';
 import { OptionType } from './constants/OptionType';
 import { SuppressorType } from './constants/SuppressorType';
 import type { Command } from './interfaces/Command';
@@ -54,24 +55,15 @@ export interface SyncOptions {
 	guildId?: string;
 }
 
-export enum CommandManagerEvent {
-	/**
-	 * Fired when a command is successfully executed
-	 * @param command Command
-	 * @param context CommandContext
-	 * @param options Options
-	 * @param mili Milliseconds
-	 */
-	COMMAND_SUCCESS = 'commandSuccess',
+export interface CommandPermissionDetails {
+	/** Default state of this permission */
+	default: boolean;
 
-	/**
-	 * Fired when a command throws an error
-	 * @param command Command
-	 * @param context CommandContext
-	 * @param options Options
-	 * @param error Error
-	 */
-	COMMAND_FAILURE = 'commandFailure',
+	/** Command which the permission comes from */
+	command: Command;
+
+	/** Subcommand path for this permission */
+	path?: Array<string>;
 }
 
 /**
@@ -94,6 +86,7 @@ export class CommandManager implements Component {
 
 	private readonly commands: Map<string, Command> = new Map();
 	private readonly aliases: Map<string, string> = new Map();
+	public readonly permissions: Map<string, CommandPermissionDetails> = new Map();
 
 	private readonly resolvers: Map<OptionType | string, Resolver<unknown>> = new Map();
 	private readonly suppressors: Map<SuppressorType | string, Suppressor> = new Map();
@@ -231,6 +224,9 @@ export class CommandManager implements Component {
 
 			this.aliases.set(alias, primary);
 		}
+
+		// rebuild permissions
+		this.rebuildPermissions();
 	}
 
 	/**
@@ -251,6 +247,9 @@ export class CommandManager implements Component {
 
 		// remove reference
 		this.commands.delete(primary);
+
+		// rebuild permissions
+		this.rebuildPermissions();
 	}
 
 	/**
@@ -312,6 +311,43 @@ export class CommandManager implements Component {
 				return ctx.createResponse(`There was an error executing this command:\`\`\`${e.message}\`\`\``);
 			}
 		}
+	}
+
+	public rebuildPermissions(): Map<string, CommandPermissionDetails> {
+		this.permissions.clear();
+
+		for (const [, command] of this.commands) {
+			const definition = command.definition;
+
+			// add top-level command permission
+			const permissionName = definition.permissionName ?? definition.aliases[0];
+			const permissionDefault = definition.permissionDefault ?? true;
+
+			this.permissions.set(permissionName, { default: permissionDefault, command });
+
+			let path: Array<string> = [];
+			// walk options
+			const walkOptions = (options: Array<AnyCommandOption>) => {
+				for (const option of options) {
+					if (option.type !== OptionType.SUB_COMMAND && option.type !== OptionType.SUB_COMMAND_GROUP) continue;
+
+					const primary = this.getSubCommandNames(option)[0];
+					path = [...path, primary];
+
+					const subName = option.permissionName ?? primary;
+					const subDefault = option.permissionDefault ?? true;
+
+					// add subcommand permissions
+					this.permissions.set(subName, { default: subDefault, command, path });
+
+					if (Array.isArray(option.options)) walkOptions(option.options);
+				}
+			};
+
+			walkOptions(definition.options);
+		}
+
+		return this.permissions;
 	}
 
 	public async getPrefix(snowflake?: string): Promise<string> {
@@ -544,14 +580,22 @@ export class CommandManager implements Component {
 		return typeBuild;
 	}
 
-	private async checkPermission(ctx: CommandContext, path: Array<string>): Promise<boolean> {
+	private getSubCommandNames(sub: AnySubCommandOption) {
+		let names: string | Array<string> = sub.name;
+		if (!Array.isArray(names)) names = [names];
+		return names;
+	}
+
+	private async checkPermission(ctx: CommandContext, path: string | Array<string>, def?: boolean): Promise<boolean> {
 		const permCtx: MessageContext = { userId: ctx.authorId, channelId: ctx.channelId };
 		if (ctx.guild) {
 			permCtx.guildId = ctx.guildId;
 			permCtx.roleIds = ctx.member.roles;
 		}
 
-		const permission = path.join('.');
+		let permission = path;
+		if (Array.isArray(permission)) permission = permission.join('.');
+
 		const [check, where] = await this.interface.checkPermission(permission, permCtx);
 
 		// handle explicit allow/deny
@@ -566,7 +610,9 @@ export class CommandManager implements Component {
 			return false;
 		}
 
-		// TODO: Add default permission lookup, used in the case of no explicit allow/deny
+		// handle default
+		if (typeof def === 'boolean') return def;
+
 		return true;
 	}
 
@@ -583,17 +629,18 @@ export class CommandManager implements Component {
 		for (const option of options) {
 			// Handle SubCommand & SubCommandGroup
 			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {
-				let names: string | Array<string> = option.name;
-				if (!Array.isArray(names)) names = [names];
-				const final = names;
-				const primary = final[0];
+				const names = this.getSubCommandNames(option);
+				const primary = names[0];
 
-				const subOptionData = optionData.find(d => final.some(f => f.toLocaleLowerCase() === d.name.toLocaleLowerCase())) as InteractionDataOptionsSubCommand | InteractionDataOptionsSubCommandGroup;
+				const subOptionData = optionData.find(d => names.some(f => f.toLocaleLowerCase() === d.name.toLocaleLowerCase())) as InteractionDataOptionsSubCommand | InteractionDataOptionsSubCommandGroup;
 				if (!subOptionData) continue;
 
 				// check permission
-				const subPath = [...path, primary];
-				if (!await this.checkPermission(ctx, subPath)) throw NON_ERROR_HALT;
+				const permissionName = option.permissionName ?? primary;
+				const permissionDefault = option.permissionDefault ?? true;
+				const subPath = [...path, permissionName];
+
+				if (!await this.checkPermission(ctx, subPath, permissionDefault)) throw NON_ERROR_HALT;
 
 				// process suppressors
 				const suppressed = await this.executeSuppressors(ctx, option);
@@ -635,10 +682,9 @@ export class CommandManager implements Component {
 		for (const option of options) {
 			if (option.type === OptionType.SUB_COMMAND_GROUP || option.type === OptionType.SUB_COMMAND) {
 				const subOption = option as AnySubCommandOption;
-				let names = subOption.name;
-				if (!Array.isArray(names)) names = [names];
-				const final = names;
-				const primary = final[0];
+
+				const names = this.getSubCommandNames(subOption);
+				const primary = names[0];
 
 				// track this suboption for prompt
 				promptSubs.push(subOption);
@@ -651,8 +697,11 @@ export class CommandManager implements Component {
 				index++;
 
 				// check permission
-				const subPath = [...path, primary];
-				if (!await this.checkPermission(ctx, subPath)) throw NON_ERROR_HALT;
+				const permissionName = subOption.permissionName ?? primary;
+				const permissionDefault = subOption.permissionDefault ?? true;
+				const subPath = [...path, permissionName];
+
+				if (!await this.checkPermission(ctx, subPath, permissionDefault)) throw NON_ERROR_HALT;
 
 				// process suppressors
 				const suppressed = await this.executeSuppressors(ctx, subOption);
@@ -687,9 +736,7 @@ export class CommandManager implements Component {
 		if (promptSubs.length > 1) {
 			const choices: Array<PromptChoice<string>> = [];
 			for (const sub of promptSubs) {
-				let names: string | Array<string> = sub.name;
-				if (!Array.isArray(names)) names = [names];
-				const primary = names[0];
+				const primary = this.getSubCommandNames(sub)[0];
 
 				let description = sub.description;
 				if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl) || description.backup;
@@ -712,14 +759,14 @@ export class CommandManager implements Component {
 				return name.some(n => n.toLocaleLowerCase() === useSub.toLocaleLowerCase());
 			}) as AnySubCommandOption;
 
-			let names = subOption.name;
-			if (!Array.isArray(names)) names = [names];
-			const final = names;
-			const primary = final[0];
+			const primary = this.getSubCommandNames(subOption)[0];
 
 			// check permission
-			const subPath = [...path, primary];
-			if (!await this.checkPermission(ctx, subPath)) throw NON_ERROR_HALT;
+			const permissionName = subOption.permissionName ?? primary;
+			const permissionDefault = subOption.permissionDefault ?? true;
+			const subPath = [...path, permissionName];
+
+			if (!await this.checkPermission(ctx, subPath, permissionDefault)) throw NON_ERROR_HALT;
 
 			if (subOption) collector = { ...collector, [useSub]: await this.processTextOptions(ctx, subOption.options, output, index, subPath) };
 		}
@@ -842,12 +889,16 @@ export class CommandManager implements Component {
 		ctx.alias = data.name;
 
 		// all permission check
-		if (!await this.checkPermission(ctx, ['all'])) return;
+		if (!await this.checkPermission(ctx, 'all', true)) return;
 
 		try {
-			// Check permissions
+			// check permission
 			const primary = definition.aliases[0];
-			if (!await this.checkPermission(ctx, [primary])) return;
+			const permissionName = definition.permissionName ?? primary;
+			const permissionDefault = definition.permissionDefault ?? true;
+			const path = [permissionName];
+
+			if (!await this.checkPermission(ctx, path, permissionDefault)) throw NON_ERROR_HALT;
 
 			// process suppressors
 			const suppressed = await this.executeSuppressors(ctx, definition);
@@ -912,14 +963,15 @@ export class CommandManager implements Component {
 					if (command) {
 						name = newName;
 						args = newArguments;
+						// continue with normal command execution
 					} else {
-						return;
+						return; // command not found
 					}
 				} else {
 					return; // command not found
 				}
 			} else {
-				return; // command not found
+				return; // not in guild, or author is a bot
 			}
 		}
 
@@ -933,12 +985,16 @@ export class CommandManager implements Component {
 		ctx.alias = name;
 
 		// all permission check
-		if (!await this.checkPermission(ctx, ['all'])) return;
+		if (!await this.checkPermission(ctx, 'all', all)) return;
 
 		try {
-			// Check permissions
+			// check permission
 			const primary = definition.aliases[0];
-			if (!await this.checkPermission(ctx, [primary])) return;
+			const permissionName = definition.permissionName ?? primary;
+			const permissionDefault = definition.permissionDefault ?? true;
+			const path = [permissionName];
+
+			if (!await this.checkPermission(ctx, path, permissionDefault)) throw NON_ERROR_HALT;
 
 			// process suppressors
 			const suppressed = await this.executeSuppressors(ctx, definition);

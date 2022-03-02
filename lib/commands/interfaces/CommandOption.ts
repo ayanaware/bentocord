@@ -54,6 +54,12 @@ export interface CommandOptionSubCommandGroup extends CommandOption<OptionType.S
 	/** The subcommands of the option */
 	options: Array<CommandOptionSubCommand>;
 
+	/** Use custom permission name, instead of the first element of name */
+	permissionName?: string;
+
+	/** Should this permission be granted, and by extension, the subcommandgroup be executable by default (Default is true) */
+	permissionDefault?: boolean;
+
 	/** Any suppressors to execute */
 	suppressors?: Array<SuppressorDefinition>;
 }
@@ -65,6 +71,12 @@ export interface CommandOptionSubCommand extends CommandOption<OptionType.SUB_CO
 
 	/** The subcommands of the option */
 	options?: Array<AnyValueCommandOption>;
+
+	/** Use custom permission name, instead of the first element of name */
+	permissionName?: string;
+
+	/** Should this permission be granted, and by extension, the subcommandgroup be executable by default (Default is true) */
+	permissionDefault?: boolean;
 
 	/** Any suppressors to execute */
 	suppressors?: Array<SuppressorDefinition>;

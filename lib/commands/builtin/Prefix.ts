@@ -17,7 +17,10 @@ export class PrefixCommand implements CommandEntity {
 		aliases: ['prefix'],
 		description: 'Set command prefix',
 		options: [
-			{ type: OptionType.STRING, name: 'prefix', description: 'new prefix', required: false },
+			{ type: OptionType.SUB_COMMAND, name: ['view', 'get'], description: 'View current prefix' },
+			{ type: OptionType.SUB_COMMAND, name: ['set'], description: 'Set command prefix', options: [
+				{ type: OptionType.STRING, name: 'prefix', description: 'new prefix', required: false },
+			], permissionDefault: false },
 		],
 
 		suppressors: [SuppressorType.GUILD, SuppressorType.GUILD_ADMIN],
@@ -27,8 +30,12 @@ export class PrefixCommand implements CommandEntity {
 
 	@Inject() private readonly commandManager: CommandManager;
 
-	public async execute(ctx: CommandContext, options: { prefix?: string }): Promise<unknown> {
-		if (options.prefix) return this.set(ctx, options.prefix);
+	public async execute(ctx: CommandContext, options: { view?: Record<string, never>, set?: { prefix: string } }): Promise<unknown> {
+		if (options.set) return this.set(ctx, options.set.prefix);
+
+		if (!options.view) {
+			/* literally how */
+		}
 
 		const prefix = await this.commandManager.getPrefix(ctx.guild.id);
 		return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_PREFIX', { prefix }) || `Current prefix is \`${prefix}\``);
