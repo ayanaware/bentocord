@@ -872,7 +872,7 @@ export class CommandManager implements Component {
 	}
 
 	@Subscribe(Discord, DiscordEvent.MESSAGE_CREATE)
-	private async handleMessageCreate(message: Message) {
+	public async handleMessageCreate(message: Message): Promise<any> {
 		// Deny messages without content, channel, or author
 		if (!message.content || !message.channel || !message.author) return;
 
@@ -900,13 +900,25 @@ export class CommandManager implements Component {
 
 		// message is not a command
 		if (!matches) return;
-		const name = matches.groups.name;
-		const args = matches.groups.args;
+		let name = matches.groups.name;
+		let args = matches.groups.args;
 
-		const command = this.findCommand(name);
+		let command = this.findCommand(name);
 		if (!command) {
-			if (message.guildID && !message.author.bot) return this.interface.resolveAlias(name, args, message);
-			return; // command not found
+			if (message.guildID && !message.author.bot) {
+				const [newName, newArguments] = await this.interface.resolveAlias(name, args, message);
+				if (newName) {
+					command = this.findCommand(newName);
+					if (command) {
+						name = newName;
+						args = newArguments;
+					} else {
+						return;
+					}
+				}
+			} else {
+				return; // command not found
+			}
 		}
 
 		const definition = command.definition;

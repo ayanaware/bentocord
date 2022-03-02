@@ -167,7 +167,7 @@ export class BentocordInterface implements Plugin {
 		return [null, null];
 	}
 
-	public async resolveAlias(name: string, args: string, message: Message): Promise<void> {
-		return null;
+	public async resolveAlias(name: string, args: string, message: Message): Promise<Array<string>> {
+		return [undefined, undefined];
 	}
 }
