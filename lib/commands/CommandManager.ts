@@ -915,6 +915,8 @@ export class CommandManager implements Component {
 					} else {
 						return;
 					}
+				} else {
+					return; // command not found
 				}
 			} else {
 				return; // command not found
