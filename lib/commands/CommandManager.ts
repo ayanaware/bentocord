@@ -339,12 +339,8 @@ export class CommandManager implements Component {
 					const subName = option.permissionName ?? primary;
 					const subPermPath = [...permPath, subName];
 
-					let subDefaults = option.permissionDefaults;
-					if (typeof subDefaults === 'boolean') subDefaults = { user: subDefaults, admin: false };
-
-					// default defaults to true
-					subDefaults.user = subDefaults.user ?? true;
-					subDefaults.admin = subDefaults.admin ?? true;
+					let subDefaults = option.permissionDefaults ?? { user: true, admin: true };
+					if (typeof subDefaults === 'boolean') subDefaults = { user: subDefaults, admin: true };
 
 					// add subcommand permissions
 					const finalName = [permissionName, ...subPermPath].join('.');
@@ -621,12 +617,8 @@ export class CommandManager implements Component {
 		}
 
 		// handle default
-		let defaults = def ?? { user: true, admin: false };
-		if (typeof defaults === 'boolean') defaults = { user: defaults, admin: false };
-
-		// default defaults to true
-		defaults.admin = defaults.admin ?? true;
-		defaults.user = defaults.user ?? true;
+		let defaults = def ?? { user: true, admin: true };
+		if (typeof defaults === 'boolean') defaults = { user: defaults, admin: true };
 
 		// all users have permission
 		if (defaults.user) return true;
