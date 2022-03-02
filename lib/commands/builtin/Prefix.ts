@@ -20,7 +20,7 @@ export class PrefixCommand implements CommandEntity {
 			{ type: OptionType.SUB_COMMAND, name: ['view', 'get'], description: 'View current prefix' },
 			{ type: OptionType.SUB_COMMAND, name: ['set'], description: 'Set command prefix', options: [
 				{ type: OptionType.STRING, name: 'prefix', description: 'new prefix', required: false },
-			], permissionDefault: false },
+			], permissionDefaults: { user: false, admin: true } },
 		],
 
 		suppressors: [SuppressorType.GUILD, SuppressorType.GUILD_ADMIN],

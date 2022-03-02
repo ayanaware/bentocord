@@ -35,6 +35,7 @@ import { CommandManagerEvent } from './constants/CommandManagerEvent';
 import { OptionType } from './constants/OptionType';
 import { SuppressorType } from './constants/SuppressorType';
 import type { Command } from './interfaces/Command';
+import { CommandPermissionDefaults } from './interfaces/CommandDefinition';
 import type { AnyCommandOption, AnySubCommandOption, AnyValueCommandOption, CommandOptionChoiceCallable } from './interfaces/CommandOption';
 import type { Resolver } from './interfaces/Resolver';
 import type { Suppressor, SuppressorOption } from './interfaces/Suppressor';
@@ -57,7 +58,7 @@ export interface SyncOptions {
 
 export interface CommandPermissionDetails {
 	/** Default state of this permission */
-	default: boolean;
+	defaults: CommandPermissionDefaults;
 
 	/** Command which the permission comes from */
 	command: Command;
@@ -321,9 +322,11 @@ export class CommandManager implements Component {
 
 			// add top-level command permission
 			const permissionName = definition.permissionName ?? definition.aliases[0];
-			const permissionDefault = definition.permissionDefault ?? true;
 
-			this.permissions.set(permissionName, { default: permissionDefault, command });
+			let defaults = definition.permissionDefaults;
+			if (typeof defaults === 'boolean') defaults = { user: defaults, admin: false };
+
+			this.permissions.set(permissionName, { defaults, command });
 
 			// walk options
 			const walkOptions = (options: Array<AnyCommandOption> = [], path: Array<string> = [], permPath: Array<string> = []) => {
@@ -336,11 +339,16 @@ export class CommandManager implements Component {
 					const subName = option.permissionName ?? primary;
 					const subPermPath = [...permPath, subName];
 
-					const subDefault = option.permissionDefault ?? true;
+					let subDefaults = option.permissionDefaults;
+					if (typeof subDefaults === 'boolean') subDefaults = { user: subDefaults, admin: false };
+
+					// default defaults to true
+					subDefaults.user = subDefaults.user ?? true;
+					subDefaults.admin = subDefaults.admin ?? true;
 
 					// add subcommand permissions
 					const finalName = [permissionName, ...subPermPath].join('.');
-					this.permissions.set(finalName, { default: subDefault, command, path: subPath });
+					this.permissions.set(finalName, { defaults: subDefaults, command, path: subPath });
 
 					if (Array.isArray(option.options)) walkOptions(option.options, subPath, subPermPath);
 				}
@@ -588,7 +596,7 @@ export class CommandManager implements Component {
 		return names;
 	}
 
-	private async checkPermission(ctx: CommandContext, path: string | Array<string>, def?: boolean): Promise<boolean> {
+	private async checkPermission(ctx: CommandContext, path: string | Array<string>, def?: CommandPermissionDefaults | boolean): Promise<boolean> {
 		const permCtx: MessageContext = { userId: ctx.authorId, channelId: ctx.channelId };
 		if (ctx.guild) {
 			permCtx.guildId = ctx.guildId;
@@ -613,9 +621,23 @@ export class CommandManager implements Component {
 		}
 
 		// handle default
-		if (typeof def === 'boolean') return def;
+		let defaults = def ?? { user: true, admin: false };
+		if (typeof defaults === 'boolean') defaults = { user: defaults, admin: false };
 
-		return true;
+		// default defaults to true
+		defaults.admin = defaults.admin ?? true;
+		defaults.user = defaults.user ?? true;
+
+		// all users have permission
+		if (defaults.user) return true;
+		// only admins have permission, verify they are one
+		else if (defaults.admin && ctx.member && ctx.member.permissions.has('administrator')) return true;
+
+		// user is not allowed to execute this command
+		const cntent = await ctx.formatTranslation('BENTOCORD_PERMISSION_DENIED_DEFAULT', { permission }) || `Permission \`${permission}\` is denined by default. Please contact a server administrator to grant you this permission.`;
+		await ctx.createResponse(cntent);
+
+		return false;
 	}
 
 	public async fufillInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, data: CommandInteraction['data'], path: Array<string> = []): Promise<Record<string, unknown>> {
@@ -639,10 +661,9 @@ export class CommandManager implements Component {
 
 				// check permission
 				const permissionName = option.permissionName ?? primary;
-				const permissionDefault = option.permissionDefault ?? true;
 				const subPath = [...path, permissionName];
 
-				if (!await this.checkPermission(ctx, subPath, permissionDefault)) throw NON_ERROR_HALT;
+				if (!await this.checkPermission(ctx, subPath, option.permissionDefaults)) throw NON_ERROR_HALT;
 
 				// process suppressors
 				const suppressed = await this.executeSuppressors(ctx, option);
@@ -700,10 +721,9 @@ export class CommandManager implements Component {
 
 				// check permission
 				const permissionName = subOption.permissionName ?? primary;
-				const permissionDefault = subOption.permissionDefault ?? true;
 				const subPath = [...path, permissionName];
 
-				if (!await this.checkPermission(ctx, subPath, permissionDefault)) throw NON_ERROR_HALT;
+				if (!await this.checkPermission(ctx, subPath, subOption.permissionDefaults)) throw NON_ERROR_HALT;
 
 				// process suppressors
 				const suppressed = await this.executeSuppressors(ctx, subOption);
@@ -765,10 +785,9 @@ export class CommandManager implements Component {
 
 			// check permission
 			const permissionName = subOption.permissionName ?? primary;
-			const permissionDefault = subOption.permissionDefault ?? true;
 			const subPath = [...path, permissionName];
 
-			if (!await this.checkPermission(ctx, subPath, permissionDefault)) throw NON_ERROR_HALT;
+			if (!await this.checkPermission(ctx, subPath, subOption.permissionDefaults)) throw NON_ERROR_HALT;
 
 			if (subOption) collector = { ...collector, [useSub]: await this.processTextOptions(ctx, subOption.options, output, index, subPath) };
 		}
@@ -897,10 +916,10 @@ export class CommandManager implements Component {
 			// check permission
 			const primary = definition.aliases[0];
 			const permissionName = definition.permissionName ?? primary;
-			const permissionDefault = definition.permissionDefault ?? true;
+			const permissionDefault = definition.permissionDefaults ?? true;
 			const path = [permissionName];
 
-			if (!await this.checkPermission(ctx, path, permissionDefault)) throw NON_ERROR_HALT;
+			if (!await this.checkPermission(ctx, path, definition.permissionDefaults)) throw NON_ERROR_HALT;
 
 			// process suppressors
 			const suppressed = await this.executeSuppressors(ctx, definition);
@@ -993,10 +1012,9 @@ export class CommandManager implements Component {
 			// check permission
 			const primary = definition.aliases[0];
 			const permissionName = definition.permissionName ?? primary;
-			const permissionDefault = definition.permissionDefault ?? true;
 			const path = [permissionName];
 
-			if (!await this.checkPermission(ctx, path, permissionDefault)) throw NON_ERROR_HALT;
+			if (!await this.checkPermission(ctx, path, definition.permissionDefaults)) throw NON_ERROR_HALT;
 
 			// process suppressors
 			const suppressed = await this.executeSuppressors(ctx, definition);

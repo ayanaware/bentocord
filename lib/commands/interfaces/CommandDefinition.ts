@@ -5,6 +5,14 @@ import type { CommandContext } from '../CommandContext';
 import type { AnyCommandOption } from './CommandOption';
 import type { SuppressorDefinition } from './Suppressor';
 
+export interface CommandPermissionDefaults {
+	/** Should this permission be granted by default for any average user (Default: true) */
+	user?: boolean;
+
+	/** Should this permission be granted by default if the user has the ADMIN discord permission (Default: true) */
+	admin?: boolean;
+}
+
 export interface CommandDefinition {
 	/** Command Aliases; First will be used for slash command name */
 	aliases: Array<string>;
@@ -18,8 +26,8 @@ export interface CommandDefinition {
 	/** Use custom permission name, instead of the first element of aliases */
 	permissionName?: string;
 
-	/** Should this permission be granted, and by extension, the command be executable by default (Default is true) */
-	permissionDefault?: boolean;
+	/** Should this permission be granted, and by extension, the command be executable when no permission overrides exist */
+	permissionDefaults?: CommandPermissionDefaults | boolean;
 
 	/** Discord Permissions this command requires */
 	selfPermissions?: Array<DiscordPermission>;

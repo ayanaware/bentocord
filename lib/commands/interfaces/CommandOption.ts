@@ -3,6 +3,7 @@ import { AnyGuildChannel, Emoji, Guild, Member, Role, User } from 'eris';
 import { Translateable } from '../../interfaces/Translateable';
 import type { OptionType } from '../constants/OptionType';
 
+import { CommandPermissionDefaults } from './CommandDefinition';
 import type { SuppressorDefinition } from './Suppressor';
 
 export type AnyCommandOption = AnySubCommandOption | AnyValueCommandOption;
@@ -57,8 +58,8 @@ export interface CommandOptionSubCommandGroup extends CommandOption<OptionType.S
 	/** Use custom permission name, instead of the first element of name */
 	permissionName?: string;
 
-	/** Should this permission be granted, and by extension, the subcommandgroup be executable by default (Default is true) */
-	permissionDefault?: boolean;
+	/** Should this permission be granted, and by extension, the subcommandgroup be executable when no permission overrides exist */
+	permissionDefaults?: CommandPermissionDefaults | boolean;
 
 	/** Any suppressors to execute */
 	suppressors?: Array<SuppressorDefinition>;
@@ -75,8 +76,8 @@ export interface CommandOptionSubCommand extends CommandOption<OptionType.SUB_CO
 	/** Use custom permission name, instead of the first element of name */
 	permissionName?: string;
 
-	/** Should this permission be granted, and by extension, the subcommandgroup be executable by default (Default is true) */
-	permissionDefault?: boolean;
+	/** Should this permission be granted, and by extension, the subcommand be executable when no permission overrides exist */
+	permissionDefaults?: CommandPermissionDefaults | boolean;
 
 	/** Any suppressors to execute */
 	suppressors?: Array<SuppressorDefinition>;
