@@ -325,22 +325,24 @@ export class CommandManager implements Component {
 
 			this.permissions.set(permissionName, { default: permissionDefault, command });
 
-			let path: Array<string> = [];
 			// walk options
-			const walkOptions = (options: Array<AnyCommandOption> = []) => {
+			const walkOptions = (options: Array<AnyCommandOption> = [], path: Array<string> = [], permPath: Array<string> = []) => {
 				for (const option of (options ?? [])) {
 					if (option.type !== OptionType.SUB_COMMAND && option.type !== OptionType.SUB_COMMAND_GROUP) continue;
 
 					const primary = this.getSubCommandNames(option)[0];
-					path = [...path, primary];
+					const subPath = [...path, primary];
 
 					const subName = option.permissionName ?? primary;
+					const subPermPath = [...permPath, subName];
+
 					const subDefault = option.permissionDefault ?? true;
 
 					// add subcommand permissions
-					this.permissions.set(subName, { default: subDefault, command, path });
+					const finalName = [permissionName, ...subPermPath].join('.');
+					this.permissions.set(finalName, { default: subDefault, command, path: subPath });
 
-					if (Array.isArray(option.options)) walkOptions(option.options);
+					if (Array.isArray(option.options)) walkOptions(option.options, subPath, subPermPath);
 				}
 			};
 
