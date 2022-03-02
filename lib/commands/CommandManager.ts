@@ -985,7 +985,7 @@ export class CommandManager implements Component {
 		ctx.alias = name;
 
 		// all permission check
-		if (!await this.checkPermission(ctx, 'all', all)) return;
+		if (!await this.checkPermission(ctx, 'all', true)) return;
 
 		try {
 			// check permission
