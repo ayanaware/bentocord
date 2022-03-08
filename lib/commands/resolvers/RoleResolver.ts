@@ -19,7 +19,11 @@ export class RoleResolver implements Resolver<Role> {
 
 		const roles = guild.roles;
 
-		return Array.from(roles.filter(r => this.checkRole(input, r)).values());
+		// Attempt filter
+		const filter = Array.from(roles.filter(r => this.checkRole(input, r)).values());
+		if (filter.length > 0) return filter;
+
+		return Array.from(roles.values());
 	}
 
 	private checkRole(input: string, role: Role) {

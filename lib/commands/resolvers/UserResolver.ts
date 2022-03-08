@@ -23,7 +23,10 @@ export class UserResolver implements Resolver<User|Member> {
 		let users: Collection<User|Member> = client.users;
 		if (ctx.guild) users = ctx.guild.members;
 
-		return Array.from(users.filter(u => this.matchUser(input, u)).values());
+		const filter = Array.from(users.filter(u => this.matchUser(input, u)).values());
+		if (filter.length > 0) return filter;
+
+		return Array.from(users.values());
 	}
 
 	private matchUser(input: string, user: User | Member) {

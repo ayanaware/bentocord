@@ -850,7 +850,9 @@ export class CommandManager implements Component {
 
 			// Reduce Choose Prompt
 			if (Array.isArray(result)) {
-				if (result.length === 1) {
+				if (result.length === 0) {
+					continue;
+				} else if (result.length === 1) {
 					// single element array
 					value.push(result[0]);
 					continue;

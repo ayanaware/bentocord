@@ -19,7 +19,10 @@ export class ChannelResolver implements Resolver<AnyGuildChannel> {
 
 		const channels = ctx.guild.channels;
 
-		return Array.from(channels.filter(c => this.checkChannel(input, c)).values());
+		const filter = Array.from(channels.filter(c => this.checkChannel(input, c)).values());
+		if (filter.length > 0) return filter;
+
+		return Array.from(channels.values());
 	}
 
 	private checkChannel(input: string, channel: AnyGuildChannel) {
