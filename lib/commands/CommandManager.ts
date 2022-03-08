@@ -359,7 +359,7 @@ export class CommandManager implements Component {
 			// add top-level command permission
 			const permissionName = definition.permissionName ?? definition.aliases[0];
 
-			let defaults = definition.permissionDefaults;
+			let defaults = definition.permissionDefaults ?? { user: true, admin: true };
 			if (typeof defaults === 'boolean') defaults = { user: defaults, admin: false };
 
 			this.permissions.set(permissionName, { defaults, command });
