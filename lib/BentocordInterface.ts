@@ -32,15 +32,30 @@ export class BentocordInterface implements Plugin {
 		return { shardIds: [0], shardCount: 1 };
 	}
 
+	/**
+	 * Check if userId is a bot owner.
+	 * @param userId Discord User ID
+	 * @returns boolean
+	 */
 	public async isOwner(userId: string): Promise<boolean> {
 		const owners = this.owners.split(',').map(o => o.trim());
 		return owners.includes(userId);
 	}
 
+	/**
+	 * Get the prefix for a given snowflake (ex: guildId).
+	 * @param snowflake The snowflake
+	 * @returns The prefix
+	 */
 	public async getPrefix(snowflake: string): Promise<string> {
 		return this.prefixes.get(snowflake);
 	}
 
+	/**
+	 * Set the prefix for a given snowflake.
+	 * @param snowflake The snowflake
+	 * @param prefix The prefix
+	 */
 	public async setPrefix(snowflake: string, prefix: string): Promise<void> {
 		if (prefix == null) {
 			this.prefixes.delete(snowflake);
@@ -51,6 +66,11 @@ export class BentocordInterface implements Plugin {
 		this.prefixes.set(snowflake, prefix);
 	}
 
+	/** Extra ALWAYS available prefixes */
+	public async getExtraPrefixes(): Promise<Array<string>> {
+		return [];
+	}
+
 	public async formatNumber(num: number, ctx?: Record<string, string>): Promise<string> {
 		return null;
 	}
@@ -59,6 +79,13 @@ export class BentocordInterface implements Plugin {
 		return null;
 	}
 
+	/**
+	 * Format a translation string
+	 * @param key Translation key
+	 * @param repl Replacements
+	 * @param ctx CommandContext
+	 * @returns Translated string
+	 */
 	public async formatTranslation(key: string, repl?: Record<string, unknown>, ctx?: Record<string, string>): Promise<string> {
 		return null;
 	}

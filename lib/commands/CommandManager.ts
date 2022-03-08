@@ -286,10 +286,16 @@ export class CommandManager implements Component {
 		const permissionName = definition.permissionName ?? primary;
 		const path = [permissionName];
 
-		if (!await this.checkPermission(ctx, path, definition.permissionDefaults)) return false;
+		const [state, type] = await this.checkPermission(ctx, path, definition.permissionDefaults);
+		// explicit or implicit deny
+		if (!state) return false;
 
-		// all permission check
-		if (!await this.checkPermission(ctx, 'all', true)) return;
+		// implicit allow, check 'all'
+		if (state && type === 'implicit') {
+			// all permission check
+			if (!(await this.checkPermission(ctx, 'all', true))[0]) return false;
+		}
+		// explicit true, or implicit true & all true
 
 		// process suppressors
 		const suppressed = await this.executeSuppressors(ctx, definition);
@@ -622,7 +628,7 @@ export class CommandManager implements Component {
 		return names;
 	}
 
-	private async checkPermission(ctx: CommandContext, path: string | Array<string>, def?: CommandPermissionDefaults | boolean): Promise<boolean> {
+	private async checkPermission(ctx: CommandContext, path: string | Array<string>, def?: CommandPermissionDefaults | boolean): Promise<[boolean, 'explicit' | 'implicit']> {
 		const permCtx: MessageContext = { userId: ctx.authorId, channelId: ctx.channelId };
 		if (ctx.guild) {
 			permCtx.guildId = ctx.guildId;
@@ -638,32 +644,32 @@ export class CommandManager implements Component {
 
 		// if admin default true & member has administrator, bypass checks
 		// prevents lockout of administrators
-		if (defaults.admin && ctx.member && ctx.member.permissions.has('administrator')) return true;
+		if (defaults.admin && ctx.member && ctx.member.permissions.has('administrator')) return [true, 'implicit'];
 
 		const [check, where] = await this.interface.checkPermission(permission, permCtx);
 
 		// handle explicit allow/deny
 		if (typeof check === 'boolean') {
 			// explicit allow
-			if (check) return true;
+			if (check) return [true, 'explicit'];
 
 			// explicit deny
 			const content = await ctx.formatTranslation('BENTOCORD_PERMISSION_DENIED', { permission, where }) || `Permission \`${permission}\` has been denied on the \`${where}\` level.`;
 			await ctx.createResponse(content);
 
-			return false;
+			return [false, 'explicit'];
 		}
 
 		// all users have permission
-		if (defaults.user) return true;
+		if (defaults.user) return [true, 'implicit'];
 		// only admins have permission, verify they are one
-		else if (defaults.admin && ctx.member && ctx.member.permissions.has('administrator')) return true;
+		else if (defaults.admin && ctx.member && ctx.member.permissions.has('administrator')) return [true, 'implicit'];
 
 		// user is not allowed to execute this command
 		const cntent = await ctx.formatTranslation('BENTOCORD_PERMISSION_DENIED_DEFAULT', { permission }) || `Permission \`${permission}\` is denined by default. Please contact a server administrator to grant you this permission.`;
 		await ctx.createResponse(cntent);
 
-		return false;
+		return [false, 'implicit'];
 	}
 
 	public async fufillInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, data: CommandInteraction['data'], path: Array<string> = []): Promise<Record<string, unknown>> {
@@ -689,7 +695,7 @@ export class CommandManager implements Component {
 				const permissionName = option.permissionName ?? primary;
 				const subPath = [...path, permissionName];
 
-				if (!await this.checkPermission(ctx, subPath, option.permissionDefaults)) throw NON_ERROR_HALT;
+				if (!(await this.checkPermission(ctx, subPath, option.permissionDefaults))[0]) throw NON_ERROR_HALT;
 
 				// process suppressors
 				const suppressed = await this.executeSuppressors(ctx, option);
@@ -749,7 +755,7 @@ export class CommandManager implements Component {
 				const permissionName = subOption.permissionName ?? primary;
 				const subPath = [...path, permissionName];
 
-				if (!await this.checkPermission(ctx, subPath, subOption.permissionDefaults)) throw NON_ERROR_HALT;
+				if (!(await this.checkPermission(ctx, subPath, subOption.permissionDefaults))[0]) throw NON_ERROR_HALT;
 
 				// process suppressors
 				const suppressed = await this.executeSuppressors(ctx, subOption);
@@ -813,7 +819,7 @@ export class CommandManager implements Component {
 			const permissionName = subOption.permissionName ?? primary;
 			const subPath = [...path, permissionName];
 
-			if (!await this.checkPermission(ctx, subPath, subOption.permissionDefaults)) throw NON_ERROR_HALT;
+			if (!(await this.checkPermission(ctx, subPath, subOption.permissionDefaults))[0]) throw NON_ERROR_HALT;
 
 			if (subOption) collector = { ...collector, [useSub]: await this.processTextOptions(ctx, subOption.options, output, index, subPath) };
 		}
@@ -964,17 +970,23 @@ export class CommandManager implements Component {
 		// raw message
 		const raw = message.content;
 
-		let prefix = this.defaultPrefix;
+		let prefixes = [this.defaultPrefix];
+
+		// guild prefix override
 		if (message.guildID) {
 			const guildPrefix = await this.interface.getPrefix(message.guildID);
-			if (guildPrefix) prefix = guildPrefix;
+			if (guildPrefix) prefixes = [guildPrefix];
 		}
 
-		// escape prefix
-		prefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+		// extra prefixes support
+		const extraPrefixes = await this.interface.getExtraPrefixes();
+		if (Array.isArray(extraPrefixes) && extraPrefixes.length > 0) prefixes = [...prefixes, ...extraPrefixes];
+
+		// escape prefixes
+		prefixes = prefixes.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 
 		// first capture group prefix
-		let build = `^(?<prefix>${prefix}`;
+		let build = `^(?<prefix>${prefixes.join('|')}`;
 		// if we have selfId allow mentions
 		if (this.selfId) build = `${build}|<(?:@|@!)${this.selfId}>`;
 		// find command and arguments
