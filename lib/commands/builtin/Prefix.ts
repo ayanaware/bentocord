@@ -23,7 +23,7 @@ export class PrefixCommand implements CommandEntity {
 			], permissionDefaults: { user: false, admin: true } },
 		],
 
-		suppressors: [SuppressorType.GUILD, SuppressorType.GUILD_ADMIN],
+		suppressors: [SuppressorType.GUILD],
 
 		registerSlash: false,
 	};

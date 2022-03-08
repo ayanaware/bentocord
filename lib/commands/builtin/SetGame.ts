@@ -30,6 +30,7 @@ export class SetGameCommand implements CommandEntity {
 		],
 
 		suppressors: [SuppressorType.BOT_OWNER],
+		hidden: true,
 
 		registerSlash: false,
 	};
