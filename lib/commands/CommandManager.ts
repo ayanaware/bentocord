@@ -272,6 +272,36 @@ export class CommandManager implements Component {
 		return command;
 	}
 
+	/**
+	 * Runs pre-flight checks such as perms & suppressors before executing command
+	 * @param command Command
+	 * @param ctx CommandContext
+	 * @returns boolean, if false you should not execute the command
+	 */
+	public async prepareCommand(command: Command, ctx: CommandContext): Promise<boolean> {
+		// all permission check
+		if (!await this.checkPermission(ctx, 'all', true)) return;
+
+		const definition = command.definition;
+
+		// check permission
+		const primary = definition.aliases[0];
+		const permissionName = definition.permissionName ?? primary;
+		const path = [permissionName];
+
+		if (!await this.checkPermission(ctx, path, definition.permissionDefaults)) return false;
+
+		// process suppressors
+		const suppressed = await this.executeSuppressors(ctx, definition);
+		if (suppressed) {
+			const message = await ctx.formatTranslation('BENTOCORD_SUPPRESSOR_HALT', { suppressor: suppressed.name, message: suppressed.message }) || `Execution was halted by \`${suppressed.name}\`: ${suppressed.message}`;
+			await ctx.createResponse(message);
+			return false;
+		}
+
+		return true;
+	}
+
 	public async executeCommand(command: Command, ctx: CommandContext, options: Record<string, unknown>): Promise<unknown> {
 		const definition = command.definition;
 		const primary = definition.aliases[0];
@@ -602,6 +632,14 @@ export class CommandManager implements Component {
 		let permission = path;
 		if (Array.isArray(permission)) permission = permission.join('.');
 
+		// handle default
+		let defaults = def ?? { user: true, admin: true };
+		if (typeof defaults === 'boolean') defaults = { user: defaults, admin: true };
+
+		// if admin default true & member has administrator, bypass checks
+		// prevents lockout of administrators
+		if (defaults.admin && ctx.member && ctx.member.permissions.has('administrator')) return true;
+
 		const [check, where] = await this.interface.checkPermission(permission, permCtx);
 
 		// handle explicit allow/deny
@@ -615,10 +653,6 @@ export class CommandManager implements Component {
 
 			return false;
 		}
-
-		// handle default
-		let defaults = def ?? { user: true, admin: true };
-		if (typeof defaults === 'boolean') defaults = { user: defaults, admin: true };
 
 		// all users have permission
 		if (defaults.user) return true;
@@ -901,25 +935,12 @@ export class CommandManager implements Component {
 		const ctx = new InteractionCommandContext(this, this.promptManager, command, interaction);
 		ctx.alias = data.name;
 
-		// all permission check
-		if (!await this.checkPermission(ctx, 'all', true)) return;
-
 		try {
-			// check permission
+			// pre-flight checks, perms, suppressors, etc
+			if (!(await this.prepareCommand(command, ctx))) return;
+
+			// fufill options
 			const primary = definition.aliases[0];
-			const permissionName = definition.permissionName ?? primary;
-			const permissionDefault = definition.permissionDefaults ?? true;
-			const path = [permissionName];
-
-			if (!await this.checkPermission(ctx, path, definition.permissionDefaults)) throw NON_ERROR_HALT;
-
-			// process suppressors
-			const suppressed = await this.executeSuppressors(ctx, definition);
-			if (suppressed) {
-				const message = await ctx.formatTranslation('BENTOCORD_SUPPRESSOR_HALT', { suppressor: suppressed.name, message: suppressed.message }) || `Execution was halted by \`${suppressed.name}\`: ${suppressed.message}`;
-				return ctx.createResponse(message);
-			}
-
 			const options = await this.fufillInteractionOptions(ctx, definition.options, data, [primary]);
 
 			return this.executeCommand(command, ctx, options);
@@ -997,25 +1018,14 @@ export class CommandManager implements Component {
 		const ctx = new MessageCommandContext(this, this.promptManager, command, message);
 		ctx.alias = name;
 
-		// all permission check
-		if (!await this.checkPermission(ctx, 'all', true)) return;
-
 		try {
-			// check permission
+			// pre-flight checks, perms, suppressors, etc
+			if (!(await this.prepareCommand(command, ctx))) return;
+
+			// fufill options
 			const primary = definition.aliases[0];
-			const permissionName = definition.permissionName ?? primary;
-			const path = [permissionName];
-
-			if (!await this.checkPermission(ctx, path, definition.permissionDefaults)) throw NON_ERROR_HALT;
-
-			// process suppressors
-			const suppressed = await this.executeSuppressors(ctx, definition);
-			if (suppressed) {
-				const suppressedMessage = await ctx.formatTranslation('BENTOCORD_SUPPRESSOR_HALT', { suppressor: suppressed.name, message: suppressed.message }) || `Execution was halted by \`${suppressed.name}\`: ${suppressed.message}`;
-				return ctx.createResponse(suppressedMessage);
-			}
-
 			const options = await this.fufillTextOptions(ctx, definition.options, args, [primary]);
+
 			return this.executeCommand(command, ctx, options);
 		} catch (e) {
 			// halt requested (this is lazy, I'll fix it later, probably)

@@ -7,10 +7,10 @@ import type { SuppressorDefinition } from './Suppressor';
 
 export interface CommandPermissionDefaults {
 	/** Should this permission be granted by default for any average user (Default: true) */
-	user?: boolean;
+	user: boolean;
 
 	/** Should this permission be granted by default if the user has the ADMIN discord permission (Default: true) */
-	admin?: boolean;
+	admin: boolean;
 }
 
 export interface CommandDefinition {
@@ -43,6 +43,9 @@ export interface CommandDefinition {
 
 	/** Suppressors */
 	suppressors?: Array<SuppressorDefinition>;
+
+	/** Hide this command from general users */
+	hidden?: boolean;
 
 	/** Function name or implementation to execute */
 	execute?: string | ((ctx?: CommandContext) => Promise<any>);
