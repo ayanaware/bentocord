@@ -161,7 +161,7 @@ export class BentocordInterface implements Plugin {
 
 			// Guild Wide Check
 			const guildCheck = await this.getPermission(permission, guildId);
-			if (typeof guildCheck === 'boolean') return [guildCheck, 'guild'];
+			if (typeof guildCheck === 'boolean') return [guildCheck, 'server'];
 		}
 
 		return [null, null];

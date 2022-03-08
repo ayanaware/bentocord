@@ -279,9 +279,6 @@ export class CommandManager implements Component {
 	 * @returns boolean, if false you should not execute the command
 	 */
 	public async prepareCommand(command: Command, ctx: CommandContext): Promise<boolean> {
-		// all permission check
-		if (!await this.checkPermission(ctx, 'all', true)) return;
-
 		const definition = command.definition;
 
 		// check permission
@@ -290,6 +287,9 @@ export class CommandManager implements Component {
 		const path = [permissionName];
 
 		if (!await this.checkPermission(ctx, path, definition.permissionDefaults)) return false;
+
+		// all permission check
+		if (!await this.checkPermission(ctx, 'all', true)) return;
 
 		// process suppressors
 		const suppressed = await this.executeSuppressors(ctx, definition);
