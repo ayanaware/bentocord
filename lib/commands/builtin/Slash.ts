@@ -7,7 +7,7 @@ import { SuppressorType } from '../constants/SuppressorType';
 import { CommandDefinition } from '../interfaces/CommandDefinition';
 import { CommandEntity } from '../interfaces/entity/CommandEntity';
 
-export class Slash implements CommandEntity {
+export class SlashCommand implements CommandEntity {
 	public name = '@ayanaware/bentocord:Slash';
 	public api!: ComponentAPI;
 	public parent = CommandManager;

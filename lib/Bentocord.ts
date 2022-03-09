@@ -11,6 +11,7 @@ import { BentoCommand } from './commands/builtin/Bento';
 import { PingCommand } from './commands/builtin/Ping';
 import { PrefixCommand } from './commands/builtin/Prefix';
 import { SetGameCommand } from './commands/builtin/SetGame';
+import { SlashCommand } from './commands/builtin/Slash';
 import { Discord } from './discord/Discord';
 import { PromptManager } from './prompt/PromptManager';
 import { ReplyCommand } from './prompt/commands/Reply';
@@ -56,6 +57,7 @@ export class Bentocord implements Plugin {
 			PingCommand,
 			PrefixCommand,
 			SetGameCommand,
+			SlashCommand,
 		]);
 	}
 }
