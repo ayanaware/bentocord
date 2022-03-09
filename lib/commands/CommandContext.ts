@@ -57,6 +57,7 @@ export abstract class CommandContext {
 
 	public member?: Member;
 
+	public messageId?: string;
 	public message?: Message;
 
 	public readonly interface: BentocordInterface;
@@ -281,6 +282,7 @@ export class InteractionCommandContext extends CommandContext {
 
 		const message = await this.interaction.getOriginalMessage();
 		this.message = message;
+		this.messageId = message.id;
 		this.responseId = message.id;
 	}
 
@@ -293,6 +295,7 @@ export class InteractionCommandContext extends CommandContext {
 
 		const message = await this.interaction.getOriginalMessage();
 		this.message = message;
+		this.messageId = message.id;
 		this.responseId = message.id;
 	}
 
@@ -313,7 +316,7 @@ export class InteractionCommandContext extends CommandContext {
 	}
 
 	public async deleteResponse(): Promise<void> {
-		if (!this.interaction.acknowledged) return;
+		if (!this.interaction.acknowledged || !this.responseId) return;
 
 		await this.interaction.deleteMessage(this.responseId);
 		this.responseId = null;
@@ -334,10 +337,12 @@ export class MessageCommandContext extends CommandContext {
 	public type: 'message' = 'message';
 
 	public message: Message;
+	public messageId: string;
 
 	public constructor(manager: CommandManager, promptManager: PromptManager, command: Command, message: Message) {
 		super(manager, promptManager, command);
 		this.message = message;
+		this.messageId = message.id;
 	}
 
 	public async prepare(): Promise<void> {
