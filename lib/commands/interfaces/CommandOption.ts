@@ -156,7 +156,7 @@ export const AllTextChannelTypes = [
 	Constants.ChannelTypes.GUILD_PRIVATE_THREAD,
 ];
 
-export const AllVoiceChannelType = [
+export const AllVoiceChannelTypes = [
 	Constants.ChannelTypes.GUILD_VOICE,
 	Constants.ChannelTypes.GUILD_STAGE_VOICE,
 ];
