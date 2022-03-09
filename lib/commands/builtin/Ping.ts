@@ -23,6 +23,13 @@ export class PingCommand implements CommandEntity {
 		const s = end[0];
 		const ms = end[1] / 1000000;
 
+		// if in guild, include shard latency. message should really include a shard
+		if (ctx.guild) {
+			const ws = ctx.guild.shard.latency;
+
+			return ctx.editResponse(await ctx.formatTranslation('BENTOCORD_PING_COUNT_WS', { s, ms, ws }) || `Pong! API: \`${s}s ${ms}ms\`, Gateway: \`${ws}ms\`)`);
+		}
+
 		return ctx.editResponse(await ctx.formatTranslation('BENTOCORD_PING_COUNT', { s, ms }) || `Pong! \`${s}s ${ms}ms\``);
 	}
 }
