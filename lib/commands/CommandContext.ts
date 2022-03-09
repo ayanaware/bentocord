@@ -81,7 +81,7 @@ export abstract class CommandContext {
 
 	protected isTextableChannel(channel: unknown): channel is TextableChannel {
 		const cast = channel as AnyChannel;
-		if (typeof cast.type !== 'number') return false;
+		if (!cast || typeof cast.type !== 'number') return false;
 
 		const textableIds: Array<number> = [
 			ChannelTypes.DM,
@@ -244,30 +244,33 @@ export class InteractionCommandContext extends CommandContext {
 	public constructor(manager: CommandManager, promptManager: PromptManager, command: Command, interaction: CommandInteraction) {
 		super(manager, promptManager, command);
 		this.interaction = interaction;
+	}
 
+	public async prepare(): Promise<void> {
 		const client = this.discord.client;
 
-		this.channelId = interaction.channel.id;
+		this.channelId = this.interaction.channel.id;
 
-		const channel = client.getChannel(this.channelId);
+		let channel = client.getChannel(this.channelId);
+		if (!channel) channel = await client.getRESTChannel(this.channelId);
 		if (!this.isTextableChannel(channel)) throw new Error('InteractionCommandContext: Channel is not textable.');
 		this.channel = channel;
 
-		if (interaction.guildID) {
-			this.authorId = interaction.member.user.id;
-			this.author = interaction.member.user;
+		if (this.interaction.guildID) {
+			this.authorId = this.interaction.member.user.id;
+			this.author = this.interaction.member.user;
 
-			this.guildId = interaction.guildID;
+			this.guildId = this.interaction.guildID;
 
-			const guild = client.guilds.get(interaction.guildID);
+			const guild = client.guilds.get(this.interaction.guildID);
 			if (!guild) throw new Error('InteractionCommandContext: Guild not found');
 			this.guild = guild;
 
 			const member = guild.members.get(this.authorId);
 			if (member) this.member = member;
 		} else {
-			this.authorId = interaction.user.id;
-			this.author = interaction.user;
+			this.authorId = this.interaction.user.id;
+			this.author = this.interaction.user;
 		}
 	}
 
@@ -335,17 +338,20 @@ export class MessageCommandContext extends CommandContext {
 	public constructor(manager: CommandManager, promptManager: PromptManager, command: Command, message: Message) {
 		super(manager, promptManager, command);
 		this.message = message;
+	}
 
+	public async prepare(): Promise<void> {
 		const client = this.discord.client;
 
-		this.channelId = message.channel.id;
+		this.channelId = this.message.channel.id;
 
-		const channel = client.getChannel(this.channelId);
+		let channel = client.getChannel(this.channelId);
+		if (!channel) channel = await client.getRESTChannel(this.channelId);
 		if (!this.isTextableChannel(channel)) throw new Error('MessageCommandContext: Channel is not textable.');
 		this.channel = channel;
 
-		this.authorId = message.author.id;
-		this.author = message.author;
+		this.authorId = this.message.author.id;
+		this.author = this.message.author;
 
 		if ('guild' in this.channel) {
 			const guild = this.channel.guild;
@@ -353,7 +359,7 @@ export class MessageCommandContext extends CommandContext {
 			this.guildId = guild.id;
 			this.guild = guild;
 
-			if (message.member) this.member = message.member;
+			if (this.message.member) this.member = this.message.member;
 		}
 	}
 

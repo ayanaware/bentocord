@@ -52,6 +52,7 @@ export class Discord implements Component {
 		// merge options & overrides
 		clientOptions = { ...clientOptions, ...optionsOverride };
 		clientOptions.autoreconnect = true;
+		clientOptions.restMode = true;
 
 		this.clientOptions = clientOptions;
 		log.info(`ClientOptions = ${JSON.stringify(clientOptions)}`);

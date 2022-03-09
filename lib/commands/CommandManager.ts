@@ -955,6 +955,9 @@ export class CommandManager implements Component {
 		ctx.alias = data.name;
 
 		try {
+			// prepare context
+			await ctx.prepare();
+
 			// pre-flight checks, perms, suppressors, etc
 			if (!(await this.prepareCommand(command, ctx))) return;
 
@@ -1044,6 +1047,9 @@ export class CommandManager implements Component {
 		ctx.alias = name;
 
 		try {
+			// prepare context
+			await ctx.prepare();
+
 			// pre-flight checks, perms, suppressors, etc
 			if (!(await this.prepareCommand(command, ctx))) return;
 
