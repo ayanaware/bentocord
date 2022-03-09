@@ -1,4 +1,4 @@
-import { AnyGuildChannel, ChannelTypes, Emoji, Guild, Member, Role, User } from 'eris';
+import { AnyGuildChannel, ChannelTypes, Constants, Emoji, Guild, Member, Role, User } from 'eris';
 
 import { Translateable } from '../../interfaces/Translateable';
 import type { OptionType } from '../constants/OptionType';
@@ -144,6 +144,22 @@ export type CommandOptionUser = CommandOptionValue<OptionType.USER, User | Membe
 
 // CHANNEL
 export type CommandOptionChannel = CommandOptionValue<OptionType.CHANNEL, AnyGuildChannel> & { channelTypes?: Array<ChannelTypes> };
+// Common channel types helper
+export const AllTextChannelTypes = [
+	Constants.ChannelTypes.GUILD_TEXT,
+	Constants.ChannelTypes.DM,
+	Constants.ChannelTypes.GROUP_DM,
+	Constants.ChannelTypes.GUILD_NEWS,
+	Constants.ChannelTypes.GUILD_STORE,
+	Constants.ChannelTypes.GUILD_NEWS_THREAD,
+	Constants.ChannelTypes.GUILD_PUBLIC_THREAD,
+	Constants.ChannelTypes.GUILD_PRIVATE_THREAD,
+];
+
+export const AllVoiceChannelType = [
+	Constants.ChannelTypes.GUILD_VOICE,
+	Constants.ChannelTypes.GUILD_STAGE_VOICE,
+];
 
 // ROLE
 export type CommandOptionRole = CommandOptionValue<OptionType.ROLE, Role>;
