@@ -2,11 +2,11 @@ import { EntityAPI } from '@ayanaware/bento';
 
 import {
 	AllowedMentions,
-	BaseData,
+	AnyChannel,
 	CommandInteraction,
+	Constants,
 	EmbedOptions,
 	Guild,
-	GuildTextableChannel,
 	Member,
 	Message,
 	MessageContent,
@@ -26,6 +26,8 @@ import { PaginationOptions } from '../prompt/prompts/PaginationPrompt';
 
 import type { CommandManager } from './CommandManager';
 import type { Command } from './interfaces/Command';
+
+const { ChannelTypes } = Constants;
 
 export type AnyCommandContext = MessageCommandContext | InteractionCommandContext;
 
@@ -77,10 +79,23 @@ export abstract class CommandContext {
 		this.interface = this.api.getEntity(BentocordInterface);
 	}
 
+	protected isTextableChannel(channel: unknown): channel is TextableChannel {
+		const cast = channel as AnyChannel;
+		if (typeof cast.type !== 'number') return false;
+
+		const textableIds: Array<number> = [
+			ChannelTypes.DM,
+			ChannelTypes.GUILD_TEXT, ChannelTypes.GUILD_NEWS,
+			ChannelTypes.GUILD_NEWS_THREAD, ChannelTypes.GUILD_PUBLIC_THREAD, ChannelTypes.GUILD_PRIVATE_THREAD,
+		];
+
+		return textableIds.includes(cast.type);
+	}
+
 	/**
 	 * Check if command author is a owner
 	 */
-	public async isOwner(): Promise<boolean> {
+	public async isBotOwner(): Promise<boolean> {
 		return this.interface.isOwner(this.authorId);
 	}
 
@@ -226,8 +241,6 @@ export class InteractionCommandContext extends CommandContext {
 	public type: 'interaction' = 'interaction';
 	public interaction: CommandInteraction;
 
-	public channel?: GuildTextableChannel;
-
 	public constructor(manager: CommandManager, promptManager: PromptManager, command: Command, interaction: CommandInteraction) {
 		super(manager, promptManager, command);
 		this.interaction = interaction;
@@ -236,25 +249,25 @@ export class InteractionCommandContext extends CommandContext {
 
 		this.channelId = interaction.channel.id;
 
+		const channel = client.getChannel(this.channelId);
+		if (!this.isTextableChannel(channel)) throw new Error('InteractionCommandContext: Channel is not textable.');
+		this.channel = channel;
+
 		if (interaction.guildID) {
 			this.authorId = interaction.member.user.id;
-			this.author = new User(interaction.member.user as unknown as BaseData, client);
+			this.author = interaction.member.user;
 
 			this.guildId = interaction.guildID;
 
 			const guild = client.guilds.get(interaction.guildID);
-			if (guild) this.guild = guild;
+			if (!guild) throw new Error('InteractionCommandContext: Guild not found');
+			this.guild = guild;
 
 			const member = guild.members.get(this.authorId);
 			if (member) this.member = member;
-
-			const channel = guild.channels.get(interaction.guildID) as GuildTextableChannel;
-			if (channel) this.channel = channel;
 		} else {
 			this.authorId = interaction.user.id;
-			this.author = new User(interaction.user as unknown as BaseData, client);
-
-			this.channel = client.getChannel(interaction.guildID) as TextChannel;
+			this.author = interaction.user;
 		}
 	}
 
@@ -321,17 +334,21 @@ export class MessageCommandContext extends CommandContext {
 
 	public constructor(manager: CommandManager, promptManager: PromptManager, command: Command, message: Message) {
 		super(manager, promptManager, command);
-
 		this.message = message;
 
+		const client = this.discord.client;
+
 		this.channelId = message.channel.id;
-		this.channel = message.channel;
+
+		const channel = client.getChannel(this.channelId);
+		if (!this.isTextableChannel(channel)) throw new Error('MessageCommandContext: Channel is not textable.');
+		this.channel = channel;
 
 		this.authorId = message.author.id;
 		this.author = message.author;
 
-		if ((message.channel as TextChannel).guild) {
-			const guild = (message.channel as TextChannel).guild;
+		if ('guild' in this.channel) {
+			const guild = this.channel.guild;
 
 			this.guildId = guild.id;
 			this.guild = guild;

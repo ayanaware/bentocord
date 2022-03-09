@@ -587,15 +587,26 @@ export class CommandManager implements Component {
 			// Bentocord Array support
 			if (option.array) appOption.type = ApplicationCommandOptionTypes.STRING;
 
+			// TODO: Stop being lazy, and make this typesafe
+
 			// choices support
 			if ('choices' in option) {
 				let choices = option.choices;
 				if (typeof choices === 'function') choices = await choices();
 
-				// Temp
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 				(appOption as any).choices = choices;
 			}
+
+			// min/max support
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+			if ('min' in option) (appOption as any).min_value = option.min;
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+			if ('max' in option) (appOption as any).max_value = option.max;
+
+			// channel_types support
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+			if ('channelTypes' in option) (appOption as any).channel_types = option.channelTypes;
 
 			// required support
 			appOption.required = typeof option.required === 'boolean' ? option.required : true;

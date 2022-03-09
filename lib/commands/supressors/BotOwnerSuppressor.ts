@@ -7,6 +7,6 @@ export class BotOwnerSuppressor implements Suppressor {
 
 	public async suppress(ctx: CommandContext, option: SuppressorOption): Promise<string | false> {
 		const message = await ctx.formatTranslation('BENTOCORD_SUPPRESSOR_BOT_OWNER') || 'You are not a bot owner.';
-		return (await ctx.isOwner()) ? false : message;
+		return (await ctx.isBotOwner()) ? false : message;
 	}
 }

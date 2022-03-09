@@ -1,4 +1,4 @@
-import { AnyGuildChannel, Emoji, Guild, Member, Role, User } from 'eris';
+import { AnyGuildChannel, ChannelTypes, Emoji, Guild, Member, Role, User } from 'eris';
 
 import { Translateable } from '../../interfaces/Translateable';
 import type { OptionType } from '../constants/OptionType';
@@ -143,7 +143,7 @@ export type CommandOptionDiscord = CommandOptionUser | CommandOptionGuild | Comm
 export type CommandOptionUser = CommandOptionValue<OptionType.USER, User | Member>;
 
 // CHANNEL
-export type CommandOptionChannel = CommandOptionValue<OptionType.CHANNEL, AnyGuildChannel>;
+export type CommandOptionChannel = CommandOptionValue<OptionType.CHANNEL, AnyGuildChannel> & { channelTypes?: Array<ChannelTypes> };
 
 // ROLE
 export type CommandOptionRole = CommandOptionValue<OptionType.ROLE, Role>;
