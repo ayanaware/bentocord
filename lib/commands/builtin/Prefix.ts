@@ -17,9 +17,9 @@ export class PrefixCommand implements CommandEntity {
 		aliases: ['prefix'],
 		description: 'Set command prefix',
 		options: [
-			{ type: OptionType.SUB_COMMAND, name: ['view', 'get'], description: 'View current prefix' },
-			{ type: OptionType.SUB_COMMAND, name: ['set'], description: 'Set command prefix', options: [
-				{ type: OptionType.STRING, name: 'prefix', description: 'new prefix', required: false },
+			{ type: OptionType.SUB_COMMAND, name: ['view', 'get'], description: 'View prefix' },
+			{ type: OptionType.SUB_COMMAND, name: ['set'], description: 'Set prefix', options: [
+				{ type: OptionType.STRING, name: 'prefix', description: 'New Prefix' },
 			], permissionDefaults: { user: false, admin: true } },
 		],
 
