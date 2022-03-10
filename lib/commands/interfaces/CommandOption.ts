@@ -15,14 +15,14 @@ export interface CommandOption<T extends OptionType | string> {
 	type: T;
 
 	/** The name of the option */
-	name: string | Array<string>;
+	name: string | Translateable | Array<string | Translateable>;
 
 	/** The description of the option */
 	description?: string | Translateable;
 }
 
 export interface CommandOptionValue<T extends OptionType, U = unknown> extends CommandOption<T> {
-	name: string;
+	name: string | Translateable;
 
 	/** The default value of the option */
 	default?: U;
@@ -41,7 +41,7 @@ export interface CommandOptionValue<T extends OptionType, U = unknown> extends C
 }
 
 export interface CommandOptionChoice<T> {
-	name: string;
+	name: string | Translateable;
 	value: T;
 }
 
