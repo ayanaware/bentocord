@@ -730,7 +730,7 @@ export class CommandManager implements Component {
 		const collector = [];
 		for (let item of items) {
 			if (!item) {
-				collector.push({ source: '', translations: {} });
+				collector.push({ main: '', translations: {} });
 				continue;
 			} else if (typeof item === 'string') {
 				if (lowercase) item = item.toLocaleLowerCase();
