@@ -250,7 +250,7 @@ export class CommandManager implements Component {
 		const aliases = await this.getItemTranslations(definition.aliases, true);
 
 		// first alias is primary alias
-		const [primary, ...rest] = aliases;
+		const primary = aliases[0];
 		const name = primary.main;
 
 		// check dupes & save
@@ -258,7 +258,7 @@ export class CommandManager implements Component {
 		this.commands.set(name, command);
 
 		// register alias => primary alias
-		for (const alias of rest) {
+		for (const alias of aliases) {
 			const aliasName = alias.main;
 			if (this.aliases.has(aliasName)) throw new Error(`${name}: Attempted to register existing alias: ${aliasName}`);
 
