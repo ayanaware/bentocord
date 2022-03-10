@@ -91,6 +91,25 @@ export class BentocordInterface implements Plugin {
 	}
 
 	/**
+	 * Format a translation in all available languages.
+	 * @param key Translation Key
+	 * @param repl Replacements
+	 * @returns Object, key is language, value is translation
+	 */
+	public async formatTranslationMap(key: string, repl?: Record<string, unknown>): Promise<Record<string, string>> {
+		return {};
+	}
+
+	/**
+	 * Can be used to convert translations to only the subset that discord supports
+	 * @param translations Translation Map from formatTranslationMap
+	 * @returns Converted Translation Map
+	 */
+	public async convertTranslationMap(translations: Record<string, string>): Promise<Record<string, string>> {
+		return translations;
+	}
+
+	/**
 	 * Get the permission for a given snowflake.
 	 * @param permission The permission to check.
 	 * @param snowflake The snowflake to check (usually guildId or userId)

@@ -3,7 +3,7 @@ import { ComponentAPI, Inject } from '@ayanaware/bento';
 import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
 
 import { CommandContext } from './CommandContext';
-import { CommandManager } from './CommandManager';
+import { CommandItemTranslations, CommandManager } from './CommandManager';
 import { OptionType } from './constants/OptionType';
 import { CommandDefinition } from './interfaces/CommandDefinition';
 import { AnyCommandOption, AnySubCommandOption, AnyValueCommandOption, CommandOptionSubCommand } from './interfaces/CommandOption';
@@ -37,20 +37,21 @@ export class HelpManager implements CommandEntity {
 		return typeBuild;
 	}
 
-	private getPrimaryAlias(command: CommandDefinition | AnySubCommandOption): string {
+	private async getPrimaryAlias(command: CommandDefinition | AnySubCommandOption): Promise<string> {
+		let aliases: Array<CommandItemTranslations> = [];
 		if ('aliases' in command) {
-			return command.aliases[0];
+			aliases = await this.commandManager.getItemTranslations(command.aliases);
 		} else if (Array.isArray(command.name)) {
-			return command.name[0];
+			aliases = await this.commandManager.getItemTranslations(command.name);
 		}
 
-		return command.name;
+		return aliases[0].main;
 	}
 
 	private async buildOptions(ctx: CommandContext, options: Array<AnyCommandOption>): Promise<Array<PromptChoice<string>>> {
 		const items: Array<PromptChoice<string>> = [];
 		for (const option of options) {
-			const name = Array.isArray(option.name) ? option.name[0] : option.name;
+			const name = (await this.commandManager.getItemTranslations(option.name, true))[0].main;
 			const type = this.getTypePreview(option);
 
 			let description = option.description;

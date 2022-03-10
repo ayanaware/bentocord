@@ -27,6 +27,7 @@ import { BentocordVariable } from '../BentocordVariable';
 import { Discord } from '../discord/Discord';
 import { DiscordEvent } from '../discord/constants/DiscordEvent';
 import { MessageContext } from '../interfaces/MessageContext';
+import { Translateable } from '../interfaces/Translateable';
 import { PromptManager } from '../prompt/PromptManager';
 import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
 
@@ -35,8 +36,15 @@ import { CommandManagerEvent } from './constants/CommandManagerEvent';
 import { OptionType } from './constants/OptionType';
 import { SuppressorType } from './constants/SuppressorType';
 import type { Command } from './interfaces/Command';
-import { CommandPermissionDefaults } from './interfaces/CommandDefinition';
-import type { AnyCommandOption, AnySubCommandOption, AnyValueCommandOption, CommandOptionChoiceCallable } from './interfaces/CommandOption';
+import { CommandDefinition, CommandPermissionDefaults } from './interfaces/CommandDefinition';
+import type {
+	AnyCommandOption,
+	AnySubCommandOption,
+	AnyValueCommandOption,
+	CommandOptionChoiceCallable,
+	CommandOptionSubCommand,
+	CommandOptionSubCommandGroup,
+} from './interfaces/CommandOption';
 import type { Resolver } from './interfaces/Resolver';
 import type { Suppressor, SuppressorOption } from './interfaces/Suppressor';
 import type { CommandEntity } from './interfaces/entity/CommandEntity';
@@ -65,6 +73,11 @@ export interface CommandPermissionDetails {
 
 	/** Subcommand path for this permission */
 	path?: Array<string>;
+}
+
+export interface CommandItemTranslations {
+	main: string;
+	translations: Record<string, string>;
 }
 
 /**
@@ -108,7 +121,7 @@ export class CommandManager implements Component {
 	public async onChildLoad(entity: CommandEntity | ResolverEntity | SuppressorEntity): Promise<void> {
 		try {
 			if (typeof (entity as CommandEntity).definition === 'object') {
-				this.addCommand(entity as CommandEntity);
+				return this.addCommand(entity as CommandEntity);
 			} else if (typeof (entity as ResolverEntity).option !== 'undefined') {
 				this.addResolver(entity as ResolverEntity);
 			} else if (typeof (entity as SuppressorEntity).suppressor !== 'undefined') {
@@ -122,7 +135,7 @@ export class CommandManager implements Component {
 	public async onChildUnload(entity: CommandEntity | ResolverEntity | SuppressorEntity): Promise<void> {
 		try {
 			if (typeof (entity as CommandEntity).definition === 'object') {
-				this.removeCommand(entity as CommandEntity);
+				return this.removeCommand(entity as CommandEntity);
 			} else if (typeof (entity as ResolverEntity).option !== 'undefined') {
 				this.removeResolver((entity as ResolverEntity).option);
 			} else if (typeof (entity as SuppressorEntity).suppressor !== 'undefined') {
@@ -200,46 +213,74 @@ export class CommandManager implements Component {
 	}
 
 	/**
+	 * Get prefix for a guild
+	 * @param snowflake guildId
+	 * @returns prefix
+	 */
+	public async getPrefix(snowflake?: string): Promise<string> {
+		let prefix = this.defaultPrefix;
+		if (snowflake) {
+			const customPrefix = await this.interface.getPrefix(snowflake);
+			if (customPrefix) prefix = customPrefix;
+		}
+
+		return prefix;
+	}
+
+	/**
+	 * Set prefix for a guild
+	 * @param snowflake guildId
+	 * @param prefix new prefix
+	 */
+	public async setPrefix(snowflake: string, prefix: string): Promise<void> {
+		return this.interface.setPrefix(snowflake, prefix);
+	}
+
+	/**
 	 * Add command
 	 * @param command Command
 	 */
-	public addCommand(command: Command): void {
+	public async addCommand(command: Command): Promise<void> {
 		if (typeof command.execute !== 'function') throw new Error('Execute must be a function');
 		if (typeof command.definition !== 'object') throw new Error('Definition must be an object');
 		const definition = command.definition;
 
 		if (definition.aliases.length < 1) throw new Error('At least one alias must be defined');
-		// ensure all aliases are lowercase
-		definition.aliases = definition.aliases.map(a => a.toLocaleLowerCase());
+
+		const aliases = await this.getItemTranslations(definition.aliases, true);
 
 		// first alias is primary alias
-		const primary = definition.aliases[0];
+		const [primary, ...rest] = aliases;
+		const name = primary.main;
 
 		// check dupes & save
-		if (this.commands.has(primary)) throw new Error(`Command name "${primary}" already exists`);
-		this.commands.set(primary, command);
+		if (this.commands.has(name)) throw new Error(`Command name "${name}" already exists`);
+		this.commands.set(name, command);
 
 		// register alias => primary alias
-		for (const alias of definition.aliases) {
-			if (this.aliases.has(alias)) throw new Error(`${primary}: Attempted to register existing alias: ${alias}`);
+		for (const alias of rest) {
+			const aliasName = alias.main;
+			if (this.aliases.has(aliasName)) throw new Error(`${name}: Attempted to register existing alias: ${aliasName}`);
 
-			this.aliases.set(alias, primary);
+			this.aliases.set(aliasName, name);
 		}
 
 		// rebuild permissions
-		this.rebuildPermissions();
+		await this.rebuildPermissions();
 	}
 
 	/**
 	 * Remove Command
 	 * @param command Command
 	 */
-	public removeCommand(command: Command | string): void {
+	public async removeCommand(command: Command | string): Promise<void> {
 		if (typeof command === 'string') command = this.findCommand(command);
 		if (!command) throw new Error('Failed to find Command');
 
 		const definition = command.definition;
-		const primary = definition.aliases[0];
+
+		const aliases = await this.getItemTranslations(definition.aliases, true);
+		const primary = aliases[0].main;
 
 		// remove any aliases
 		for (const [alias, name] of this.aliases.entries()) {
@@ -250,7 +291,7 @@ export class CommandManager implements Component {
 		this.commands.delete(primary);
 
 		// rebuild permissions
-		this.rebuildPermissions();
+		await this.rebuildPermissions();
 	}
 
 	/**
@@ -282,7 +323,8 @@ export class CommandManager implements Component {
 		const definition = command.definition;
 
 		// check permission
-		const primary = definition.aliases[0];
+		const aliases = await this.getItemTranslations(definition.aliases, true);
+		const primary = aliases[0].main;
 		const permissionName = definition.permissionName ?? primary;
 		const path = [permissionName];
 
@@ -350,14 +392,15 @@ export class CommandManager implements Component {
 		}
 	}
 
-	public rebuildPermissions(): Map<string, CommandPermissionDetails> {
+	public async rebuildPermissions(): Promise<Map<string, CommandPermissionDetails>> {
 		this.permissions.clear();
 
 		for (const [, command] of this.commands) {
 			const definition = command.definition;
 
 			// add top-level command permission
-			const permissionName = definition.permissionName ?? definition.aliases[0];
+			const aliases = await this.getItemTranslations(definition.aliases, true);
+			const permissionName = definition.permissionName ?? aliases[0].main;
 
 			let defaults = definition.permissionDefaults ?? { user: true, admin: true };
 			if (typeof defaults === 'boolean') defaults = { user: defaults, admin: false };
@@ -365,11 +408,11 @@ export class CommandManager implements Component {
 			this.permissions.set(permissionName, { defaults, command });
 
 			// walk options
-			const walkOptions = (options: Array<AnyCommandOption> = [], path: Array<string> = [], permPath: Array<string> = []) => {
+			const walkOptions = async (options: Array<AnyCommandOption> = [], path: Array<string> = [], permPath: Array<string> = []): Promise<unknown> => {
 				for (const option of (options ?? [])) {
 					if (option.type !== OptionType.SUB_COMMAND && option.type !== OptionType.SUB_COMMAND_GROUP) continue;
 
-					const primary = this.getSubCommandNames(option)[0];
+					const primary = (await this.getItemTranslations(option.name))[0].main;
 					const subPath = [...path, primary];
 
 					const subName = option.permissionName ?? primary;
@@ -382,28 +425,77 @@ export class CommandManager implements Component {
 					const finalName = [permissionName, ...subPermPath].join('.');
 					this.permissions.set(finalName, { defaults: subDefaults, command, path: subPath });
 
-					if (Array.isArray(option.options)) walkOptions(option.options, subPath, subPermPath);
+					if (Array.isArray(option.options)) return walkOptions(option.options, subPath, subPermPath);
 				}
 			};
 
-			walkOptions(definition.options);
+			await walkOptions(definition.options);
 		}
 
 		return this.permissions;
 	}
 
-	public async getPrefix(snowflake?: string): Promise<string> {
-		let prefix = this.defaultPrefix;
-		if (snowflake) {
-			const customPrefix = await this.interface.getPrefix(snowflake);
-			if (customPrefix) prefix = customPrefix;
+	private async checkPermission(ctx: CommandContext, path: string | Array<string>, def?: CommandPermissionDefaults | boolean): Promise<[boolean, 'explicit' | 'implicit']> {
+		const permCtx: MessageContext = { userId: ctx.authorId, channelId: ctx.channelId };
+		if (ctx.guild) {
+			permCtx.guildId = ctx.guildId;
+			permCtx.roleIds = ctx.member.roles;
 		}
 
-		return prefix;
+		let permission = path;
+		if (Array.isArray(permission)) permission = permission.join('.');
+
+		// handle default
+		let defaults = def ?? { user: true, admin: true };
+		if (typeof defaults === 'boolean') defaults = { user: defaults, admin: true };
+
+		// if admin default true & member has administrator, bypass checks
+		// prevents lockout of administrators
+		if (defaults.admin && ctx.member && ctx.member.permissions.has('administrator')) return [true, 'implicit'];
+
+		const [check, where] = await this.interface.checkPermission(permission, permCtx);
+
+		// handle explicit allow/deny
+		if (typeof check === 'boolean') {
+			// explicit allow
+			if (check) return [true, 'explicit'];
+
+			// explicit deny
+			const content = await ctx.formatTranslation('BENTOCORD_PERMISSION_DENIED', { permission, where }) || `Permission \`${permission}\` has been denied on the \`${where}\` level.`;
+			await ctx.createResponse(content);
+
+			return [false, 'explicit'];
+		}
+
+		// all users have permission
+		if (defaults.user) return [true, 'implicit'];
+		// only admins have permission, verify they are one
+		else if (defaults.admin && ctx.member && ctx.member.permissions.has('administrator')) return [true, 'implicit'];
+
+		// user is not allowed to execute this command
+		const cntent = await ctx.formatTranslation('BENTOCORD_PERMISSION_DENIED_DEFAULT', { permission }) || `Permission \`${permission}\` is denined by default. Please contact a server administrator to grant you this permission.`;
+		await ctx.createResponse(cntent);
+
+		return [false, 'implicit'];
 	}
 
-	public async setPrefix(snowflake: string, prefix: string): Promise<void> {
-		return this.interface.setPrefix(snowflake, prefix);
+	/**
+	 * Sync test- prefixed Slash Commands with TestGuilds
+	 */
+	public async syncTestGuildCommands(): Promise<void> {
+		// get test guild list
+		const testGuilds = this.api.getVariable<string>({ name: BentocordVariable.BENTOCORD_TEST_GUILDS, default: '' }).split(',').map(g => g.trim()).filter(v => !!v);
+		if (testGuilds.length < 1) return;
+
+		// prefix commands with test-
+		let commands = await this.convertCommands();
+		commands = commands.map(c => ({ ...c, name: `${this.testPrefix}${c.name}` }));
+
+		for (const guildId of testGuilds) {
+			await this.syncCommands(commands, { delete: this.testPrefix, guildId });
+		}
+
+		log.info(`Successfully synced "${commands.length}" slash commnads in: "${testGuilds.join(', ')}"`);
 	}
 
 	/**
@@ -463,25 +555,6 @@ export class CommandManager implements Component {
 	}
 
 	/**
-	 * Sync test- prefixed Slash Commands with TestGuilds
-	 */
-	public async syncTestGuildCommands(): Promise<void> {
-		// get test guild list
-		const testGuilds = this.api.getVariable<string>({ name: BentocordVariable.BENTOCORD_TEST_GUILDS, default: '' }).split(',').map(g => g.trim()).filter(v => !!v);
-		if (testGuilds.length < 1) return;
-
-		// prefix commands with test-
-		let commands = await this.convertCommands();
-		commands = commands.map(c => ({ ...c, name: `${this.testPrefix}${c.name}` }));
-
-		for (const guildId of testGuilds) {
-			await this.syncCommands(commands, { delete: this.testPrefix, guildId });
-		}
-
-		log.info(`Successfully synced "${commands.length}" slash commnads in: "${testGuilds.join(', ')}"`);
-	}
-
-	/**
 	 * Convert all slash supporting Bentocord commands to Discord ApplicationCommand
 	 * @returns Array of ApplicationCommand
 	 */
@@ -492,17 +565,8 @@ export class CommandManager implements Component {
 			const definition = command.definition;
 			if (!definition || typeof definition.registerSlash === 'boolean' && !definition.registerSlash) continue;
 
-			const [first, ...rest] = definition.aliases;
-			const cmd = await this.convertCommand(first);
+			const cmd = await this.convertCommand(command);
 			collector.push(cmd);
-
-			// slash top-level alias support
-			if (rest.length > 0 && definition.slashAliases) {
-				for (const alias of rest) {
-					const aliasCmd = { ...cmd, name: alias };
-					collector.push(aliasCmd);
-				}
-			}
 		}
 
 		return collector;
@@ -512,23 +576,34 @@ export class CommandManager implements Component {
 	 * Convert Bentocord Command into Discord ApplicationCommand
 	 * @param command
 	 */
-	public async convertCommand(name: string): Promise<ApplicationCommand> {
-		const command = this.findCommand(name);
-		if (!command) throw new Error(`Failed to find Command "${name}"`);
-
+	private async convertCommand(command: Command): Promise<ApplicationCommand> {
 		const definition = command.definition;
-		if (!definition) throw new Error(`Command "${name}" lacks definition`);
+		if (!definition) throw new Error('Command lacks definition');
 
-		if (typeof definition.registerSlash === 'boolean' && !definition.registerSlash) throw new Error(`${name}: Command "${definition.aliases[0]}" has disabled slash conversion`);
+		// support translated names
+		const aliases = await this.getItemTranslations(definition.aliases, true);
+		const primary = aliases[0];
 
-		let description = definition.description;
-		if (typeof description === 'object') description = await this.interface.formatTranslation(description.key, description.repl) || description.backup;
+		// support translated descriptions
+		const description = (await this.getItemTranslations(definition.description))[0];
 
 		const appCommand: ApplicationCommandStructure = {
 			type: ApplicationCommandTypes.CHAT_INPUT,
-			name: definition.aliases[0],
-			description,
+			name: primary.main,
+			description: description.main,
 		};
+
+		// add name localizations (convert for discord needed)
+		if (Object.keys(primary.translations).length > 0) {
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+			(appCommand as any).name_localizations = await this.interface.convertTranslationMap(primary.translations);
+		}
+
+		// add description localizations (convert for discord needed)
+		if (Object.keys(description.translations).length > 0) {
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+			(appCommand as any).description_localizations = await this.interface.convertTranslationMap(description.translations);
+		}
 
 		// convert options
 		if (Array.isArray(definition.options)) appCommand.options = await this.convertOptions(definition.options);
@@ -546,24 +621,33 @@ export class CommandManager implements Component {
 
 		if (!options) options = [];
 		for (const option of options) {
-			let name = option.name;
-			if (Array.isArray(name)) name = name[0];
-			name = name.toLocaleLowerCase();
+			// support translated names
+			const names = await this.getItemTranslations(option.name, true);
+			const primary = names[0];
 
 			// support translated descriptions
-			let description = option.description;
-			if (typeof description === 'object') description = await this.interface.formatTranslation(description.key, description.repl) || description.backup;
-
-			// handle no description
-			if (!description) description = name;
+			const description = (await this.getItemTranslations(option.description))[0];
+			if (!description.main) description.main = primary.main;
 
 			// Handle Special Subcommand & SubcommandGroup OptionTypes
-			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {
+			if (this.isAnySubCommand(option)) {
 				const subOption: ApplicationCommandOptionsSubCommand | ApplicationCommandOptionsSubCommandGroup = {
 					type: option.type === OptionType.SUB_COMMAND ? ApplicationCommandOptionTypes.SUB_COMMAND : ApplicationCommandOptionTypes.SUB_COMMAND_GROUP,
-					name,
-					description,
+					name: primary.main,
+					description: description.main,
 				};
+
+				// add name localizations (convert for discord needed)
+				if (Object.keys(primary.translations).length > 0) {
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+					(subOption as any).name_localizations = await this.interface.convertTranslationMap(primary.translations);
+				}
+
+				// add description localizations (convert for discord needed)
+				if (Object.keys(description.translations).length > 0) {
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+					(subOption as any).description_localizations = await this.interface.convertTranslationMap(description.translations);
+				}
 
 				subOption.options = await this.convertOptions(option.options) as Array<ApplicationCommandOptionsSubCommand | ApplicationCommandOptionsWithValue>;
 				collector.push(subOption);
@@ -576,13 +660,28 @@ export class CommandManager implements Component {
 
 			const appOption: ApplicationCommandOption<any> = {
 				type: resolver ? resolver.convert : ApplicationCommandOptionTypes.STRING,
-				name,
-				description,
+				name: primary.main,
+				description: description.main,
 			};
 
 			// Prepend type information to description
 			const typeInfo = this.getTypePreview(option);
 			appOption.description = `${typeInfo} ${appOption.description}`;
+
+			// add name localizations (convert for discord needed)
+			if (Object.keys(primary.translations).length > 0) {
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+				(appOption as any).name_localizations = await this.interface.convertTranslationMap(primary.translations);
+			}
+
+			// add description localizations (convert for discord needed)
+			if (Object.keys(description.translations).length > 0) {
+				// prepend type information to description
+				description.translations = Object.fromEntries(Object.entries(description.translations).map(([key, value]) => [key, `${typeInfo} ${value}`]));
+
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+				(appOption as any).description_localizations = await this.interface.convertTranslationMap(description.translations);
+			}
 
 			// Bentocord Array support
 			if (option.array) appOption.type = ApplicationCommandOptionTypes.STRING;
@@ -620,6 +719,36 @@ export class CommandManager implements Component {
 		return collector;
 	}
 
+	/**
+	 * Get all translations for a possibly translatable
+	 * @param item string | Translatable | Array<string | Translatable>
+	 * @returns Array of Objects, obj.source = default locale, obj.translations = all other locales keyed by locale
+	 */
+	public async getItemTranslations(items: string | Translateable | Array<string | Translateable>, lowercase = false): Promise<Array<CommandItemTranslations>> {
+		if (!Array.isArray(items)) items = [items];
+
+		const collector = [];
+		for (let item of items) {
+			if (typeof item === 'string') {
+				if (lowercase) item = item.toLocaleLowerCase();
+				collector.push({ main: item, translations: {} });
+				continue;
+			}
+
+			let main = await this.interface.formatTranslation(item.key, item.repl) ?? item.backup ?? item.key;
+			let translations = await this.interface.formatTranslationMap(item.key, item.repl) ?? {};
+
+			if (lowercase) {
+				main = main.toLocaleLowerCase();
+				translations = Object.fromEntries(Object.entries(translations).map(([key, value]) => [key.toLocaleLowerCase(), value]));
+			}
+
+			collector.push({ main, translations });
+		}
+
+		return collector;
+	}
+
 	private getTypePreview(option: AnyValueCommandOption) {
 		// Prepend type information to description
 		let typeBuild = '[';
@@ -633,58 +762,23 @@ export class CommandManager implements Component {
 		return typeBuild;
 	}
 
-	private getSubCommandNames(sub: AnySubCommandOption) {
-		let names: string | Array<string> = sub.name;
-		if (!Array.isArray(names)) names = [names];
-		return names;
+	public isSubCommand(option: AnyCommandOption): option is CommandOptionSubCommand {
+		return option.type === OptionType.SUB_COMMAND;
 	}
 
-	private async checkPermission(ctx: CommandContext, path: string | Array<string>, def?: CommandPermissionDefaults | boolean): Promise<[boolean, 'explicit' | 'implicit']> {
-		const permCtx: MessageContext = { userId: ctx.authorId, channelId: ctx.channelId };
-		if (ctx.guild) {
-			permCtx.guildId = ctx.guildId;
-			permCtx.roleIds = ctx.member.roles;
-		}
-
-		let permission = path;
-		if (Array.isArray(permission)) permission = permission.join('.');
-
-		// handle default
-		let defaults = def ?? { user: true, admin: true };
-		if (typeof defaults === 'boolean') defaults = { user: defaults, admin: true };
-
-		// if admin default true & member has administrator, bypass checks
-		// prevents lockout of administrators
-		if (defaults.admin && ctx.member && ctx.member.permissions.has('administrator')) return [true, 'implicit'];
-
-		const [check, where] = await this.interface.checkPermission(permission, permCtx);
-
-		// handle explicit allow/deny
-		if (typeof check === 'boolean') {
-			// explicit allow
-			if (check) return [true, 'explicit'];
-
-			// explicit deny
-			const content = await ctx.formatTranslation('BENTOCORD_PERMISSION_DENIED', { permission, where }) || `Permission \`${permission}\` has been denied on the \`${where}\` level.`;
-			await ctx.createResponse(content);
-
-			return [false, 'explicit'];
-		}
-
-		// all users have permission
-		if (defaults.user) return [true, 'implicit'];
-		// only admins have permission, verify they are one
-		else if (defaults.admin && ctx.member && ctx.member.permissions.has('administrator')) return [true, 'implicit'];
-
-		// user is not allowed to execute this command
-		const cntent = await ctx.formatTranslation('BENTOCORD_PERMISSION_DENIED_DEFAULT', { permission }) || `Permission \`${permission}\` is denined by default. Please contact a server administrator to grant you this permission.`;
-		await ctx.createResponse(cntent);
-
-		return [false, 'implicit'];
+	public isSubCommandGroup(option: AnyCommandOption): option is CommandOptionSubCommandGroup {
+		return option.type === OptionType.SUB_COMMAND_GROUP;
 	}
 
-	public async fufillInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, data: CommandInteraction['data'], path: Array<string> = []): Promise<Record<string, unknown>> {
-		return this.processInteractionOptions(ctx, options, data.options, path);
+	public isAnySubCommand(option: AnyCommandOption): option is CommandOptionSubCommand | CommandOptionSubCommandGroup {
+		return this.isSubCommand(option) || this.isSubCommandGroup(option);
+	}
+
+	public async fufillInteractionOptions(ctx: CommandContext, definition: CommandDefinition, data: CommandInteraction['data']): Promise<Record<string, unknown>> {
+		const aliases = await this.getItemTranslations(definition.aliases, true);
+		const primary = aliases[0].main;
+
+		return this.processInteractionOptions(ctx, definition.options, data.options, [primary]);
 	}
 
 	private async processInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, optionData: Array<InteractionDataOptions>, path: Array<string> = []) {
@@ -694,12 +788,12 @@ export class CommandManager implements Component {
 		if (!optionData) optionData = [];
 
 		for (const option of options) {
-			// Handle SubCommand & SubCommandGroup
-			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {
-				const names = this.getSubCommandNames(option);
-				const primary = names[0];
+			const names = await this.getItemTranslations(option.name, true);
+			const primary = names[0].main;
 
-				const subOptionData = optionData.find(d => names.some(f => f.toLocaleLowerCase() === d.name.toLocaleLowerCase())) as InteractionDataOptionsSubCommand | InteractionDataOptionsSubCommandGroup;
+			// Handle SubCommand & SubCommandGroup
+			if (this.isAnySubCommand(option)) {
+				const subOptionData = optionData.find(d => names.some(f => f.main === d.name.toLocaleLowerCase())) as InteractionDataOptionsSubCommand | InteractionDataOptionsSubCommandGroup;
 				if (!subOptionData) continue;
 
 				// check permission
@@ -716,10 +810,10 @@ export class CommandManager implements Component {
 				break;
 			}
 
-			const data = optionData.find(d => d.name.toLocaleLowerCase() === option.name.toLocaleLowerCase()) as InteractionDataOptionsWithValue;
+			const data = optionData.find(d => d.name.toLocaleLowerCase() === primary) as InteractionDataOptionsWithValue;
 
 			const value: string = data?.value.toString();
-			collector = { ...collector, [option.name]: await this.resolveOption(ctx, option, value) };
+			collector = { ...collector, [primary]: await this.resolveOption(ctx, option, value) };
 		}
 
 		return collector;
@@ -730,13 +824,16 @@ export class CommandManager implements Component {
 	 * @param options Array of CommandOption
 	 * @param input User input
 	 */
-	public async fufillTextOptions(ctx: CommandContext, options: Array<AnyCommandOption>, input: string, path: Array<string> = []): Promise<Record<string, unknown>> {
+	public async fufillTextOptions(ctx: CommandContext, definition: CommandDefinition, input: string): Promise<Record<string, unknown>> {
 		const tokens = new Tokenizer(input).tokenize();
 
 		// TODO: Build allowedOptions
 		const output = new Parser(tokens).parse();
 
-		return this.processTextOptions(ctx, options, output, 0, path);
+		const aliases = await this.getItemTranslations(definition.aliases, true);
+		const primary = aliases[0].main;
+
+		return this.processTextOptions(ctx, definition.options, output, 0, [primary]);
 	}
 
 	private async processTextOptions(ctx: CommandContext, options: Array<AnyCommandOption>, output: ParserOutput, index = 0, path: Array<string> = []): Promise<Record<string, unknown>> {
@@ -746,40 +843,38 @@ export class CommandManager implements Component {
 
 		let promptSubs: Array<AnySubCommandOption> = [];
 		for (const option of options) {
-			if (option.type === OptionType.SUB_COMMAND_GROUP || option.type === OptionType.SUB_COMMAND) {
-				const subOption = option as AnySubCommandOption;
+			const names = await this.getItemTranslations(option.name, true);
+			const primary = names[0].main;
 
-				const names = this.getSubCommandNames(subOption);
-				const primary = names[0];
-
+			if (this.isAnySubCommand(option)) {
 				// track this suboption for prompt
-				promptSubs.push(subOption);
+				promptSubs.push(option);
 
 				// phrase is a single element
 				const phrase = output.phrases[index];
 				// validate arg matches subcommand or group name
-				if (!phrase || names.every(n => n.toLocaleLowerCase() !== phrase.value.toLocaleLowerCase())) continue;
+				if (!phrase || names.every(n => n.main !== phrase.value.toLocaleLowerCase())) continue;
 
 				index++;
 
 				// check permission
-				const permissionName = subOption.permissionName ?? primary;
+				const permissionName = option.permissionName ?? primary;
 				const subPath = [...path, permissionName];
 
-				if (!(await this.checkPermission(ctx, subPath, subOption.permissionDefaults))[0]) throw NON_ERROR_HALT;
+				if (!(await this.checkPermission(ctx, subPath, option.permissionDefaults))[0]) throw NON_ERROR_HALT;
 
 				// process suppressors
-				const suppressed = await this.executeSuppressors(ctx, subOption);
+				const suppressed = await this.executeSuppressors(ctx, option);
 				if (suppressed) throw new Error(`Suppressor \`${suppressed.name}\` halted execution: ${suppressed.message}`);
 
 				// process nested option
-				collector = { ...collector, [primary]: await this.processTextOptions(ctx, subOption.options, output, index, subPath) };
+				collector = { ...collector, [primary]: await this.processTextOptions(ctx, option.options, output, index, subPath) };
 				promptSubs = []; // collected successfully
 				break;
 			}
 
 			let value: string;
-			const textOption = output.options.find(o => o.key.toLocaleLowerCase() === option.name.toLocaleLowerCase());
+			const textOption = output.options.find(o => o.key.toLocaleLowerCase() === primary.toLocaleLowerCase());
 			if (textOption) {
 				value = textOption.value;
 			} else {
@@ -793,7 +888,7 @@ export class CommandManager implements Component {
 				value = phrases.map(p => p.value).join(' ');
 			}
 
-			collector = { ...collector, [option.name]: await this.resolveOption(ctx, option, value) };
+			collector = { ...collector, [primary]: await this.resolveOption(ctx, option, value) };
 		}
 
 		// Prompt for subcommand option
@@ -801,7 +896,7 @@ export class CommandManager implements Component {
 		if (promptSubs.length > 1) {
 			const choices: Array<PromptChoice<string>> = [];
 			for (const sub of promptSubs) {
-				const primary = this.getSubCommandNames(sub)[0];
+				const primary = (await this.getItemTranslations(sub.name, true))[0].main;
 
 				let description = sub.description;
 				if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl) || description.backup;
@@ -813,26 +908,25 @@ export class CommandManager implements Component {
 			const choice = await ctx.choice(choices, content);
 			useSub = choice;
 		} else if (promptSubs.length === 1) {
-			useSub = promptSubs[0]?.name[0];
+			const sub = promptSubs[0];
+			const primary = (await this.getItemTranslations(sub.name, true))[0].main;
+			useSub = primary;
 		}
 
 		if (useSub) {
-			const subOption = options.find(o => {
-				let name = o.name;
-				if (!Array.isArray(name)) name = [name];
+			for (const option of options) {
+				const primary = (await this.getItemTranslations(option.name, true))[0].main;
+				if (primary !== useSub.toLocaleLowerCase()) continue;
+				if (!this.isAnySubCommand(option)) continue;
 
-				return name.some(n => n.toLocaleLowerCase() === useSub.toLocaleLowerCase());
-			}) as AnySubCommandOption;
+				// check permission
+				const permissionName = option.permissionName ?? primary;
+				const subPath = [...path, permissionName];
 
-			const primary = this.getSubCommandNames(subOption)[0];
+				if (!(await this.checkPermission(ctx, subPath, option.permissionDefaults))[0]) throw NON_ERROR_HALT;
 
-			// check permission
-			const permissionName = subOption.permissionName ?? primary;
-			const subPath = [...path, permissionName];
-
-			if (!(await this.checkPermission(ctx, subPath, subOption.permissionDefaults))[0]) throw NON_ERROR_HALT;
-
-			if (subOption) collector = { ...collector, [useSub]: await this.processTextOptions(ctx, subOption.options, output, index, subPath) };
+				if (option) collector = { ...collector, [useSub]: await this.processTextOptions(ctx, option.options, output, index, subPath) };
+			}
 		}
 
 		return collector;
@@ -905,13 +999,28 @@ export class CommandManager implements Component {
 
 		// handle choices
 		if ('choices' in option) {
-			let choices: CommandOptionChoiceCallable<unknown> = option.choices;
+			let choices: CommandOptionChoiceCallable<number | string> = option.choices;
 			if (typeof choices === 'function') choices = await choices();
 
 			const findChoice = choices.find(c => out && (c.value === out.toString() || c.value === parseInt(out.toString(), 10)));
 			if (!findChoice) {
 				const content = await ctx.formatTranslation('BENTOCORD_PROMPT_CHOICE_OPTION', { option: option.name }) || `Please select one of the following choices for option \`${option.name}\``;
-				out = await ctx.choice<T>(choices.map(c => ({ name: c.name, value: c.value as T, match: [c.name] })), content);
+
+				const finalChoices: Array<PromptChoice<number | string>> = [];
+				for (const choice of choices) {
+					const name = await this.getItemTranslations(choice.name);
+					const primary = name[0];
+
+					const final = { name: primary.main, value: choice.value, match: [primary.main] };
+					if (Object.keys(primary.translations).length > 0) {
+						// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+						(final as any).name_localizations = primary.translations;
+					}
+
+					finalChoices.push(final);
+				}
+
+				out = await ctx.choice<number | string>(finalChoices, content) as unknown as T;
 			}
 		}
 
@@ -962,8 +1071,7 @@ export class CommandManager implements Component {
 			if (!(await this.prepareCommand(command, ctx))) return;
 
 			// fufill options
-			const primary = definition.aliases[0];
-			const options = await this.fufillInteractionOptions(ctx, definition.options, data, [primary]);
+			const options = await this.fufillInteractionOptions(ctx, definition, data);
 
 			return this.executeCommand(command, ctx, options);
 		} catch (e) {
@@ -1054,8 +1162,7 @@ export class CommandManager implements Component {
 			if (!(await this.prepareCommand(command, ctx))) return;
 
 			// fufill options
-			const primary = definition.aliases[0];
-			const options = await this.fufillTextOptions(ctx, definition.options, args, [primary]);
+			const options = await this.fufillTextOptions(ctx, definition, args);
 
 			return this.executeCommand(command, ctx, options);
 		} catch (e) {

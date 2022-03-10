@@ -11,6 +11,7 @@ export * from './commands/CommandManager';
 export * from './commands/CommandContext';
 export * from './commands/HelpManager';
 export * from './commands/constants/CommandManagerEvent';
+export * from './commands/constants/DiscordLocales';
 export * from './commands/constants/OptionType';
 export * from './commands/constants/SuppressorType';
 export * from './commands/interfaces/Command';
