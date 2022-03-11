@@ -727,7 +727,7 @@ export class CommandManager implements Component {
 	 * @param item string | Translatable | Array<string | Translatable>
 	 * @returns Array of Objects, obj.source = default locale, obj.translations = all other locales keyed by locale
 	 */
-	public async getItemTranslations(items: string | Translateable | Array<string | Translateable>, lowercase = false): Promise<Array<CommandItemTranslations>> {
+	public async getItemTranslations(items: string | Translateable | Array<string | Translateable>, normalize = false): Promise<Array<CommandItemTranslations>> {
 		if (!Array.isArray(items)) items = [items];
 
 		const collector = [];
@@ -736,7 +736,7 @@ export class CommandManager implements Component {
 				collector.push({ main: '', translations: {} });
 				continue;
 			} else if (typeof item === 'string') {
-				if (lowercase) item = item.toLocaleLowerCase();
+				if (normalize) item = item.toLocaleLowerCase();
 				collector.push({ main: item, translations: {} });
 				continue;
 			}
@@ -744,9 +744,11 @@ export class CommandManager implements Component {
 			let main = await this.interface.formatTranslation(item.key, item.repl) ?? item.backup ?? item.key;
 			let translations = await this.interface.formatTranslationMap(item.key, item.repl) ?? {};
 
-			if (lowercase) {
+			if (normalize) {
 				main = main.toLocaleLowerCase();
-				translations = Object.fromEntries(Object.entries(translations).map(([key, value]) => [key.toLocaleLowerCase(), value]));
+				main = main.replace(/\s/g, '');
+
+				translations = Object.fromEntries(Object.entries(translations).map(([key, value]) => [key, value.toLocaleLowerCase().replace(/\s/g, '')]));
 			}
 
 			collector.push({ main, translations });
