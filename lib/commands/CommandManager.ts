@@ -325,6 +325,7 @@ export class CommandManager implements Component {
 		// check permission
 		const aliases = await this.getItemTranslations(definition.aliases, true);
 		const primary = aliases[0].main;
+
 		const permissionName = definition.permissionName ?? primary;
 		const path = [permissionName];
 
@@ -352,7 +353,9 @@ export class CommandManager implements Component {
 
 	public async executeCommand(command: Command, ctx: CommandContext, options: Record<string, unknown>): Promise<unknown> {
 		const definition = command.definition;
-		const primary = definition.aliases[0];
+
+		const aliases = await this.getItemTranslations(definition.aliases, true);
+		const primary = aliases[0].main;
 
 		// selfPermissions
 		if (ctx.guild && Array.isArray(definition.selfPermissions) && definition.selfPermissions.length > 0) {

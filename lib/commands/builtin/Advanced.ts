@@ -14,11 +14,11 @@ export class AdvancedCommand implements CommandEntity {
 	@Inject() private readonly cm: CommandManager;
 
 	public definition: CommandDefinition = {
-		aliases: ['adv'],
-		description: 'Meta Command. Takes passed arg and redirects to relevant command',
+		aliases: [{ key: 'BENTOCORD_COMMAND_ADV', backup: 'advanced' }],
+		description: { key: 'BENTOCORD_DESCRIPTION_ADV', backup: 'Run non-slash exposed commands' },
 		options: [
-			{ type: OptionType.STRING, name: 'alias', description: 'command name or alias' },
-			{ type: OptionType.STRING, name: 'opts', description: 'option string to parse', required: false, rest: true },
+			{ type: OptionType.STRING, name: { key: 'BENTOCORD_OPTION_ALIAS', backup: 'alias' }, description: { key: 'BENTOCORD_OPTION_ALIAS_DESCRIPTION', backup: 'Command name or alias' } },
+			{ type: OptionType.STRING, name: { key: 'BENTOCORD_OPTION_OPTIONS', backup: 'options' }, description: { key: 'BENTOCORD_OPTION_OPTIONS_DESCRIPTION', backup: 'Command arguments to pass' }, required: false, rest: true },
 		],
 
 		registerSlash: true,

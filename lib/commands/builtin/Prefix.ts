@@ -14,12 +14,12 @@ export class PrefixCommand implements CommandEntity {
 	public parent = CommandManager;
 
 	public definition: CommandDefinition = {
-		aliases: ['prefix'],
-		description: 'Set command prefix',
+		aliases: [{ key: 'BENTOCORD_COMMAND_PREFIX', backup: 'prefix' }],
+		description: { key: 'BENTOCORD_COMMAND_PREFIX_DESCRIPTION', backup: 'Manage command prefix' },
 		options: [
-			{ type: OptionType.SUB_COMMAND, name: ['view', 'get'], description: 'View prefix' },
-			{ type: OptionType.SUB_COMMAND, name: ['set'], description: 'Set prefix', options: [
-				{ type: OptionType.STRING, name: 'prefix', description: 'New Prefix' },
+			{ type: OptionType.SUB_COMMAND, name: [{ key: 'BENTOCORD_COMMAND_PREFIX_VIEW', backup: 'view' }, 'get'], description: { key: 'BENTOCORD_COMMAND_PREFIX_VIEW_DESCRIPTION', backup: 'View prefix' } },
+			{ type: OptionType.SUB_COMMAND, name: { key: 'BENTOCORD_COMMAND_PREFIX_SET', backup: 'set' }, description: { key: 'BENTOCORD_COMMAND_PREFIX_SET_DESCRIPTION', backup: 'Set prefix' }, options: [
+				{ type: OptionType.STRING, name: { key: 'BENTOCORD_OPTION_PREFIX', backup: 'prefix' }, description: { key: 'BENTOCORD_OPTION_PREFIX_DESCRIPTION', backup: 'New prefix' } },
 			], permissionDefaults: { user: false, admin: true } },
 		],
 

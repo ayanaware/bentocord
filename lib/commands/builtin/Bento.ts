@@ -13,8 +13,8 @@ export class BentoCommand implements CommandEntity {
 	public parent = CommandManager;
 
 	public definition: CommandDefinition = {
-		aliases: ['bento', 'bentocord'],
-		description: 'Display Bentocord details',
+		aliases: [{ key: 'BENTOCORD_COMMAND_BENTO', backup: 'bento' }, 'bentocord'],
+		description: { key: 'BENTOCORD_COMMAND_BENTO_DESCRIPTION', backup: 'Display bentocord details' },
 
 		registerSlash: false,
 	};
