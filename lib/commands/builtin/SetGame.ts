@@ -16,7 +16,7 @@ export class SetGameCommand implements CommandEntity {
 	public parent = CommandManager;
 
 	public definition: CommandDefinition = {
-		aliases: [{ key: 'BENTOCORD_COMMAND_SETGAME', backup: 'setgame' }, 'setgame'],
+		aliases: [{ key: 'BENTOCORD_COMMAND_SETGAME', backup: 'setgame' }],
 		description: { key: 'BENTOCORD_COMMAND_SETGAME_DESCRIPTION', backup: 'Set the bot\'s game status' },
 		options: [
 			{ type: OptionType.STRING, name: { key: 'BENTOCORD_OPTION_ACTIVITY', backup: 'activity' }, description: { key: 'BENTOCORD_OPTION_ACTIVITY_DESCRIPTION', backup: 'Activity name' }, rest: true },
