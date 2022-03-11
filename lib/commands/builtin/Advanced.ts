@@ -15,7 +15,7 @@ export class AdvancedCommand implements CommandEntity {
 
 	public definition: CommandDefinition = {
 		aliases: [{ key: 'BENTOCORD_COMMAND_ADV', backup: 'advanced' }],
-		description: { key: 'BENTOCORD_DESCRIPTION_ADV', backup: 'Run non-slash exposed commands' },
+		description: { key: 'BENTOCORD_COMMAND_ADV_DESCRIPTION', backup: 'Run non-slash exposed commands' },
 		options: [
 			{ type: OptionType.STRING, name: { key: 'BENTOCORD_OPTION_ALIAS', backup: 'alias' }, description: { key: 'BENTOCORD_OPTION_ALIAS_DESCRIPTION', backup: 'Command name or alias' } },
 			{ type: OptionType.STRING, name: { key: 'BENTOCORD_OPTION_OPTIONS', backup: 'options' }, description: { key: 'BENTOCORD_OPTION_OPTIONS_DESCRIPTION', backup: 'Command arguments to pass' }, required: false, rest: true },
