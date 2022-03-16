@@ -17,6 +17,9 @@ export interface CommandDefinition {
 	/** Command Aliases; First will be used for slash command name */
 	aliases: Array<string | Translateable>;
 
+	/** Command Category; Fully Optional, used by help & some permission */
+	category?: string;
+
 	/** Command Description */
 	description: string | Translateable;
 

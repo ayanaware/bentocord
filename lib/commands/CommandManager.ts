@@ -64,12 +64,23 @@ export interface SyncOptions {
 	guildId?: string;
 }
 
+export interface CommandDetails {
+	/** The command */
+	command: Command;
+
+	/** Command category */
+	category?: string;
+
+	/** Command permissions */
+	permissions: Array<CommandPermissionDetails>;
+}
+
 export interface CommandPermissionDetails {
+	/** The permission name */
+	permission: string;
+
 	/** Default state of this permission */
 	defaults: CommandPermissionDefaults;
-
-	/** Command which the permission comes from */
-	command: Command;
 
 	/** Subcommand path for this permission */
 	path?: Array<string>;
@@ -98,9 +109,8 @@ export class CommandManager implements Component {
 
 	@Inject() private readonly promptManager: PromptManager;
 
-	private readonly commands: Map<string, Command> = new Map();
+	private readonly commands: Map<string, CommandDetails> = new Map();
 	private readonly aliases: Map<string, string> = new Map();
-	public readonly permissions: Map<string, CommandPermissionDetails> = new Map();
 
 	private readonly resolvers: Map<OptionType | string, Resolver<unknown>> = new Map();
 	private readonly suppressors: Map<SuppressorType | string, Suppressor> = new Map();
@@ -255,7 +265,12 @@ export class CommandManager implements Component {
 
 		// check dupes & save
 		if (this.commands.has(name)) throw new Error(`Command name "${name}" already exists`);
-		this.commands.set(name, command);
+
+		// add permissions
+		const permissions = await this.getPermissionDetails(command);
+
+		const commandDetails: CommandDetails = { command, category: definition.category ?? null, permissions };
+		this.commands.set(name, commandDetails);
 
 		// register alias => primary alias
 		for (const alias of aliases) {
@@ -264,9 +279,6 @@ export class CommandManager implements Component {
 
 			this.aliases.set(aliasName, name);
 		}
-
-		// rebuild permissions
-		await this.rebuildPermissions();
 	}
 
 	/**
@@ -289,9 +301,6 @@ export class CommandManager implements Component {
 
 		// remove reference
 		this.commands.delete(primary);
-
-		// rebuild permissions
-		await this.rebuildPermissions();
 	}
 
 	/**
@@ -310,7 +319,37 @@ export class CommandManager implements Component {
 		const command = this.commands.get(primary);
 		if (!command) return null;
 
-		return command;
+		return command.command;
+	}
+
+	/**
+	 * Get all commands and their details
+	 */
+	public getCommands(): Map<string, CommandDetails> {
+		return this.commands;
+	}
+
+	/**
+	 * Get all valid command related permissions, include all and categories
+	 * @returns Map of permission => CommandPermissionDetails
+	 */
+	public getPermissions(): Map<string, CommandPermissionDetails & { command?: Command }> {
+		const collector = new Map<string, CommandPermissionDetails & { command?: Command }>();
+
+		collector.set('all', { permission: 'all', defaults: { user: false, admin: true } });
+
+		for (const commandDetails of this.commands.values()) {
+			const { command, permissions } = commandDetails;
+			if (!command) continue;
+
+			// add category permissions
+			const category = command.definition.category;
+			if (category) collector.set(['all', category].join('.'), { permission: ['all', category].join('.'), defaults: { user: false, admin: true } });
+
+			for (const permission of permissions) collector.set(permission.permission, { ...permission, command });
+		}
+
+		return collector;
 	}
 
 	/**
@@ -329,16 +368,22 @@ export class CommandManager implements Component {
 		const permissionName = definition.permissionName ?? primary;
 		const path = [permissionName];
 
-		const [state, type] = await this.checkPermission(ctx, path, definition.permissionDefaults);
+		// check all for explicit deny
+		const all = (await this.checkPermission(ctx, 'all', { user: true, admin: true }))[0];
+		if (!all) return false;
+
+		// category/group permission support
+		if (definition.category) {
+			const [group, type] = await this.checkPermission(ctx, ['all', definition.category], { user: true, admin: true });
+			// explicit allow/deny
+			if (type === 'explicit') return group;
+		}
+
+		const state = (await this.checkPermission(ctx, path, definition.permissionDefaults))[0];
 		// explicit or implicit deny
 		if (!state) return false;
 
-		// implicit allow, check 'all'
-		if (state && type === 'implicit') {
-			// all permission check
-			if (!(await this.checkPermission(ctx, 'all', true))[0]) return false;
-		}
-		// explicit true, or implicit true & all true
+		// explicit or implicit allow
 
 		// process suppressors
 		const suppressed = await this.executeSuppressors(ctx, definition);
@@ -395,47 +440,78 @@ export class CommandManager implements Component {
 		}
 	}
 
-	public async rebuildPermissions(): Promise<Map<string, CommandPermissionDetails>> {
-		this.permissions.clear();
+	/**
+	 * Get all translations for a possibly translatable
+	 * @param item string | Translatable | Array<string | Translatable>
+	 * @returns Array of Objects, obj.source = default locale, obj.translations = all other locales keyed by locale
+	 */
+	public async getItemTranslations(items: string | Translateable | Array<string | Translateable>, normalize = false): Promise<Array<CommandItemTranslations>> {
+		if (!Array.isArray(items)) items = [items];
 
-		for (const [, command] of this.commands) {
-			const definition = command.definition;
+		const collector = [];
+		for (let item of items) {
+			if (!item) {
+				collector.push({ main: '', translations: {} });
+				continue;
+			} else if (typeof item === 'string') {
+				if (normalize) item = item.toLocaleLowerCase();
+				collector.push({ main: item, translations: {} });
+				continue;
+			}
 
-			// add top-level command permission
-			const aliases = await this.getItemTranslations(definition.aliases, true);
-			const permissionName = definition.permissionName ?? aliases[0].main;
+			let main = await this.interface.formatTranslation(item.key, item.repl) ?? item.backup ?? item.key;
+			let translations = await this.interface.formatTranslationMap(item.key, item.repl) ?? {};
 
-			let defaults = definition.permissionDefaults ?? { user: true, admin: true };
-			if (typeof defaults === 'boolean') defaults = { user: defaults, admin: false };
+			if (normalize) {
+				main = main.toLocaleLowerCase();
+				main = main.replace(/\s/g, '');
 
-			this.permissions.set(permissionName, { defaults, command });
+				translations = Object.fromEntries(Object.entries(translations).map(([key, value]) => [key, value.toLocaleLowerCase().replace(/\s/g, '')]));
+			}
 
-			// walk options
-			const walkOptions = async (options: Array<AnyCommandOption> = [], path: Array<string> = [], permPath: Array<string> = []): Promise<unknown> => {
-				for (const option of (options ?? [])) {
-					if (option.type !== OptionType.SUB_COMMAND && option.type !== OptionType.SUB_COMMAND_GROUP) continue;
-
-					const primary = (await this.getItemTranslations(option.name))[0].main;
-					const subPath = [...path, primary];
-
-					const subName = option.permissionName ?? primary;
-					const subPermPath = [...permPath, subName];
-
-					let subDefaults = option.permissionDefaults ?? { user: true, admin: true };
-					if (typeof subDefaults === 'boolean') subDefaults = { user: subDefaults, admin: true };
-
-					// add subcommand permissions
-					const finalName = [permissionName, ...subPermPath].join('.');
-					this.permissions.set(finalName, { defaults: subDefaults, command, path: subPath });
-
-					if (Array.isArray(option.options)) return walkOptions(option.options, subPath, subPermPath);
-				}
-			};
-
-			await walkOptions(definition.options);
+			collector.push({ main, translations });
 		}
 
-		return this.permissions;
+		return collector;
+	}
+
+	public async getPermissionDetails(command: Command): Promise<Array<CommandPermissionDetails>> {
+		const definition = command.definition;
+
+		const collector: Array<CommandPermissionDetails> = [];
+
+		const aliases = await this.getItemTranslations(definition.aliases, true);
+		const permissionName = definition.permissionName ?? aliases[0].main;
+
+		let defaults = definition.permissionDefaults ?? { user: true, admin: true };
+		if (typeof defaults === 'boolean') defaults = { user: defaults, admin: false };
+
+		collector.push({ permission: permissionName, defaults, path: [] });
+
+		// walk options
+		const walkOptions = async (options: Array<AnyCommandOption> = [], path: Array<string> = [], permPath: Array<string> = []): Promise<unknown> => {
+			for (const option of (options ?? [])) {
+				if (option.type !== OptionType.SUB_COMMAND && option.type !== OptionType.SUB_COMMAND_GROUP) continue;
+				const primary = (await this.getItemTranslations(option.name))[0].main;
+				const subPath = [...path, primary];
+
+				const subName = option.permissionName ?? primary;
+				const subPermPath = [...permPath, subName];
+
+				let subDefaults = option.permissionDefaults ?? { user: true, admin: true };
+				if (typeof subDefaults === 'boolean') subDefaults = { user: subDefaults, admin: true };
+
+				// add subcommand permissions
+				const finalName = [permissionName, ...subPermPath].join('.');
+				collector.push({ permission: finalName, defaults: subDefaults, path: subPath });
+
+				if (Array.isArray(option.options)) return walkOptions(option.options, subPath, subPermPath);
+			}
+		};
+
+		await walkOptions(definition.options);
+
+		return collector;
 	}
 
 	private async checkPermission(ctx: CommandContext, path: string | Array<string>, def?: CommandPermissionDefaults | boolean): Promise<[boolean, 'explicit' | 'implicit']> {
@@ -472,8 +548,6 @@ export class CommandManager implements Component {
 
 		// all users have permission
 		if (defaults.user) return [true, 'implicit'];
-		// only admins have permission, verify they are one
-		else if (defaults.admin && ctx.member && ctx.member.permissions.has('administrator')) return [true, 'implicit'];
 
 		// user is not allowed to execute this command
 		const cntent = await ctx.formatTranslation('BENTOCORD_PERMISSION_DENIED_DEFAULT', { permission }) || `Permission \`${permission}\` is denined by default. Please contact a server administrator to grant you this permission.`;
@@ -564,7 +638,9 @@ export class CommandManager implements Component {
 	public async convertCommands(): Promise<Array<ApplicationCommand>> {
 		const collector: Array<ApplicationCommand> = [];
 
-		for (const command of this.commands.values()) {
+		for (const details of this.commands.values()) {
+			const command = details.command;
+
 			const definition = command.definition;
 			if (!definition || typeof definition.registerSlash === 'boolean' && !definition.registerSlash) continue;
 
@@ -722,41 +798,6 @@ export class CommandManager implements Component {
 		return collector;
 	}
 
-	/**
-	 * Get all translations for a possibly translatable
-	 * @param item string | Translatable | Array<string | Translatable>
-	 * @returns Array of Objects, obj.source = default locale, obj.translations = all other locales keyed by locale
-	 */
-	public async getItemTranslations(items: string | Translateable | Array<string | Translateable>, normalize = false): Promise<Array<CommandItemTranslations>> {
-		if (!Array.isArray(items)) items = [items];
-
-		const collector = [];
-		for (let item of items) {
-			if (!item) {
-				collector.push({ main: '', translations: {} });
-				continue;
-			} else if (typeof item === 'string') {
-				if (normalize) item = item.toLocaleLowerCase();
-				collector.push({ main: item, translations: {} });
-				continue;
-			}
-
-			let main = await this.interface.formatTranslation(item.key, item.repl) ?? item.backup ?? item.key;
-			let translations = await this.interface.formatTranslationMap(item.key, item.repl) ?? {};
-
-			if (normalize) {
-				main = main.toLocaleLowerCase();
-				main = main.replace(/\s/g, '');
-
-				translations = Object.fromEntries(Object.entries(translations).map(([key, value]) => [key, value.toLocaleLowerCase().replace(/\s/g, '')]));
-			}
-
-			collector.push({ main, translations });
-		}
-
-		return collector;
-	}
-
 	private getTypePreview(option: AnyValueCommandOption) {
 		// Prepend type information to description
 		let typeBuild = '[';
@@ -803,6 +844,13 @@ export class CommandManager implements Component {
 			if (this.isAnySubCommand(option)) {
 				const subOptionData = optionData.find(d => names.some(f => f.main === d.name.toLocaleLowerCase())) as InteractionDataOptionsSubCommand | InteractionDataOptionsSubCommandGroup;
 				if (!subOptionData) continue;
+
+				// check category permission
+				const category = ctx.command.definition.category;
+				if (category) {
+					const [group, type] = await this.checkPermission(ctx, ['all', category], { user: true, admin: true });
+					if (!group && type === 'explicit') throw NON_ERROR_HALT;
+				}
 
 				// check permission
 				const permissionName = option.permissionName ?? primary;
@@ -865,6 +913,13 @@ export class CommandManager implements Component {
 
 				index++;
 
+				// check category permission
+				const category = ctx.command.definition.category;
+				if (category) {
+					const [group, type] = await this.checkPermission(ctx, ['all', category], { user: true, admin: true });
+					if (!group && type === 'explicit') throw NON_ERROR_HALT;
+				}
+
 				// check permission
 				const permissionName = option.permissionName ?? primary;
 				const subPath = [...path, permissionName];
@@ -926,6 +981,13 @@ export class CommandManager implements Component {
 				const primary = (await this.getItemTranslations(option.name, true))[0].main;
 				if (primary !== useSub.toLocaleLowerCase()) continue;
 				if (!this.isAnySubCommand(option)) continue;
+
+				// check category permission
+				const category = ctx.command.definition.category;
+				if (category) {
+					const [group, type] = await this.checkPermission(ctx, ['all', category], { user: true, admin: true });
+					if (!group && type === 'explicit') throw NON_ERROR_HALT;
+				}
 
 				// check permission
 				const permissionName = option.permissionName ?? primary;
