@@ -333,20 +333,22 @@ export class CommandManager implements Component {
 	 * Get all valid command related permissions, include all and categories
 	 * @returns Map of permission => CommandPermissionDetails
 	 */
-	public getPermissions(): Map<string, CommandPermissionDetails & { command?: Command }> {
-		const collector = new Map<string, CommandPermissionDetails & { command?: Command }>();
+	public getPermissions(): Map<string, CommandPermissionDetails & { command?: Command, type: 'GROUP' | 'COMMAND' }> {
+		const collector = new Map<string, CommandPermissionDetails & { command?: Command, type: 'GROUP' | 'COMMAND'  }>();
 
-		collector.set('all', { permission: 'all', defaults: { user: false, admin: true } });
+		collector.set('all', { permission: 'all', defaults: { user: false, admin: true }, type: 'GROUP' });
 
 		for (const commandDetails of this.commands.values()) {
 			const { command, permissions } = commandDetails;
 			if (!command) continue;
 
 			// add category permissions
-			const category = command.definition.category;
-			if (category) collector.set(['all', category].join('.'), { permission: ['all', category].join('.'), defaults: { user: false, admin: true } });
+			if (command.definition.category) {
+				const category = ['all', command.definition.category].join('.');
+				if (!collector.has(category)) collector.set(category, { permission: category, defaults: { user: false, admin: true }, type: 'GROUP' });
+			}
 
-			for (const permission of permissions) collector.set(permission.permission, { ...permission, command });
+			for (const permission of permissions) collector.set(permission.permission, { ...permission, command, type: 'COMMAND' });
 		}
 
 		return collector;
