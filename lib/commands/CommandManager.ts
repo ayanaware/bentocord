@@ -507,7 +507,7 @@ export class CommandManager implements Component {
 				const finalName = [permissionName, ...subPermPath].join('.');
 				collector.push({ permission: finalName, defaults: subDefaults, path: subPath });
 
-				if (Array.isArray(option.options)) return walkOptions(option.options, subPath, subPermPath);
+				if (Array.isArray(option.options)) await walkOptions(option.options, subPath, subPermPath);
 			}
 		};
 
