@@ -491,7 +491,7 @@ export class CommandManager implements Component {
 		collector.push({ permission: permissionName, defaults, path: [] });
 
 		// walk options
-		const walkOptions = async (options: Array<AnyCommandOption> = [], path: Array<string> = [], permPath: Array<string> = []): Promise<unknown> => {
+		const walkOptions = async (options: Array<AnyCommandOption> = [], path: Array<string> = [], permPath: Array<string> = []): Promise<void> => {
 			for (const option of (options ?? [])) {
 				if (option.type !== OptionType.SUB_COMMAND && option.type !== OptionType.SUB_COMMAND_GROUP) continue;
 				const primary = (await this.getItemTranslations(option.name))[0].main;
