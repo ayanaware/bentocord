@@ -1,7 +1,8 @@
 import { ComponentAPI, Inject } from '@ayanaware/bento';
 
 import { CommandContext } from '../CommandContext';
-import { CommandManager, SyncOptions } from '../CommandManager';
+import { CommandManager } from '../CommandManager';
+import { SlashManager, SyncOptions } from '../SlashManager';
 import { OptionType } from '../constants/OptionType';
 import { SuppressorType } from '../constants/SuppressorType';
 import { CommandDefinition } from '../interfaces/CommandDefinition';
@@ -12,10 +13,10 @@ export class SlashCommand implements CommandEntity {
 	public api!: ComponentAPI;
 	public parent = CommandManager;
 
-	@Inject() private readonly cm: CommandManager;
+	@Inject() private readonly sm: SlashManager;
 
 	public definition: CommandDefinition = {
-		aliases: ['slash', 'manageslash'],
+		name: ['slash', 'manageslash'],
 		description: 'manage slash commands',
 		options: [
 			{ type: OptionType.SUB_COMMAND, name: 'resync', description: 'resync slash commands', options: [
@@ -39,13 +40,13 @@ export class SlashCommand implements CommandEntity {
 		if (options.resync) {
 			const resync = options.resync;
 
-			let commands = await this.cm.convertCommands();
+			let commands = await this.sm.convertCommands();
 			if (resync.prefix) commands = commands.map(c => ({ ...c, name: `${resync.prefix}${c.name}` }));
 
 			const opts: SyncOptions = { delete: resync.prefix ? resync.prefix : true };
 			if (resync.guild) opts.guildId = resync.guild;
 
-			await this.cm.syncCommands(commands, opts);
+			await this.sm.syncCommands(commands, opts);
 
 			return ctx.createResponse('Sync successful');
 		} else if (options.purge) {
@@ -54,7 +55,7 @@ export class SlashCommand implements CommandEntity {
 			const opts: SyncOptions = { delete: purge.prefix ? purge.prefix : true };
 			if (purge.guild) opts.guildId = purge.guild;
 
-			await this.cm.syncCommands([], opts);
+			await this.sm.syncCommands([], opts);
 
 			return ctx.createResponse('Purge successful');
 		}

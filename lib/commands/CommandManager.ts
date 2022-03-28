@@ -5,13 +5,6 @@ import { Logger } from '@ayanaware/logger-api';
 
 import {
 	AnyInteraction,
-	ApplicationCommand,
-	ApplicationCommandOption,
-	ApplicationCommandOptions,
-	ApplicationCommandOptionsSubCommand,
-	ApplicationCommandOptionsSubCommandGroup,
-	ApplicationCommandOptionsWithValue,
-	ApplicationCommandStructure,
 	CommandInteraction,
 	Constants,
 	GuildChannel,
@@ -55,15 +48,6 @@ import { Tokenizer } from './internal/Tokenizer';
 import { Resolvers } from './resolvers';
 import { Suppressors } from './supressors';
 
-const { ApplicationCommandTypes, ApplicationCommandOptionTypes } = Constants;
-
-export interface SyncOptions {
-	/** Should unspecified commands be removed */
-	delete?: boolean | string;
-	/** Register in this guild or globally */
-	guildId?: string;
-}
-
 export interface CommandDetails {
 	/** The command */
 	command: Command;
@@ -84,11 +68,6 @@ export interface CommandPermissionDetails {
 
 	/** Subcommand path for this permission */
 	path?: Array<string>;
-}
-
-export interface CommandItemTranslations {
-	main: string;
-	translations: Record<string, string>;
 }
 
 /**
@@ -117,9 +96,6 @@ export class CommandManager implements Component {
 
 	private selfId: string = null;
 
-	private testSynced = false;
-	private readonly testPrefix = 'test-';
-
 	public async onLoad(): Promise<void> {
 		// Load built-in resolvers
 		Resolvers.forEach(resolver => this.addResolver(resolver));
@@ -145,7 +121,7 @@ export class CommandManager implements Component {
 	public async onChildUnload(entity: CommandEntity | ResolverEntity | SuppressorEntity): Promise<void> {
 		try {
 			if (typeof (entity as CommandEntity).definition === 'object') {
-				return this.removeCommand(entity as CommandEntity);
+				this.removeCommand(entity as CommandEntity);
 			} else if (typeof (entity as ResolverEntity).option !== 'undefined') {
 				this.removeResolver((entity as ResolverEntity).option);
 			} else if (typeof (entity as SuppressorEntity).suppressor !== 'undefined') {
@@ -172,8 +148,16 @@ export class CommandManager implements Component {
 		this.resolvers.delete(type);
 	}
 
+	public getResolvers(): Map<OptionType | string, Resolver<unknown>> {
+		return this.resolvers;
+	}
+
+	public findResolver(type: OptionType | string): Resolver<unknown> {
+		return this.resolvers.get(type);
+	}
+
 	private async executeResolver<T = unknown>(ctx: CommandContext, option: AnyValueCommandOption, input: string) {
-		const resolver = this.resolvers.get(option.type) as Resolver<T>;
+		const resolver = this.findResolver(option.type) as Resolver<T>;
 		if (!resolver) return null;
 
 		return resolver.resolve(ctx, option, input);
@@ -247,6 +231,68 @@ export class CommandManager implements Component {
 	}
 
 	/**
+	 * Get primary name of command alias or option name
+	 * @param name string or array of string and translateables. First element is always a string
+	 * @returns string
+	 */
+	public getPrimaryName(name: string | [string, ...Array<string | Translateable>]): string {
+		let primary = name;
+		if (Array.isArray(primary)) primary = primary[0];
+
+		return primary.toLocaleLowerCase().replace(/\s/g, '');
+	}
+
+	/**
+	 * Get all translations for a possibly translatable
+	 * @param item Array<string | Translatable>
+	 * @returns Tuple <string, Array<{ lang: string }>>
+	 */
+	public async getItemTranslations(items: string | Translateable | Array<string | Translateable>, normalize = false): Promise<Array<[string, Record<string, string>]>> {
+		if (!Array.isArray(items)) items = [items];
+
+		const collector: Array<[string, Record<string, string>]> = [];
+
+		for (const item of items) {
+			const iteration: [string, Record<string, string>] = ['', {}];
+
+			if (typeof item === 'object') {
+				iteration[0] = await this.interface.formatTranslation(item.key, item.repl) ?? item.backup ?? item.key;
+				iteration[1] = await this.interface.formatTranslationMap(item.key, item.repl) ?? {};
+			} else if (typeof item === 'string') {
+				iteration[0] = await this.interface.formatTranslation(item) ?? item;
+			}
+
+			if (normalize) {
+				iteration[0] = iteration[0].toLocaleLowerCase().replace(/\s/g, '');
+				iteration[1] = Object.fromEntries(Object.entries(iteration[1]).map(([k, v]) => [k.toLocaleLowerCase().replace(/\s/g, ''), v]));
+			}
+
+			collector.push(iteration);
+		}
+
+		return collector;
+	}
+
+	/**
+	 * Get all commands and their details
+	 */
+	public getCommands(): Map<string, CommandDetails> {
+		return this.commands;
+	}
+
+	public isSubCommand(option: AnyCommandOption): option is CommandOptionSubCommand {
+		return option.type === OptionType.SUB_COMMAND;
+	}
+
+	public isSubCommandGroup(option: AnyCommandOption): option is CommandOptionSubCommandGroup {
+		return option.type === OptionType.SUB_COMMAND_GROUP;
+	}
+
+	public isAnySubCommand(option: AnyCommandOption): option is CommandOptionSubCommand | CommandOptionSubCommandGroup {
+		return this.isSubCommand(option) || this.isSubCommandGroup(option);
+	}
+
+	/**
 	 * Add command
 	 * @param command Command
 	 */
@@ -255,29 +301,29 @@ export class CommandManager implements Component {
 		if (typeof command.definition !== 'object') throw new Error('Definition must be an object');
 		const definition = command.definition;
 
-		if (definition.aliases.length < 1) throw new Error('At least one alias must be defined');
+		if (definition.name.length < 1) throw new Error('At least one alias must be defined');
 
-		const aliases = await this.getItemTranslations(definition.aliases, true);
-
-		// first alias is primary alias
-		const primary = aliases[0];
-		const name = primary.main;
+		const [first, ...rest] = definition.name;
+		const primary = this.getPrimaryName(first);
 
 		// check dupes & save
-		if (this.commands.has(name)) throw new Error(`Command name "${name}" already exists`);
+		if (this.commands.has(primary)) throw new Error(`Command name "${primary}" already exists`);
 
 		// add permissions
-		const permissions = await this.getPermissionDetails(command);
+		const permissions = this.getPermissionDetails(command);
 
 		const commandDetails: CommandDetails = { command, category: definition.category ?? null, permissions };
-		this.commands.set(name, commandDetails);
+		this.commands.set(primary, commandDetails);
+
+		const aliases = await this.getItemTranslations(rest);
 
 		// register alias => primary alias
-		for (const alias of aliases) {
-			const aliasName = alias.main;
-			if (this.aliases.has(aliasName)) throw new Error(`${name}: Attempted to register existing alias: ${aliasName}`);
+		for (const [aliasName] of aliases) {
+			// check if alias exists and references a different command
+			const existing = this.aliases.get(aliasName);
+			if (existing && existing !== primary) throw new Error(`${primary}: Attempted to register existing alias "${aliasName}", which is registered to "${existing}"`);
 
-			this.aliases.set(aliasName, name);
+			this.aliases.set(aliasName, primary);
 		}
 	}
 
@@ -285,14 +331,13 @@ export class CommandManager implements Component {
 	 * Remove Command
 	 * @param command Command
 	 */
-	public async removeCommand(command: Command | string): Promise<void> {
+	public removeCommand(command: Command | string): void {
 		if (typeof command === 'string') command = this.findCommand(command);
 		if (!command) throw new Error('Failed to find Command');
 
 		const definition = command.definition;
 
-		const aliases = await this.getItemTranslations(definition.aliases, true);
-		const primary = aliases[0].main;
+		const primary = this.getPrimaryName(definition.name);
 
 		// remove any aliases
 		for (const [alias, name] of this.aliases.entries()) {
@@ -320,13 +365,6 @@ export class CommandManager implements Component {
 		if (!command) return null;
 
 		return command.command;
-	}
-
-	/**
-	 * Get all commands and their details
-	 */
-	public getCommands(): Map<string, CommandDetails> {
-		return this.commands;
 	}
 
 	/**
@@ -364,8 +402,7 @@ export class CommandManager implements Component {
 		const definition = command.definition;
 
 		// check permission
-		const aliases = await this.getItemTranslations(definition.aliases, true);
-		const primary = aliases[0].main;
+		const primary = this.getPrimaryName(definition.name);
 
 		const permissionName = definition.permissionName ?? primary;
 		const path = [permissionName];
@@ -400,9 +437,7 @@ export class CommandManager implements Component {
 
 	public async executeCommand(command: Command, ctx: CommandContext, options: Record<string, unknown>): Promise<unknown> {
 		const definition = command.definition;
-
-		const aliases = await this.getItemTranslations(definition.aliases, true);
-		const primary = aliases[0].main;
+		const primary = this.getPrimaryName(definition.name);
 
 		// selfPermissions
 		if (ctx.guild && Array.isArray(definition.selfPermissions) && definition.selfPermissions.length > 0) {
@@ -442,48 +477,13 @@ export class CommandManager implements Component {
 		}
 	}
 
-	/**
-	 * Get all translations for a possibly translatable
-	 * @param item string | Translatable | Array<string | Translatable>
-	 * @returns Array of Objects, obj.source = default locale, obj.translations = all other locales keyed by locale
-	 */
-	public async getItemTranslations(items: string | Translateable | Array<string | Translateable>, normalize = false): Promise<Array<CommandItemTranslations>> {
-		if (!Array.isArray(items)) items = [items];
-
-		const collector = [];
-		for (let item of items) {
-			if (!item) {
-				collector.push({ main: '', translations: {} });
-				continue;
-			} else if (typeof item === 'string') {
-				if (normalize) item = item.toLocaleLowerCase();
-				collector.push({ main: item, translations: {} });
-				continue;
-			}
-
-			let main = await this.interface.formatTranslation(item.key, item.repl) ?? item.backup ?? item.key;
-			let translations = await this.interface.formatTranslationMap(item.key, item.repl) ?? {};
-
-			if (normalize) {
-				main = main.toLocaleLowerCase();
-				main = main.replace(/\s/g, '');
-
-				translations = Object.fromEntries(Object.entries(translations).map(([key, value]) => [key, value.toLocaleLowerCase().replace(/\s/g, '')]));
-			}
-
-			collector.push({ main, translations });
-		}
-
-		return collector;
-	}
-
-	public async getPermissionDetails(command: Command): Promise<Array<CommandPermissionDetails>> {
+	public getPermissionDetails(command: Command): Array<CommandPermissionDetails> {
 		const definition = command.definition;
 
 		const collector: Array<CommandPermissionDetails> = [];
 
-		const aliases = await this.getItemTranslations(definition.aliases, true);
-		const permissionName = definition.permissionName ?? aliases[0].main;
+		const primary = this.getPrimaryName(definition.name);
+		const permissionName = definition.permissionName ?? primary;
 
 		let defaults = definition.permissionDefaults ?? { user: true, admin: true };
 		if (typeof defaults === 'boolean') defaults = { user: defaults, admin: false };
@@ -491,13 +491,13 @@ export class CommandManager implements Component {
 		collector.push({ permission: permissionName, defaults, path: [] });
 
 		// walk options
-		const walkOptions = async (options: Array<AnyCommandOption> = [], path: Array<string> = [], permPath: Array<string> = []): Promise<void> => {
+		const walkOptions = (options: Array<AnyCommandOption> = [], path: Array<string> = [], permPath: Array<string> = []): void => {
 			for (const option of (options ?? [])) {
 				if (option.type !== OptionType.SUB_COMMAND && option.type !== OptionType.SUB_COMMAND_GROUP) continue;
-				const primary = (await this.getItemTranslations(option.name))[0].main;
-				const subPath = [...path, primary];
+				const subPrimary = this.getPrimaryName(option.name);
+				const subPath = [...path, subPrimary];
 
-				const subName = option.permissionName ?? primary;
+				const subName = option.permissionName ?? subPrimary;
 				const subPermPath = [...permPath, subName];
 
 				let subDefaults = option.permissionDefaults ?? { user: true, admin: true };
@@ -507,11 +507,11 @@ export class CommandManager implements Component {
 				const finalName = [permissionName, ...subPermPath].join('.');
 				collector.push({ permission: finalName, defaults: subDefaults, path: subPath });
 
-				if (Array.isArray(option.options)) await walkOptions(option.options, subPath, subPermPath);
+				if (Array.isArray(option.options)) walkOptions(option.options, subPath, subPermPath);
 			}
 		};
 
-		await walkOptions(definition.options);
+		walkOptions(definition.options);
 
 		return collector;
 	}
@@ -558,249 +558,7 @@ export class CommandManager implements Component {
 		return [false, 'implicit'];
 	}
 
-	/**
-	 * Sync test- prefixed Slash Commands with TestGuilds
-	 */
-	public async syncTestGuildCommands(): Promise<void> {
-		// get test guild list
-		const testGuilds = this.api.getVariable<string>({ name: BentocordVariable.BENTOCORD_TEST_GUILDS, default: '' }).split(',').map(g => g.trim()).filter(v => !!v);
-		if (testGuilds.length < 1) return;
-
-		// prefix commands with test-
-		let commands = await this.convertCommands();
-		commands = commands.map(c => ({ ...c, name: `${this.testPrefix}${c.name}` }));
-
-		for (const guildId of testGuilds) {
-			await this.syncCommands(commands, { delete: this.testPrefix, guildId });
-		}
-
-		log.info(`Successfully synced "${commands.length}" slash commnads in: "${testGuilds.join(', ')}"`);
-	}
-
-	/**
-	 * Sync Slash Commands with Discord
-	 * @param commandsIn Array of ApplicationCommand
-	 * @param opts SyncOptions
-	 * @returns Discord Slash Bulk Update Response Payload
-	 */
-	public async syncCommands(commandsIn: Array<ApplicationCommand>, opts?: SyncOptions): Promise<unknown> {
-		opts = Object.assign({ delete: true, prefix: null }, opts);
-
-		// want to avoid reference weirdness so we preform a deep copy of commands
-		// has the added benifit of yeeting any properties / functions we dont care about
-		const commands: Array<ApplicationCommand> = JSON.parse(JSON.stringify(commandsIn)) as Array<ApplicationCommand>;
-
-		const applicationId = this.discord.application.id;
-		if (!applicationId) throw new Error('Failed to infer application_id');
-
-		// Get existing commands
-		let existingCommands: Array<ApplicationCommand> = [];
-		if (opts.guildId) existingCommands = await this.discord.client.getGuildCommands(opts.guildId);
-		else existingCommands = await this.discord.client.getCommands();
-
-		const commandIds: Set<string> = new Set();
-
-		const bulkOverwrite: Array<ApplicationCommand> = [];
-		for (const command of commands) {
-			if (opts.guildId) command.guild_id = opts.guildId;
-
-			// Update command if it already exists
-			const existing = existingCommands.find(c => c.name === command.name);
-			if (existing && existing.id) {
-				command.id = existing.id;
-				commandIds.add(existing.id); // consumed
-			}
-
-			bulkOverwrite.push(command);
-		}
-
-		// Delete is string... Only delete other commands starting with this string
-		if (typeof opts.delete === 'string') {
-			for (const existing of existingCommands) {
-				if (!existing.name.startsWith(opts.delete)) bulkOverwrite.push(existing);
-			}
-		} else if ((typeof opts.delete === 'boolean' && !opts.delete) || typeof opts.delete !== 'boolean') {
-			for (const existing of existingCommands) {
-				if (!Array.from(commandIds).includes(existing.id)) {
-					bulkOverwrite.push(existing);
-					commandIds.add(existing.id);
-				}
-			}
-		}
-
-		// Bulk Update
-		if (opts.guildId) return this.discord.client.bulkEditGuildCommands(opts.guildId, bulkOverwrite);
-		return this.discord.client.bulkEditCommands(bulkOverwrite);
-	}
-
-	/**
-	 * Convert all slash supporting Bentocord commands to Discord ApplicationCommand
-	 * @returns Array of ApplicationCommand
-	 */
-	public async convertCommands(): Promise<Array<ApplicationCommand>> {
-		const collector: Array<ApplicationCommand> = [];
-
-		for (const details of this.commands.values()) {
-			const command = details.command;
-
-			const definition = command.definition;
-			if (!definition || typeof definition.registerSlash === 'boolean' && !definition.registerSlash) continue;
-
-			const cmd = await this.convertCommand(command);
-			collector.push(cmd);
-		}
-
-		return collector;
-	}
-
-	/**
-	 * Convert Bentocord Command into Discord ApplicationCommand
-	 * @param command
-	 */
-	private async convertCommand(command: Command): Promise<ApplicationCommand> {
-		const definition = command.definition;
-		if (!definition) throw new Error('Command lacks definition');
-
-		// support translated names
-		const aliases = await this.getItemTranslations(definition.aliases, true);
-		const primary = aliases[0];
-
-		// support translated descriptions
-		const description = (await this.getItemTranslations(definition.description))[0];
-
-		const appCommand: ApplicationCommandStructure = {
-			type: ApplicationCommandTypes.CHAT_INPUT,
-			name: primary.main,
-			description: description.main,
-		};
-
-		// add name localizations (convert for discord needed)
-		if (Object.keys(primary.translations).length > 0) {
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-			(appCommand as any).name_localizations = await this.interface.convertTranslationMap(primary.translations);
-		}
-
-		// add description localizations (convert for discord needed)
-		if (Object.keys(description.translations).length > 0) {
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-			(appCommand as any).description_localizations = await this.interface.convertTranslationMap(description.translations);
-		}
-
-		// convert options
-		if (Array.isArray(definition.options)) appCommand.options = await this.convertOptions(definition.options);
-
-		return appCommand as ApplicationCommand;
-	}
-
-	/**
-	 * Convert Bentocord CommandOption to Discord ApplicationCommandOption Counterpart
-	 * @param options Array of CommandOptions
-	 * @returns ApplicationCommandOption Structure
-	 */
-	private async convertOptions(options: Array<AnyCommandOption>): Promise<Array<ApplicationCommandOptions>> {
-		const collector: Array<ApplicationCommandOptions> = [];
-
-		if (!options) options = [];
-		for (const option of options) {
-			// support translated names
-			const names = await this.getItemTranslations(option.name, true);
-			const primary = names[0];
-
-			// support translated descriptions
-			const description = (await this.getItemTranslations(option.description))[0];
-			if (!description.main) description.main = primary.main;
-
-			// Handle Special Subcommand & SubcommandGroup OptionTypes
-			if (this.isAnySubCommand(option)) {
-				const subOption: ApplicationCommandOptionsSubCommand | ApplicationCommandOptionsSubCommandGroup = {
-					type: option.type === OptionType.SUB_COMMAND ? ApplicationCommandOptionTypes.SUB_COMMAND : ApplicationCommandOptionTypes.SUB_COMMAND_GROUP,
-					name: primary.main,
-					description: description.main,
-				};
-
-				// add name localizations (convert for discord needed)
-				if (Object.keys(primary.translations).length > 0) {
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-					(subOption as any).name_localizations = await this.interface.convertTranslationMap(primary.translations);
-				}
-
-				// add description localizations (convert for discord needed)
-				if (Object.keys(description.translations).length > 0) {
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-					(subOption as any).description_localizations = await this.interface.convertTranslationMap(description.translations);
-				}
-
-				subOption.options = await this.convertOptions(option.options) as Array<ApplicationCommandOptionsSubCommand | ApplicationCommandOptionsWithValue>;
-				collector.push(subOption);
-
-				continue;
-			}
-
-			// Convert to Discord ApplicationCommandOptionType
-			const resolver = this.resolvers.get(option.type);
-
-			const appOption: ApplicationCommandOption<any> = {
-				type: resolver ? resolver.convert : ApplicationCommandOptionTypes.STRING,
-				name: primary.main,
-				description: description.main,
-			};
-
-			// Prepend type information to description
-			const typeInfo = this.getTypePreview(option);
-			appOption.description = `${typeInfo} ${appOption.description}`;
-
-			// add name localizations (convert for discord needed)
-			if (Object.keys(primary.translations).length > 0) {
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-				(appOption as any).name_localizations = await this.interface.convertTranslationMap(primary.translations);
-			}
-
-			// add description localizations (convert for discord needed)
-			if (Object.keys(description.translations).length > 0) {
-				// prepend type information to description
-				description.translations = Object.fromEntries(Object.entries(description.translations).map(([key, value]) => [key, `${typeInfo} ${value}`]));
-
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-				(appOption as any).description_localizations = await this.interface.convertTranslationMap(description.translations);
-			}
-
-			// Bentocord Array support
-			if (option.array) appOption.type = ApplicationCommandOptionTypes.STRING;
-
-			// TODO: Stop being lazy, and make this typesafe
-
-			// choices support
-			if ('choices' in option) {
-				let choices = option.choices;
-				if (typeof choices === 'function') choices = await choices();
-
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-				(appOption as any).choices = choices;
-			}
-
-			// min/max support
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-			if ('min' in option) (appOption as any).min_value = option.min;
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-			if ('max' in option) (appOption as any).max_value = option.max;
-
-			// channel_types support
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-			if ('channelTypes' in option) (appOption as any).channel_types = option.channelTypes;
-
-			// required support
-			appOption.required = typeof option.required === 'boolean' ? option.required : true;
-
-			// failed to convert option
-			if (option.type === null) continue;
-
-			collector.push(appOption);
-		}
-
-		return collector;
-	}
-
-	private getTypePreview(option: AnyValueCommandOption) {
+	public getTypePreview(option: AnyValueCommandOption): string {
 		// Prepend type information to description
 		let typeBuild = '[';
 		if (typeof option.type === 'number') typeBuild += OptionType[option.type];
@@ -813,21 +571,8 @@ export class CommandManager implements Component {
 		return typeBuild;
 	}
 
-	public isSubCommand(option: AnyCommandOption): option is CommandOptionSubCommand {
-		return option.type === OptionType.SUB_COMMAND;
-	}
-
-	public isSubCommandGroup(option: AnyCommandOption): option is CommandOptionSubCommandGroup {
-		return option.type === OptionType.SUB_COMMAND_GROUP;
-	}
-
-	public isAnySubCommand(option: AnyCommandOption): option is CommandOptionSubCommand | CommandOptionSubCommandGroup {
-		return this.isSubCommand(option) || this.isSubCommandGroup(option);
-	}
-
 	public async fufillInteractionOptions(ctx: CommandContext, definition: CommandDefinition, data: CommandInteraction['data']): Promise<Record<string, unknown>> {
-		const aliases = await this.getItemTranslations(definition.aliases, true);
-		const primary = aliases[0].main;
+		const primary = this.getPrimaryName(definition.name);
 
 		return this.processInteractionOptions(ctx, definition.options, data.options, [primary]);
 	}
@@ -839,12 +584,11 @@ export class CommandManager implements Component {
 		if (!optionData) optionData = [];
 
 		for (const option of options) {
-			const names = await this.getItemTranslations(option.name, true);
-			const primary = names[0].main;
+			const primary = this.getPrimaryName(option.name);
 
 			// Handle SubCommand & SubCommandGroup
 			if (this.isAnySubCommand(option)) {
-				const subOptionData = optionData.find(d => names.some(f => f.main === d.name.toLocaleLowerCase())) as InteractionDataOptionsSubCommand | InteractionDataOptionsSubCommandGroup;
+				const subOptionData = optionData.find(d => primary === d.name.toLocaleLowerCase()) as InteractionDataOptionsSubCommand | InteractionDataOptionsSubCommandGroup;
 				if (!subOptionData) continue;
 
 				// check category permission
@@ -888,8 +632,7 @@ export class CommandManager implements Component {
 		// TODO: Build allowedOptions
 		const output = new Parser(tokens).parse();
 
-		const aliases = await this.getItemTranslations(definition.aliases, true);
-		const primary = aliases[0].main;
+		const primary = this.getPrimaryName(definition.name);
 
 		return this.processTextOptions(ctx, definition.options, output, 0, [primary]);
 	}
@@ -902,7 +645,7 @@ export class CommandManager implements Component {
 		let promptSubs: Array<AnySubCommandOption> = [];
 		for (const option of options) {
 			const names = await this.getItemTranslations(option.name, true);
-			const primary = names[0].main;
+			const primary = names[0][0];
 
 			if (this.isAnySubCommand(option)) {
 				// track this suboption for prompt
@@ -911,7 +654,7 @@ export class CommandManager implements Component {
 				// phrase is a single element
 				const phrase = output.phrases[index];
 				// validate arg matches subcommand or group name
-				if (!phrase || names.every(n => n.main !== phrase.value.toLocaleLowerCase())) continue;
+				if (!phrase || names.every(n => n[0] !== phrase.value.toLocaleLowerCase())) continue;
 
 				index++;
 
@@ -961,7 +704,7 @@ export class CommandManager implements Component {
 		if (promptSubs.length > 1) {
 			const choices: Array<PromptChoice<string>> = [];
 			for (const sub of promptSubs) {
-				const primary = (await this.getItemTranslations(sub.name, true))[0].main;
+				const primary = this.getPrimaryName(sub.name);
 
 				let description = sub.description;
 				if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl) || description.backup;
@@ -974,13 +717,13 @@ export class CommandManager implements Component {
 			useSub = choice;
 		} else if (promptSubs.length === 1) {
 			const sub = promptSubs[0];
-			const primary = (await this.getItemTranslations(sub.name, true))[0].main;
+			const primary = this.getPrimaryName(sub.name);
 			useSub = primary;
 		}
 
 		if (useSub) {
 			for (const option of options) {
-				const primary = (await this.getItemTranslations(option.name, true))[0].main;
+				const primary = this.getPrimaryName(option.name);
 				if (primary !== useSub.toLocaleLowerCase()) continue;
 				if (!this.isAnySubCommand(option)) continue;
 
@@ -1080,15 +823,9 @@ export class CommandManager implements Component {
 
 				const finalChoices: Array<PromptChoice<number | string>> = [];
 				for (const choice of choices) {
-					const name = await this.getItemTranslations(choice.name);
-					const primary = name[0];
+					const primary = this.getPrimaryName(choice.name);
 
-					const final = { name: primary.main, value: choice.value, match: [primary.main] };
-					if (Object.keys(primary.translations).length > 0) {
-						// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-						(final as any).name_localizations = primary.translations;
-					}
-
+					const final = { name: primary, value: choice.value, match: [primary] };
 					finalChoices.push(final);
 				}
 
@@ -1108,11 +845,6 @@ export class CommandManager implements Component {
 	private async handleShardStateChange() {
 		const self = await this.discord.client.getSelf();
 		if (self.id) this.selfId = self.id;
-
-		if (!this.testSynced) {
-			await this.syncTestGuildCommands();
-			this.testSynced = true;
-		}
 	}
 
 	@Subscribe(Discord, DiscordEvent.INTERACTION_CREATE)
@@ -1125,7 +857,8 @@ export class CommandManager implements Component {
 
 		let command = this.findCommand(data.name);
 		if (!command) {
-			if (data.name.startsWith(this.testPrefix)) command = this.findCommand(data.name.replace(new RegExp(`^${this.testPrefix}`, 'i'), ''));
+			const testPrefix = await this.interface.getTestCommandPrefix();
+			if (data.name.startsWith(testPrefix)) command = this.findCommand(data.name.replace(new RegExp(`^${testPrefix}`, 'i'), ''));
 			if (!command) return; // command or test-command not found
 		}
 
@@ -1150,7 +883,7 @@ export class CommandManager implements Component {
 			// halt requested (this is lazy, I'll fix it later, probably)
 			if (e === NON_ERROR_HALT) return;
 
-			log.error(`Command "${definition.aliases[0]}" option error:\n${util.inspect(e)}`);
+			log.error(`Command "${definition.name[0]}" option error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
 				return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_COMMAND_ERROR', { error: e.message }) || `There was an error resolving command options: ${e.message}`);
@@ -1241,7 +974,7 @@ export class CommandManager implements Component {
 			// halt requested (this is lazy, I'll fix it later, probably)
 			if (e === NON_ERROR_HALT) return;
 
-			log.error(`Command "${definition.aliases[0]}" error:\n${util.inspect(e)}`);
+			log.error(`Command "${definition.name[0]}" error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
 				return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_COMMAND_ERROR', { error: e.message }) || `There was an error resolving command options: ${e.message}`);

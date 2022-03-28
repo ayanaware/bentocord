@@ -71,6 +71,10 @@ export class BentocordInterface implements Plugin {
 		return [];
 	}
 
+	public async getTestCommandPrefix(): Promise<string> {
+		return 'test-';
+	}
+
 	public async formatNumber(num: number, ctx?: Record<string, string>): Promise<string> {
 		return null;
 	}

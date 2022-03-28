@@ -1,7 +1,7 @@
 import { ComponentAPI, Inject } from '@ayanaware/bento';
 
 import { CommandContext } from '../CommandContext';
-import { CommandManager, NON_ERROR_HALT } from '../CommandManager';
+import { CommandManager } from '../CommandManager';
 import { OptionType } from '../constants/OptionType';
 import { CommandDefinition } from '../interfaces/CommandDefinition';
 import { CommandEntity } from '../interfaces/entity/CommandEntity';
@@ -14,11 +14,11 @@ export class AdvancedCommand implements CommandEntity {
 	@Inject() private readonly cm: CommandManager;
 
 	public definition: CommandDefinition = {
-		aliases: [{ key: 'BENTOCORD_COMMAND_ADV', backup: 'advanced' }],
+		name: ['advanced', { key: 'BENTOCORD_COMMAND_ADV' }],
 		description: { key: 'BENTOCORD_COMMAND_ADV_DESCRIPTION', backup: 'Run non-slash exposed commands' },
 		options: [
-			{ type: OptionType.STRING, name: { key: 'BENTOCORD_OPTION_ALIAS', backup: 'alias' }, description: { key: 'BENTOCORD_OPTION_ALIAS_DESCRIPTION', backup: 'Command name or alias' } },
-			{ type: OptionType.STRING, name: { key: 'BENTOCORD_OPTION_OPTIONS', backup: 'options' }, description: { key: 'BENTOCORD_OPTION_OPTIONS_DESCRIPTION', backup: 'Command arguments to pass' }, required: false, rest: true },
+			{ type: OptionType.STRING, name: ['alias', { key: 'BENTOCORD_OPTION_ALIAS' }], description: { key: 'BENTOCORD_OPTION_ALIAS_DESCRIPTION', backup: 'Command name or alias' } },
+			{ type: OptionType.STRING, name: ['options', { key: 'BENTOCORD_OPTION_OPTIONS' }], description: { key: 'BENTOCORD_OPTION_OPTIONS_DESCRIPTION', backup: 'Command arguments to pass' }, required: false, rest: true },
 		],
 
 		registerSlash: true,
@@ -26,8 +26,8 @@ export class AdvancedCommand implements CommandEntity {
 	};
 
 	public async execute(ctx: CommandContext, options: { alias: string, opts: string }): Promise<unknown> {
-		const aliases = await this.cm.getItemTranslations(this.definition.aliases, true);
-		if (aliases.some(a => a.main === options.alias.toLocaleLowerCase())) return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_ADV_NO_RECURSIVE') || 'Recursive execution is not allowed.');
+		const aliases = await this.cm.getItemTranslations(this.definition.name, true);
+		if (aliases.some(a => a[0] === options.alias.toLocaleLowerCase())) return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_ADV_NO_RECURSIVE') || 'Recursive execution is not allowed.');
 
 		const command = this.cm.findCommand(options.alias);
 		if (!command) return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_ADV_NOTEXIST', { command: options.alias }) || `Command "${options.alias}" does not exist in CommandManager`);

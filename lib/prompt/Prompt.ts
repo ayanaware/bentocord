@@ -19,8 +19,8 @@ export class Prompt<T = string> {
 	public pending = false;
 	public sent: string;
 
-	protected resolve: (value?: T | PromiseLike<T>) => void;
-	protected reject: (reason?: any) => void;
+	protected resolve: (value?: T | PromiseLike<T>) => Promise<void>;
+	protected reject: (reason?: any) => Promise<void>;
 	protected timer: NodeJS.Timeout;
 
 	protected validate: PromptValidate<T>;
@@ -113,7 +113,7 @@ export class Prompt<T = string> {
 			content = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED') || 'Prompt has been closed.';
 		}
 
-		if (this.reject) this.reject(reason);
+		if (this.reject) return this.reject(reason);
 
 		try {
 			await this.ctx.createResponse({ content });

@@ -210,8 +210,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		if (close) {
 			Promise.all([this.removeReactions(), this.deleteMessage(message)]).catch(() => { /* no-op */ });
 
-			this.resolve();
-			return;
+			return this.resolve();
 		}
 
 		switch (input) {
@@ -281,9 +280,8 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 			}
 
 			case PaginationControls.EMOJI_CLOSE: {
-				this.resolve();
 				Promise.all([this.deleteReaction(emoji), this.removeReactions()]).catch(() => { /* no-op */ });
-				return;
+				return this.resolve();
 			}
 		}
 

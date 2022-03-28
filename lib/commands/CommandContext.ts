@@ -229,6 +229,8 @@ export abstract class CommandContext {
 		return this.editResponse({ content });
 	}
 
+	public abstract getResponseMessage(): Promise<Message>;
+
 	public abstract acknowledge(): Promise<void>;
 
 	public abstract createResponse(response: string | ResponseContent): Promise<unknown>;
@@ -275,15 +277,27 @@ export class InteractionCommandContext extends CommandContext {
 		}
 	}
 
+	public async getResponseMessage(): Promise<Message> {
+		if (this.message) return this.message;
+
+		let message: Message;
+		if (this.responseId === '@original') {
+			message = await this.interaction.getOriginalMessage();
+		} else {
+			message = await this.discord.client.getMessage(this.channelId, this.responseId);
+		}
+
+		if (!message) throw new Error('InteractionCommandContext: Message not found');
+
+		this.message = message;
+		this.messageId = message.id;
+	}
+
 	public async acknowledge(): Promise<void> {
 		if (this.interaction.acknowledged) return;
 
 		await this.interaction.acknowledge();
-
-		const message = await this.interaction.getOriginalMessage();
-		this.message = message;
-		this.messageId = message.id;
-		this.responseId = message.id;
+		this.responseId = '@original';
 	}
 
 	public async createResponse(response: string | ResponseContent): Promise<unknown> {
@@ -292,11 +306,7 @@ export class InteractionCommandContext extends CommandContext {
 		if (typeof response === 'string') response = { content: response };
 
 		await this.interaction.createMessage(response);
-
-		const message = await this.interaction.getOriginalMessage();
-		this.message = message;
-		this.messageId = message.id;
-		this.responseId = message.id;
+		this.responseId = '@original';
 	}
 
 	public async editResponse(response: string | ResponseContent): Promise<unknown> {
@@ -366,6 +376,10 @@ export class MessageCommandContext extends CommandContext {
 
 			if (this.message.member) this.member = this.message.member;
 		}
+	}
+
+	public async getResponseMessage(): Promise<Message<TextableChannel>> {
+		return this.message;
 	}
 
 	public async acknowledge(): Promise<void> {

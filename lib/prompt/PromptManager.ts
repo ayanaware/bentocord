@@ -116,7 +116,9 @@ export class PromptManager implements Component {
 		const key = `${message.channel.id}.${reactor.id}`;
 		const prompt = this.prompts.get(key);
 		if (!prompt) return;
-		if (message.id !== prompt.ctx.responseId) return;
+
+		const response = await prompt.ctx.getResponseMessage();
+		if (message.id !== response.id) return;
 
 		return prompt.handleReaction(message, emoji);
 	}

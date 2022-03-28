@@ -11,7 +11,7 @@ export class PingCommand implements CommandEntity {
 	public parent = CommandManager;
 
 	public definition: CommandDefinition = {
-		aliases: [{ key: 'BENTOCORD_COMMAND_PING', backup: 'ping' }, { key: 'BENTOCORD_COMMAND_PONG', backup: 'pong' }],
+		name: ['ping', 'pong', { key: 'BENTOCORD_COMMAND_PING' }, { key: 'BENTOCORD_COMMAND_PONG' }],
 		description: { key: 'BENTOCORD_COMMAND_PING_DESCRIPTION', backup: 'Check if the bot is online' },
 	};
 

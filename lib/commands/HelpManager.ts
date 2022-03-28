@@ -3,10 +3,10 @@ import { ComponentAPI, Inject } from '@ayanaware/bento';
 import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
 
 import { CommandContext } from './CommandContext';
-import { CommandItemTranslations, CommandManager } from './CommandManager';
+import { CommandManager } from './CommandManager';
 import { OptionType } from './constants/OptionType';
 import { CommandDefinition } from './interfaces/CommandDefinition';
-import { AnyCommandOption, AnySubCommandOption, AnyValueCommandOption, CommandOptionSubCommand } from './interfaces/CommandOption';
+import { AnyCommandOption, AnySubCommandOption, } from './interfaces/CommandOption';
 import { CommandEntity } from './interfaces/entity/CommandEntity';
 
 export class HelpManager implements CommandEntity {
@@ -17,7 +17,7 @@ export class HelpManager implements CommandEntity {
 	@Inject() private readonly commandManager: CommandManager;
 
 	public definition: CommandDefinition = {
-		aliases: ['help', 'commands'],
+		name: ['help', 'commands'],
 		description: 'Bentocord Help',
 		options: [
 			{ name: 'input', type: OptionType.STRING, description: 'Command, category, or help page', rest: true, required: false },
@@ -37,27 +37,16 @@ export class HelpManager implements CommandEntity {
 		return typeBuild;
 	}
 
-	private async getPrimaryAlias(command: CommandDefinition | AnySubCommandOption): Promise<string> {
-		let aliases: Array<CommandItemTranslations> = [];
-		if ('aliases' in command) {
-			aliases = await this.commandManager.getItemTranslations(command.aliases);
-		} else if (Array.isArray(command.name)) {
-			aliases = await this.commandManager.getItemTranslations(command.name);
-		}
-
-		return aliases[0].main;
-	}
-
 	private async buildOptions(ctx: CommandContext, options: Array<AnyCommandOption>): Promise<Array<PromptChoice<string>>> {
 		const items: Array<PromptChoice<string>> = [];
 		for (const option of options) {
-			const name = (await this.commandManager.getItemTranslations(option.name, true))[0].main;
+			const primary = this.commandManager.getPrimaryName(option.name);
 			const type = this.getTypePreview(option);
 
 			let description = option.description;
 			if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl) || description.backup;
 
-			items.push({ name: `${name}${type} - ${description}`, value: name, match: [name] });
+			items.push({ name: `${primary}${type} - ${description}`, value: primary, match: [primary] });
 		}
 
 		return items;
@@ -85,13 +74,13 @@ export class HelpManager implements CommandEntity {
 		// no args to fufill, build list of options
 		const items = await this.buildOptions(ctx, options);
 
-		const alias = this.getPrimaryAlias(command);
+		const primary = this.commandManager.getPrimaryName(command.name);
 
 		let type = '';
 		if (definition) type = '[COMMAND]';
 		else type = this.getTypePreview(command as AnyCommandOption);
 
-		let content = `${alias}${type} - ${command.description}`;
+		let content = `${primary}${type} - ${command.description}`;
 
 		const hasSub = options.find(o => [OptionType.SUB_COMMAND, OptionType.SUB_COMMAND_GROUP].includes(o.type));
 		if (hasSub) {
