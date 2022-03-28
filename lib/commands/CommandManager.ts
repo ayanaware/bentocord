@@ -264,7 +264,7 @@ export class CommandManager implements Component {
 
 			if (normalize) {
 				iteration[0] = iteration[0].toLocaleLowerCase().replace(/\s/g, '');
-				iteration[1] = Object.fromEntries(Object.entries(iteration[1]).map(([k, v]) => [k.toLocaleLowerCase().replace(/\s/g, ''), v]));
+				iteration[1] = Object.fromEntries(Object.entries(iteration[1]).map(([k, v]) => [k, v.toLocaleLowerCase().replace(/\s/g, '')]));
 			}
 
 			collector.push(iteration);
@@ -324,10 +324,11 @@ export class CommandManager implements Component {
 			this.aliases.set(aliasName, primary);
 
 			// register translations
-			for (const [, translation] of Object.entries(translations)) {
+			for (const [lang, translation] of Object.entries(translations)) {
 				const existingTranslation = this.aliases.get(translation);
 				if (existingTranslation && existingTranslation !== primary) {
-					log.warn(`${primary}: Skipping translation alias "${translation}", because it is already registered to "${existing}"`);
+					log.warn(`${primary}: Skipping "${lang}" translation alias "${translation}", because it is already registered to "${existing}"`);
+					continue;
 				}
 
 				this.aliases.set(translation, primary);
