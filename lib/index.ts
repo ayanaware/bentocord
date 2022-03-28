@@ -8,6 +8,7 @@ export * from './builders/EmbedBuilder';
 export * from './builders/LocalizedEmbedBuilder';
 
 export * from './commands/CommandManager';
+export * from './commands/SlashManager';
 export * from './commands/CommandContext';
 export * from './commands/HelpManager';
 export * from './commands/constants/CommandManagerEvent';

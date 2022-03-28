@@ -6,6 +6,7 @@ import { BentocordInterface } from './BentocordInterface';
 import { BentocordVariable } from './BentocordVariable';
 import { CommandManager } from './commands/CommandManager';
 import { HelpManager } from './commands/HelpManager';
+import { SlashManager } from './commands/SlashManager';
 import { AdvancedCommand } from './commands/builtin/Advanced';
 import { BentoCommand } from './commands/builtin/Bento';
 import { PingCommand } from './commands/builtin/Ping';
@@ -43,6 +44,7 @@ export class Bentocord implements Plugin {
 			Discord,
 			PromptManager,
 			CommandManager,
+			SlashManager,
 			HelpManager,
 			ReplyCommand,
 		]);

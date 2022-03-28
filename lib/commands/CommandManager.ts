@@ -327,7 +327,7 @@ export class CommandManager implements Component {
 			for (const [lang, translation] of Object.entries(translations)) {
 				const existingTranslation = this.aliases.get(translation);
 				if (existingTranslation && existingTranslation !== primary) {
-					log.warn(`${primary}: Skipping "${lang}" translation alias "${translation}", because it is already registered to "${existing}"`);
+					log.warn(`${primary}: Skipping "${lang}" translation alias "${translation}", because it is already registered to "${existingTranslation}"`);
 					continue;
 				}
 
