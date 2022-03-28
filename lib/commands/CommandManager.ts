@@ -301,10 +301,8 @@ export class CommandManager implements Component {
 		if (typeof command.definition !== 'object') throw new Error('Definition must be an object');
 		const definition = command.definition;
 
-		if (definition.name.length < 1) throw new Error('At least one alias must be defined');
-
-		const [first, ...rest] = definition.name;
-		const primary = this.getPrimaryName(first);
+		if (definition.name.length < 1) throw new Error('At least one name must be defined');
+		const primary = this.getPrimaryName(definition.name);
 
 		// check dupes & save
 		if (this.commands.has(primary)) throw new Error(`Command name "${primary}" already exists`);
@@ -315,15 +313,25 @@ export class CommandManager implements Component {
 		const commandDetails: CommandDetails = { command, category: definition.category ?? null, permissions };
 		this.commands.set(primary, commandDetails);
 
-		const aliases = await this.getItemTranslations(rest);
+		const aliases = await this.getItemTranslations(definition.name, true);
 
 		// register alias => primary alias
-		for (const [aliasName] of aliases) {
+		for (const [aliasName, translations] of aliases) {
 			// check if alias exists and references a different command
 			const existing = this.aliases.get(aliasName);
 			if (existing && existing !== primary) throw new Error(`${primary}: Attempted to register existing alias "${aliasName}", which is registered to "${existing}"`);
 
 			this.aliases.set(aliasName, primary);
+
+			// register translations
+			for (const [, translation] of Object.entries(translations[1])) {
+				const existingTranslation = this.aliases.get(translation);
+				if (existingTranslation && existingTranslation !== primary) {
+					log.warn(`${primary}: Skipping translation alias "${translation}", because it is already registered to "${existing}"`);
+				}
+
+				this.aliases.set(translation, primary);
+			}
 		}
 	}
 

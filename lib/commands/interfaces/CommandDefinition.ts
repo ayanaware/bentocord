@@ -15,7 +15,13 @@ export interface CommandPermissionDefaults {
 
 export interface CommandDefinition {
 	/** Command Aliases; First will be used for slash command name */
-	name: [string,  ...Array<string | Translateable>];
+	name: [string, ...Array<string | Translateable>];
+
+	/**
+	 * Please use the `name` key instead
+	 * @deprecated
+	 */
+	aliases: never;
 
 	/** Command Category; Fully Optional, used by help & some permission */
 	category?: string;
