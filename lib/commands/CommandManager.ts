@@ -826,15 +826,18 @@ export class CommandManager implements Component {
 			let choices: CommandOptionChoiceCallable<number | string> = option.choices;
 			if (typeof choices === 'function') choices = await choices();
 
+			if (choices.length === 0) throw new Error('No choices available for this option.');
+
 			const findChoice = choices.find(c => out && (c.value === out.toString() || c.value === parseInt(out.toString(), 10)));
 			if (!findChoice) {
-				const content = await ctx.formatTranslation('BENTOCORD_PROMPT_CHOICE_OPTION', { option: option.name }) || `Please select one of the following choices for option \`${option.name}\``;
+				const primary = this.getPrimaryName(option.name);
+				const content = await ctx.formatTranslation('BENTOCORD_PROMPT_CHOICE_OPTION', { option: primary }) || `Please select one of the following choices for option \`${primary}\``;
 
 				const finalChoices: Array<PromptChoice<number | string>> = [];
 				for (const choice of choices) {
-					const primary = this.getPrimaryName(choice.name);
+					const choiceName = this.getPrimaryName(choice.name);
 
-					const final = { name: primary, value: choice.value, match: [primary] };
+					const final = { name: choiceName, value: choice.value, match: [choiceName] };
 					finalChoices.push(final);
 				}
 
