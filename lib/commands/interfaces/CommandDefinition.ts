@@ -21,7 +21,7 @@ export interface CommandDefinition {
 	 * Please use the `name` key instead
 	 * @deprecated
 	 */
-	aliases: never;
+	aliases?: never;
 
 	/** Command Category; Fully Optional, used by help & some permission */
 	category?: string;
