@@ -259,7 +259,7 @@ export class CommandManager implements Component {
 				iteration[0] = await this.interface.formatTranslation(item.key, item.repl) ?? item.backup ?? item.key;
 				iteration[1] = await this.interface.formatTranslationMap(item.key, item.repl) ?? {};
 			} else if (typeof item === 'string') {
-				iteration[0] = await this.interface.formatTranslation(item) ?? item;
+				iteration[0] = item;
 			}
 
 			if (normalize) {
