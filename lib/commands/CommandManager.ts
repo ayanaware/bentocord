@@ -324,7 +324,7 @@ export class CommandManager implements Component {
 			this.aliases.set(aliasName, primary);
 
 			// register translations
-			for (const [, translation] of Object.entries(translations[1])) {
+			for (const [, translation] of Object.entries(translations)) {
 				const existingTranslation = this.aliases.get(translation);
 				if (existingTranslation && existingTranslation !== primary) {
 					log.warn(`${primary}: Skipping translation alias "${translation}", because it is already registered to "${existing}"`);
