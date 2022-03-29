@@ -123,7 +123,7 @@ export class Prompt<T = string> {
 	}
 
 	public async handleResponse(input: string, message?: Message): Promise<void> {
-		this.deleteMessage(message).catch(() => { /* no-op */ });
+		if (this.pending) this.deleteMessage(message).catch(() => { /* no-op */ });
 
 		const close = PROMPT_CLOSE.some(c => c.toLocaleLowerCase() === input.toLocaleLowerCase());
 		if (close) return this.close();
