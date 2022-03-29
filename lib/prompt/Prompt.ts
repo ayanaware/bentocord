@@ -64,7 +64,7 @@ export class Prompt<T = string> {
 		if (!this.ctx.selfHasPermission(DiscordPermission.MANAGE_MESSAGES)) return;
 
 		try {
-			await this.ctx.channel.removeMessageReaction(this.ctx.responseId, emoji.name, this.userId);
+			await this.ctx.channel.removeMessageReaction(await this.ctx.getResponseId(), emoji.name, this.userId);
 		} catch { /* Failed */ }
 	}
 

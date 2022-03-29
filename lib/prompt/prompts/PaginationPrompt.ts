@@ -160,7 +160,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	}
 
 	protected async addReactions(): Promise<void> {
-		const messageId = this.ctx.responseId;
+		const messageId = await this.ctx.getResponseId();
 		if (!messageId || !this.ctx.channel) return;
 		const channel = this.ctx.channel;
 
@@ -179,7 +179,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	}
 
 	protected async removeReactions(): Promise<void> {
-		const messageId = this.ctx.responseId;
+		const messageId = await this.ctx.getResponseId();
 		const channel = this.ctx.channel;
 		const selfId = this.ctx.discord.client.user.id;
 		if (!messageId || !channel || !selfId) return;
@@ -256,7 +256,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 	public async handleReaction(message: Message, emoji: Emoji): Promise<void> {
 		if (this.isSinglePage) return;
-		if (message.id !== this.ctx.responseId) return;
+		if (message.id !== await this.ctx.getResponseId()) return;
 
 		switch (emoji.name) {
 			case PaginationControls.EMOJI_FIRST: {

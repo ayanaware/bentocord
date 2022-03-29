@@ -117,8 +117,8 @@ export class PromptManager implements Component {
 		const prompt = this.prompts.get(key);
 		if (!prompt) return;
 
-		const response = await prompt.ctx.getResponseMessage();
-		if (message.id !== response.id) return;
+		const responseId = await prompt.ctx.getResponseId();
+		if (message.id !== responseId) return;
 
 		return prompt.handleReaction(message, emoji);
 	}
