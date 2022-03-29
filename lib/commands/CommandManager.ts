@@ -416,29 +416,6 @@ export class CommandManager implements Component {
 	public async prepareCommand(command: Command, ctx: CommandContext): Promise<boolean> {
 		const definition = command.definition;
 
-		// check permission
-		const primary = this.getPrimaryName(definition.name);
-
-		const permissionName = definition.permissionName ?? primary;
-		const path = [permissionName];
-
-		// check all for explicit deny
-		const all = (await this.checkPermission(ctx, 'all', { user: true, admin: true }))[0];
-		if (!all) return false;
-
-		// category/group permission support
-		if (definition.category) {
-			const [group, type] = await this.checkPermission(ctx, ['all', definition.category], { user: true, admin: true });
-			// explicit allow/deny
-			if (type === 'explicit') return group;
-		}
-
-		const state = (await this.checkPermission(ctx, path, definition.permissionDefaults))[0];
-		// explicit or implicit deny
-		if (!state) return false;
-
-		// explicit or implicit allow
-
 		// process suppressors
 		const suppressed = await this.executeSuppressors(ctx, definition);
 		if (suppressed) {
@@ -446,6 +423,29 @@ export class CommandManager implements Component {
 			await ctx.createResponse(message);
 			return false;
 		}
+
+		// check permission
+		const primary = this.getPrimaryName(definition.name);
+
+		const permissionName = definition.permissionName ?? primary;
+		const path = [permissionName];
+
+		// check perm for explicit deny
+		const [state, type] = await this.checkPermission(ctx, path, definition.permissionDefaults);
+		if (type === 'explicit') return state;
+
+		// check category for explicit deny
+		if (definition.category) {
+			const [group, groupType] = await this.checkPermission(ctx, ['all', definition.category], { user: true, admin: true });
+			if (groupType === 'explicit') return group;
+		}
+
+		// check all for explicit deny
+		const [all, allType] = await this.checkPermission(ctx, ['all'], { user: true, admin: true });
+		if (allType === 'explicit') return all;
+
+		// handle implicit deny
+		if (!state) return false;
 
 		return true;
 	}
