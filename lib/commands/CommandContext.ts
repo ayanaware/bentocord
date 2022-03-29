@@ -283,14 +283,14 @@ export class InteractionCommandContext extends CommandContext {
 		let message: Message;
 		if (this.responseId === '@original') {
 			message = await this.interaction.getOriginalMessage();
+			this.message = message;
+			this.messageId = message.id;
 		} else {
 			message = await this.discord.client.getMessage(this.channelId, this.responseId);
 		}
 
 		if (!message) throw new Error('InteractionCommandContext: Message not found');
-
-		this.message = message;
-		this.messageId = message.id;
+		this.responseId = message.id;
 	}
 
 	public async acknowledge(): Promise<void> {
