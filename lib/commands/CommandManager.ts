@@ -334,6 +334,9 @@ export class CommandManager implements Component {
 				this.aliases.set(translation, primary);
 			}
 		}
+
+		// emit event
+		this.api.emit(CommandManagerEvent.COMMAND_ADD, command);
 	}
 
 	/**
@@ -355,6 +358,9 @@ export class CommandManager implements Component {
 
 		// remove reference
 		this.commands.delete(primary);
+
+		// emit event
+		this.api.emit(CommandManagerEvent.COMMAND_REMOVE, command);
 	}
 
 	/**
