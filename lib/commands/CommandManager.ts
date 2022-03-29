@@ -842,9 +842,10 @@ export class CommandManager implements Component {
 
 				const finalChoices: Array<PromptChoice<number | string>> = [];
 				for (const choice of choices) {
-					const choiceName = this.getPrimaryName(choice.name);
+					let display = choice.name;
+					if (typeof display === 'object') display = await ctx.formatTranslation(display.key, display.repl) ?? display.backup;
 
-					const final = { name: choiceName, value: choice.value, match: [choiceName] };
+					const final = { name: display, value: choice.value, match: [choice.value.toString()] };
 					finalChoices.push(final);
 				}
 

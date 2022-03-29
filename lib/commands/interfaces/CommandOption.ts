@@ -39,7 +39,7 @@ export interface CommandOptionValue<T extends OptionType, U = unknown> extends C
 }
 
 export interface CommandOptionChoice<T> {
-	name: string | [string, ...Array<string | Translateable>];
+	name: string | Translateable;
 	value: T;
 }
 
