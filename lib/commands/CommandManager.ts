@@ -769,10 +769,12 @@ export class CommandManager implements Component {
 		let inputs: Array<string> = option.array ? raw.split(/,\s?/gi) : [raw];
 		inputs = inputs.filter(i => !!i);
 
+		const primary = this.getPrimaryName(option.name);
+
 		// Auto prompt missing data on required option
 		if (inputs.length < 1 && (typeof option.required !== 'boolean' || option.required) && !('choices' in option)) {
 			const type = this.getTypePreview(option);
-			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_OPTION', { option: option.name, type }) || `Please provide an input for option \`${option.name}\` of type \`${type}\`:`;
+			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_OPTION', { option: primary, type }) || `Please provide an input for option \`${primary}\` of type \`${type}\`:`;
 			const input = await ctx.prompt<string>(content, async (s: string) => s);
 
 			inputs = option.array ? input.split(/,\s?/gi) : [input];
@@ -836,7 +838,6 @@ export class CommandManager implements Component {
 
 			const findChoice = choices.find(c => out && (c.value === out.toString() || c.value === parseInt(out.toString(), 10)));
 			if (!findChoice) {
-				const primary = this.getPrimaryName(option.name);
 				const content = await ctx.formatTranslation('BENTOCORD_PROMPT_CHOICE_OPTION', { option: primary }) || `Please select one of the following choices for option \`${primary}\``;
 
 				const finalChoices: Array<PromptChoice<number | string>> = [];
@@ -852,7 +853,7 @@ export class CommandManager implements Component {
 		}
 
 		// required value
-		if ((out == null || (Array.isArray(out) && out.length === 0)) && (typeof option.required !== 'boolean' || option.required)) throw new Error(`Failed to resolve required option "${option.name}"`);
+		if ((out == null || (Array.isArray(out) && out.length === 0)) && (typeof option.required !== 'boolean' || option.required)) throw new Error(`Failed to resolve required option "${primary}"`);
 
 		// TODO: Transform function
 		return out;
