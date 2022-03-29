@@ -19,13 +19,13 @@ export class ChannelResolver implements Resolver<AnyGuildChannel> {
 
 		const channels = ctx.guild.channels;
 
-		const channelTypes = option.channelTypes;
+		const channelTypes = option.channelTypes ?? [];
 
 		// filter matching channelType
-		const find = Array.from(channels.filter(c => this.checkChannel(input, c)).filter(c => channelTypes.includes(c.type)).values());
+		const find = Array.from(channels.filter(c => this.checkChannel(input, c)).filter(c => channelTypes.length > 0 && channelTypes.includes(c.type)).values());
 		if (find.length > 0) return find;
 
-		return Array.from(channels.filter(c => channelTypes.includes(c.type)).values());
+		return Array.from(channels.filter(c => channelTypes.length > 0 && channelTypes.includes(c.type)).values());
 	}
 
 	private checkChannel(input: string, channel: AnyGuildChannel) {
