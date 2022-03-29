@@ -66,7 +66,7 @@ export abstract class CommandContext {
 	public readonly manager: CommandManager;
 	public readonly promptManager: PromptManager;
 
-	public responseId: string;
+	protected responseId: string;
 
 	public constructor(manager: CommandManager, promptManager: PromptManager, command: Command) {
 		this.manager = manager;
@@ -229,7 +229,7 @@ export abstract class CommandContext {
 		return this.editResponse({ content });
 	}
 
-	public abstract getResponseMessage(): Promise<Message>;
+	public abstract getResponseId(): Promise<string>;
 
 	public abstract acknowledge(): Promise<void>;
 
@@ -277,20 +277,15 @@ export class InteractionCommandContext extends CommandContext {
 		}
 	}
 
-	public async getResponseMessage(): Promise<Message> {
-		if (this.message) return this.message;
+	public async getResponseId(): Promise<string> {
+		if (this.responseId !== '@original') return this.responseId;
 
-		let message: Message;
-		if (this.responseId === '@original') {
-			message = await this.interaction.getOriginalMessage();
-			this.message = message;
-			this.messageId = message.id;
-		} else {
-			message = await this.discord.client.getMessage(this.channelId, this.responseId);
-		}
-
-		if (!message) throw new Error('InteractionCommandContext: Message not found');
+		const message = await this.interaction.getOriginalMessage();
+		this.message = message;
+		this.messageId = message.id;
 		this.responseId = message.id;
+
+		return this.responseId;
 	}
 
 	public async acknowledge(): Promise<void> {
@@ -378,8 +373,8 @@ export class MessageCommandContext extends CommandContext {
 		}
 	}
 
-	public async getResponseMessage(): Promise<Message<TextableChannel>> {
-		return this.message;
+	public async getResponseId(): Promise<string> {
+		return this.responseId;
 	}
 
 	public async acknowledge(): Promise<void> {
