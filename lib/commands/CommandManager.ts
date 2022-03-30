@@ -264,9 +264,9 @@ export class CommandManager implements Component {
 
 			if (normalize) {
 				// Thx to infinitestory for Discord's validation regex
-				iteration[0] = iteration[0].toLocaleLowerCase().replace(/[^-_\p{L}\p{N}\p{sc=Devanagari}\p{sc=Thai}]|\s/g, '');
+				iteration[0] = iteration[0].toLocaleLowerCase().replace(/[^-_\p{L}\p{N}\p{sc=Devanagari}\p{sc=Thai}]|\s/gu, '');
 				iteration[1] = Object.fromEntries(Object.entries(iteration[1]).map(([k, v]) =>
-					[k, v.toLocaleLowerCase().replace(/[^-_\p{L}\p{N}\p{sc=Devanagari}\p{sc=Thai}]|\s/g, '')]));
+					[k, v.toLocaleLowerCase().replace(/[^-_\p{L}\p{N}\p{sc=Devanagari}\p{sc=Thai}]|\s/gu, '')]));
 			}
 
 			collector.push(iteration);
