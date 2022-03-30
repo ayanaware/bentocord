@@ -263,8 +263,10 @@ export class CommandManager implements Component {
 			}
 
 			if (normalize) {
-				iteration[0] = iteration[0].toLocaleLowerCase().replace(/\s/g, '');
-				iteration[1] = Object.fromEntries(Object.entries(iteration[1]).map(([k, v]) => [k, v.toLocaleLowerCase().replace(/\s/g, '')]));
+				// Thx to infinitestory for Discord's validation regex
+				iteration[0] = iteration[0].toLocaleLowerCase().replace(/[^-_\p{L}\p{N}\p{sc=Devanagari}\p{sc=Thai}]|\s/g, '');
+				iteration[1] = Object.fromEntries(Object.entries(iteration[1]).map(([k, v]) =>
+					[k, v.toLocaleLowerCase().replace(/[^-_\p{L}\p{N}\p{sc=Devanagari}\p{sc=Thai}]|\s/g, '')]));
 			}
 
 			collector.push(iteration);
