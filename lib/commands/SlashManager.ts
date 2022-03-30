@@ -153,7 +153,7 @@ export class SlashManager implements Component {
 
 		// Since we only need one translated name for discord, we merge all
 		// translation objects together, with accumulator overriding next object
-		const translations: Record<string, string> = names.reduce((a, v) => Object.assign({}, v, a), {});
+		const translations: Record<string, string> = names.reduce((a, v) => Object.assign({}, v[1], a), {});
 
 		// support translated descriptions
 		const [description] = await this.cm.getItemTranslations(definition.description);
@@ -198,7 +198,7 @@ export class SlashManager implements Component {
 
 			// Since we only need one translated name for discord, we merge all
 			// translation objects together, with accumulator overriding next object
-			const translations: Record<string, string> = names.reduce((a, v) => Object.assign({}, v, a), {});
+			const translations: Record<string, string> = names.reduce((a, v) => Object.assign({}, v[1], a), {});
 
 			// support translated descriptions
 			const [description] = await this.cm.getItemTranslations(option.description);
