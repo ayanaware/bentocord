@@ -944,7 +944,7 @@ export class CommandManager implements Component {
 		build = `${build})\\s?(?<name>[\\w]+)\\s?(?<args>.+)?$`;
 
 		// example of finished regex: `/^(?<prefix>=|<@!?185476724627210241>)\s?(?<name>[\w]+)\s?(?<args>.+)?$/si`
-		const matches = new RegExp(build, 'si').exec(raw);
+		const matches = new RegExp(build, 'siu').exec(raw);
 
 		// message is not a command
 		if (!matches) return;
