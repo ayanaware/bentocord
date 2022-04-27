@@ -61,6 +61,9 @@ export interface CommandOptionSubCommandGroup extends CommandOption<OptionType.S
 
 	/** Any suppressors to execute */
 	suppressors?: Array<SuppressorDefinition>;
+
+	/** Hide this subcommand group from general users */
+	hidden?: boolean;
 }
 
 // SUBCOMMAND
@@ -79,6 +82,9 @@ export interface CommandOptionSubCommand extends CommandOption<OptionType.SUB_CO
 
 	/** Any suppressors to execute */
 	suppressors?: Array<SuppressorDefinition>;
+
+	/** Hide this subcommand from general users */
+	hidden?: boolean;
 }
 
 // PRIMITIVES

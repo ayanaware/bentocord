@@ -16,7 +16,7 @@ export class ConfirmPrompt extends PaginationPrompt<boolean> {
 	}
 
 	public async open(content: string | Translateable): Promise<boolean> {
-		if (typeof content === 'object') content = await this.ctx.formatTranslation(content.key, content.repl) || content.backup;
+		if (typeof content === 'object') content = await this.ctx.formatTranslation(content.key, content.repl, content.backup);
 		this.content = content;
 
 		await this.render();

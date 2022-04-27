@@ -4,6 +4,7 @@ import { Plugin, PluginAPI, Variable } from '@ayanaware/bento';
 import { Message } from 'eris';
 
 import { BentocordVariable } from './BentocordVariable';
+import type { LocalizedEmbedBuilder } from './builders/LocalizedEmbedBuilder';
 import { MessageContext } from './interfaces/MessageContext';
 import { PermissionScope, PermissionScopeType } from './interfaces/PermissionScope';
 
@@ -75,6 +76,15 @@ export class BentocordInterface implements Plugin {
 		return 'test-';
 	}
 
+	public async getHelpEmbed(embed: LocalizedEmbedBuilder): Promise<LocalizedEmbedBuilder> {
+		const name = this.api.getProperty<string>('APPLICATION_NAME') || 'Bentocord';
+		const version = this.api.getProperty('APPLICATION_VERSION') || '';
+
+		embed.setAuthor(`${name} ${version}`);
+
+		return embed;
+	}
+
 	public async formatNumber(num: number, ctx?: Record<string, string>): Promise<string> {
 		return null;
 	}
@@ -86,18 +96,19 @@ export class BentocordInterface implements Plugin {
 	/**
 	 * Format a translation string
 	 * @param key Translation key
-	 * @param repl Replacements
-	 * @param ctx CommandContext
+	 * @param repl Translation Replacements
+	 * @param ctx Translation Context (Snowflakes)
+	 * @param backup Translation Backup
 	 * @returns Translated string
 	 */
-	public async formatTranslation(key: string, repl?: Record<string, unknown>, ctx?: Record<string, string>): Promise<string> {
-		return null;
+	public async formatTranslation(key: string, repl?: Record<string, unknown>, ctx?: Record<string, string>, backup?: string): Promise<string> {
+		return backup ?? null;
 	}
 
 	/**
 	 * Format a translation in all available languages.
 	 * @param key Translation Key
-	 * @param repl Replacements
+	 * @param repl Translation Replacements
 	 * @returns Object, key is language, value is translation
 	 */
 	public async formatTranslationMap(key: string, repl?: Record<string, unknown>): Promise<Record<string, string>> {

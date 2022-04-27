@@ -92,7 +92,7 @@ export class Prompt<T = string> {
 	public async open(content: string | Translateable): Promise<T> {
 		if (this.pending) await this.close(await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_NEW') || 'New prompt was opened.');
 
-		if (typeof content === 'object') content = await this.ctx.formatTranslation(content.key, content.repl) || content.backup;
+		if (typeof content === 'object') content = await this.ctx.formatTranslation(content.key, content.repl, content.backup);
 
 		const usage = await this.ctx.formatTranslation('BENTOCORD_PROMPT_USAGE') || '*You may respond via message or the `r` command.*';
 		content += `\n${usage}`;
@@ -106,7 +106,7 @@ export class Prompt<T = string> {
 	public async close(reason?: string | Translateable): Promise<void> {
 		let content;
 		if (reason) {
-			if (typeof reason === 'object') reason = await this.ctx.formatTranslation(reason.key, reason.repl) || reason.backup;
+			if (typeof reason === 'object') reason = await this.ctx.formatTranslation(reason.key, reason.repl, reason.backup);
 
 			content = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_REASON', { reason }) || `Prompt has been closed: ${reason}`;
 		} else {

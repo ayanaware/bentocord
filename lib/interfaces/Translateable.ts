@@ -1,8 +1,10 @@
 export interface Translateable {
 	/** Translation Key */
 	key: string;
+
 	/** Translation Replacements */
 	repl?: Record<string, unknown>;
-	/** Use this sting if translation fails */
+
+	/** String to use if key doesn't exist */
 	backup?: string;
 }

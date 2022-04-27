@@ -7,7 +7,7 @@ export class HelloWorld implements CommandEntity {
 	public parent = CommandManager;
 
 	public definition: CommandDefinition = {
-		aliases: ['hello'],
+		name: ['hello'],
 		description: 'Hello world',
 	};
 

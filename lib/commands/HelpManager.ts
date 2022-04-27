@@ -1,12 +1,16 @@
 import { ComponentAPI, Inject } from '@ayanaware/bento';
 
+import { BentocordInterface } from '../BentocordInterface';
+import { LocalizedCodeblockBuilder } from '../builders/LocalizedCodeblockBuilder';
+import { LocalizedEmbedBuilder } from '../builders/LocalizedEmbedBuilder';
+import { Translateable } from '../interfaces/Translateable';
 import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
 
 import { CommandContext } from './CommandContext';
-import { CommandManager } from './CommandManager';
+import { CommandDetails, CommandManager } from './CommandManager';
 import { OptionType } from './constants/OptionType';
 import { CommandDefinition } from './interfaces/CommandDefinition';
-import { AnyCommandOption, AnySubCommandOption, } from './interfaces/CommandOption';
+import { AnyCommandOption, AnySubCommandOption, AnyValueCommandOption } from './interfaces/CommandOption';
 import { CommandEntity } from './interfaces/entity/CommandEntity';
 
 export class HelpManager implements CommandEntity {
@@ -14,98 +18,212 @@ export class HelpManager implements CommandEntity {
 	public api!: ComponentAPI;
 	public parent = CommandManager;
 
-	@Inject() private readonly commandManager: CommandManager;
+	@Inject() private readonly interface: BentocordInterface;
+	@Inject() private readonly cm: CommandManager;
 
 	public definition: CommandDefinition = {
-		name: ['help', 'commands'],
-		description: 'Bentocord Help',
+		name: ['help', { key: 'COMMAND_HELP' }],
+		description: { key: 'BENTOCORD_COMMAND_HELP_DESCRIPTION', backup: 'Learn about commands and features the bot provides.' },
 		options: [
-			{ name: 'input', type: OptionType.STRING, description: 'Command, category, or help page', rest: true, required: false },
+			{ type: OptionType.STRING, name: 'input', description: { key: 'BENTOCORD_COMMAND_HELP_INPUT_DESCRIPTION', backup: 'Category, Command, or Page' }, rest: true, required: false },
 		],
 	};
 
-	private getTypePreview(option: AnyCommandOption) {
-		// Prepend type information to description
-		let typeBuild = '[';
-		if (typeof option.type === 'number') typeBuild += OptionType[option.type];
-		else typeBuild += option.type;
+	public async execute(ctx: CommandContext, { input }: { input?: string }): Promise<unknown> {
+		if (!input) return this.showPrimaryHelp(ctx);
 
-		// handle array
-		if ('array' in option && option.array) typeBuild += ', ...';
-		typeBuild += ']';
+		const args = input.split(' ');
+		// first argument is command or category name
+		const name = args.shift().toLocaleLowerCase();
 
-		return typeBuild;
-	}
-
-	private async buildOptions(ctx: CommandContext, options: Array<AnyCommandOption>): Promise<Array<PromptChoice<string>>> {
-		const items: Array<PromptChoice<string>> = [];
-		for (const option of options) {
-			const primary = this.commandManager.getPrimaryName(option.name);
-			const type = this.getTypePreview(option);
-
-			let description = option.description;
-			if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl) || description.backup;
-
-			items.push({ name: `${primary}${type} - ${description}`, value: primary, match: [primary] });
+		// handle commands
+		const command = this.cm.findCommand(name);
+		if (command) {
+			return this.showCommandHelp(ctx, command.definition, args);
 		}
 
-		return items;
+		// handle categories
+		for (const [category, commands] of this.cm.getCategorizedCommands()) {
+			if (category.toLocaleLowerCase() !== name) continue;
+
+			return this.showCategoryHelp(ctx, category, commands);
+		}
+
+		return ctx.createTranslatedResponse('BENTOCORD_HELP_NOT_FOUND', {}, 'Could not find any relevant help from your input.');
 	}
 
-	public async processCommand(ctx: CommandContext, command: CommandDefinition | AnySubCommandOption, args: Array<string>): Promise<unknown> {
-		let definition = false;
-		if ('aliases' in command) definition = true;
+	private async showPrimaryHelp(ctx: CommandContext): Promise<unknown> {
+		// grab embed
+		let embed = new LocalizedEmbedBuilder(ctx);
+		embed = await this.interface.getHelpEmbed(embed);
 
-		const options = command.options || [];
+		// apply fields
+		for (const [category, commands] of this.cm.getCategorizedCommands()) {
+			const names = Array.from(commands.keys()).sort();
+			await embed.addTranslatedField(
+				{ key: `BENTOCORD_HELP_CATEGORY_${category.toLocaleUpperCase()}`, backup: category.toLocaleUpperCase() },
+				`\`${names.join('`, `')}\``, false);
+		}
 
-		// if we have an arg attempt to find it
-		const arg = args.shift();
-		if (arg) {
-			const option = options.find(o => o.name === arg);
+		// add help usage details
+		// await embed.addTranslatedField('\u200b', { key: 'BENTOCORD_HELP_' });
 
-			if ([OptionType.SUB_COMMAND, OptionType.SUB_COMMAND_GROUP].includes(option.type)) {
-				return this.processCommand(ctx, option as AnySubCommandOption, args);
+		return ctx.createResponse({ embeds: [embed.toJSON()] });
+	}
+
+	private async showCategoryHelp(ctx: CommandContext, category: string, commands: Map<string, CommandDetails>): Promise<unknown> {
+		const items: Array<string> = [];
+		for (const [command, details] of Array.from(commands.entries()).sort()) {
+			let description = details.command.definition.description;
+			if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl, description.backup);
+
+			let final = command;
+			if (description) final = `${final} - ${description}`;
+			items.push(final);
+		}
+
+		return ctx.pagination(items, { key: `BENTOCORD_HELP_CATEGORY_${category.toLocaleUpperCase()}`, backup: category }, { language: 'css', resolveOnClose: true });
+	}
+
+	public async showCommandHelp(ctx: CommandContext, definition: CommandDefinition, path: Array<string>): Promise<unknown> {
+		let selected: CommandDefinition | AnyCommandOption = definition;
+		let selectedPath: Array<string> = [];
+		const list: Map<string, string | Translateable> = new Map();
+
+		// Good god what is this mess. Someone please fix
+		// This function is responsible for fully recursing down a command object
+		// This allows us to get a flat object with key = full command path, value = description
+		// TODO: use this.cm.getItemTranslations & support localized help names
+		const walkCommand = (item: CommandDefinition | AnySubCommandOption, depth = 0, crumb: Array<string> = []) => {
+			// append ourself to crumb
+			crumb = [...crumb, this.cm.getPrimaryName(item.name)];
+
+			// process options recursivly
+			const filter = path[depth] ?? null;
+			let found = !filter;
+			for (const option of item.options ?? []) {
+				const name = this.cm.getPrimaryName(option.name);
+
+				// filter when requested, keep track of "selected" item
+				if (filter) {
+					if (filter !== name) continue;
+					selected = option;
+					selectedPath = [...crumb];
+
+					found = true;
+				}
+
+				// recurse & continue if options are available
+				if (!('options' in option)) continue;
+
+				// no subcommand/group children, so add to list
+				if (!(option.options ?? []).some(o => this.cm.isAnySubCommand(o))) {
+					// don't add to list if filter selected this specific item, this lets showCommandHelp know to not show subCommand dialog
+					if (!filter) list.set([...crumb, name].join(' '), option.description);
+				}
+
+				// TIL: ++x = value after increment, x++ = value before increment
+				if (!walkCommand(option, ++depth, crumb)) return false;
 			}
 
-			// return this.displayOption(ctx, option);
+			return found;
+		};
+		if (!walkCommand(definition)) return ctx.createTranslatedResponse('BENTOCORD_HELP_NOT_FOUND', {}, 'Failed to find any relevant help for input.');
+
+		// selected = the command/option that was requested
+		// list = a map of all valid sub commands
+
+		const primary = this.cm.getPrimaryName(selected.name);
+		const fullPath = [...selectedPath, primary];
+		let description = selected.description;
+		if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl, description.backup);
+
+		// if there are items in list then show a choice prompt with them
+		// allows users to drill down futher if they want
+		if (list.size > 0) {
+			// translate descriptions
+			const choices: Array<PromptChoice<Array<string>>> = [];
+			for (let [key, desc] of list) {
+				if (typeof desc === 'object') desc = await ctx.formatTranslation(desc.key, desc.repl, desc.backup);
+				choices.push({ name: `${key} - ${desc}`, value: key.split(' ') });
+			}
+
+			const subCommandResponse = await ctx.formatTranslation(
+				'BENTOCORD_HELP_COMMAND', { command: fullPath.join(' '), description },
+				`**Command**: \`${fullPath.join(' ')}\`\n**Description**: ${description}`);
+
+			const subCommandHeader = await ctx.formatTranslation('BENTOCORD_HELP_HEADER_SUBCOMMANDS', {}, '**Sub Commands**:');
+
+			const choice = await ctx.choice(choices, `${subCommandResponse}\n\n${subCommandHeader}`, { resolveOnClose: true });
+
+			// user picked something remove first element and invoke ourself again
+			if (choice) return this.showCommandHelp(ctx, definition, choice.slice(1));
 			return;
 		}
 
-		// no args to fufill, build list of options
-		const items = await this.buildOptions(ctx, options);
+		// selected is now either a option, or a command/subcommand/group with no child subcommand/group
 
-		const primary = this.commandManager.getPrimaryName(command.name);
+		// handle options
+		if ('type' in selected && !this.cm.isAnySubCommand(selected)) return this.displayOption(ctx, selected, selectedPath);
 
-		let type = '';
-		if (definition) type = '[COMMAND]';
-		else type = this.getTypePreview(command as AnyCommandOption);
-
-		let content = `${primary}${type} - ${command.description}`;
-
-		const hasSub = options.find(o => [OptionType.SUB_COMMAND, OptionType.SUB_COMMAND_GROUP].includes(o.type));
-		if (hasSub) {
-			content += '\n\nPlease select a subcommand:';
-		}
-
-		// display choices
-		const choice = await ctx.choice(items, content, { resolveOnClose: true });
-
-		if (choice) {
-			return this.processCommand(ctx, command, [choice]);
-		}
+		// handle command/subcommand/group
+		return this.displayCommand(ctx, definition, selected, selectedPath);
 	}
 
-	public async execute(ctx: CommandContext, { input }: { input: string }): Promise<unknown> {
-		const args = input.split(' ');
-		const name = args.shift();
-		// TODO: Check categories, pages, and then commands
+	private async displayCommand(ctx: CommandContext, definition: CommandDefinition, command: CommandDefinition | AnySubCommandOption, crumb: Array<string> = []) {
+		const primary = this.cm.getPrimaryName(command.name);
+		const fullPath = [...crumb, primary];
 
-		// find command
-		const command = this.commandManager.findCommand(name);
-		if (!command) return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_ADV_NOTEXIST', { command: name }) || `Command "${name}" does not exist`);
+		let description = command.description;
+		if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl, description.backup);
 
-		const definition = command.definition;
+		const response = await ctx.formatTranslation(
+			'BENTOCORD_HELP_COMMAND', { command: fullPath.join(' '), description },
+			`**Command**: \`${fullPath.join(' ')}\`\n**Description**: ${description}`);
 
-		return this.processCommand(ctx, definition, args);
+		// Display Options
+		const choices: Array<PromptChoice<Array<string>>> = [];
+		for (const option of command.options ?? []) {
+			// if this is somehow possible handle it
+			if (this.cm.isAnySubCommand(option)) continue;
+
+			const name = this.cm.getPrimaryName(option.name);
+			let desc = option.description;
+			if (typeof desc === 'object') desc = await ctx.formatTranslation(desc.key, desc.repl, desc.backup);
+			const type = this.cm.getTypePreview(option);
+
+			choices.push({ name: `${name}${type} - ${desc}`, value: [...fullPath, name ] });
+		}
+
+		// TODO: Dynamically generate examples and/or pull from definition
+
+		if (choices.length > 0) {
+			const optionHeader = await ctx.formatTranslation('BENTOCORD_HELP_HEADER_OPTIONS', {}, '**Options**:');
+			const choice = await ctx.choice(choices, `${response}\n\n${optionHeader}`, { resolveOnClose: true });
+
+			// user picked something remove first element and invoke showCommandHelp again
+			if (choice) return this.showCommandHelp(ctx, definition, choice.slice(1));
+			return;
+		}
+
+		return ctx.createResponse(response);
+	}
+
+	private async displayOption(ctx: CommandContext, option: AnyValueCommandOption, crumb: Array<string>) {
+		const primary = this.cm.getPrimaryName(option.name);
+		let description = option.description;
+		if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl, description.backup);
+
+		const type = this.cm.getTypePreview(option);
+
+		const optionResponse = await ctx.formatTranslation(
+			'BENTOCORD_HELP_OPTION', { option: primary, description, command: crumb.join(' ') },
+			`**Option**: \`${primary}\`\n**Type**: ${type}\n**Description**: ${description}\n**Parent Command**: \`${crumb.join(' ')}\``);
+
+		// TODO: Add choices, min/max, channel_types, etc
+
+		// TODO: Dynamically generate example values based on type
+
+		return ctx.createResponse(optionResponse);
 	}
 }

@@ -8,7 +8,7 @@ export class ArrayCommand implements CommandEntity {
 	public parent = CommandManager;
 
 	public definition: CommandDefinition = {
-		aliases: ['arraytest'],
+		name: ['arraytest'],
 		description: 'Test away all day',
 		options: [
 			{ type: OptionType.BOOLEAN, array: true, name: 'booleans', description: 'booleans', required: true },

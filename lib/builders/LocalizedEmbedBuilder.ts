@@ -21,7 +21,7 @@ export class LocalizedEmbedBuilder extends EmbedBuilder {
 	}
 
 	public async setTranslatedDescription(description: string | Translateable): Promise<this> {
-		if (typeof description === 'object') description = await this.ctx.formatTranslation(description.key, description.repl) || description.backup;
+		if (typeof description === 'object') description = await this.ctx.formatTranslation(description.key, description.repl, description.backup);
 
 		this.setDescription(description);
 
@@ -29,7 +29,7 @@ export class LocalizedEmbedBuilder extends EmbedBuilder {
 	}
 
 	public async setTranslatedAuthor(name: string | Translateable, url?: string, iconUrl?: string): Promise<this> {
-		if (typeof name === 'object') name = await this.ctx.formatTranslation(name.key, name.repl) || name.backup;
+		if (typeof name === 'object') name = await this.ctx.formatTranslation(name.key, name.repl, name.backup);
 
 		this.setAuthor(name, url, iconUrl);
 
@@ -37,8 +37,8 @@ export class LocalizedEmbedBuilder extends EmbedBuilder {
 	}
 
 	public async addTranslatedField(name: string | Translateable, value?: string | Translateable, inline: boolean = false): Promise<this> {
-		if (typeof name === 'object') name = await this.ctx.formatTranslation(name.key, name.repl) || name.backup;
-		if (typeof value === 'object') value = await this.ctx.formatTranslation(value.key, value.repl) || value.backup;
+		if (typeof name === 'object') name = await this.ctx.formatTranslation(name.key, name.repl, name.backup);
+		if (typeof value === 'object') value = await this.ctx.formatTranslation(value.key, value.repl, value.backup);
 
 		this.addField(name, value, inline);
 
@@ -46,7 +46,7 @@ export class LocalizedEmbedBuilder extends EmbedBuilder {
 	}
 
 	public async setTranslatedFooter(text: string | Translateable, iconUrl?: string): Promise<this> {
-		if (typeof text === 'object') text = await this.ctx.formatTranslation(text.key, text.repl) || text.backup;
+		if (typeof text === 'object') text = await this.ctx.formatTranslation(text.key, text.repl, text.backup);
 
 		this.setFooter(text, iconUrl);
 

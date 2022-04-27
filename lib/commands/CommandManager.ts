@@ -55,6 +55,9 @@ export interface CommandDetails {
 	/** Command category */
 	category?: string;
 
+	/** Hidden */
+	hidden: boolean;
+
 	/** Command permissions */
 	permissions: Array<CommandPermissionDetails>;
 }
@@ -256,7 +259,7 @@ export class CommandManager implements Component {
 			const iteration: [string, Record<string, string>] = ['', {}];
 
 			if (typeof item === 'object') {
-				iteration[0] = await this.interface.formatTranslation(item.key, item.repl) ?? item.backup ?? item.key;
+				iteration[0] = await this.interface.formatTranslation(item.key, item.repl, {}, item.backup ?? item.key);
 				iteration[1] = await this.interface.formatTranslationMap(item.key, item.repl) ?? {};
 			} else if (typeof item === 'string') {
 				iteration[0] = item;
@@ -280,6 +283,18 @@ export class CommandManager implements Component {
 	 */
 	public getCommands(): Map<string, CommandDetails> {
 		return this.commands;
+	}
+
+	public getCategorizedCommands(): Map<string, Map<string, CommandDetails>> {
+		const out: Map<string, Map<string, CommandDetails>> = new Map();
+		for (const [command, details] of this.commands) {
+			const category = details.category ?? 'default';
+			if (!out.has(category)) out.set(category, new Map());
+
+			out.get(category).set(command, details);
+		}
+
+		return out;
 	}
 
 	public isSubCommand(option: AnyCommandOption): option is CommandOptionSubCommand {
@@ -312,7 +327,7 @@ export class CommandManager implements Component {
 		// add permissions
 		const permissions = this.getPermissionDetails(command);
 
-		const commandDetails: CommandDetails = { command, category: definition.category ?? null, permissions };
+		const commandDetails: CommandDetails = { command, category: definition.category ?? null, hidden: definition.hidden ?? false, permissions };
 		this.commands.set(primary, commandDetails);
 
 		const aliases = await this.getItemTranslations(definition.name, true);
@@ -724,7 +739,7 @@ export class CommandManager implements Component {
 				const primary = this.getPrimaryName(sub.name);
 
 				let description = sub.description;
-				if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl) || description.backup;
+				if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl, description.backup);
 
 				choices.push({ value: primary, name: `${primary} - ${description}`, match: [primary] });
 			}
@@ -845,7 +860,7 @@ export class CommandManager implements Component {
 				const finalChoices: Array<PromptChoice<number | string>> = [];
 				for (const choice of choices) {
 					let display = choice.name;
-					if (typeof display === 'object') display = await ctx.formatTranslation(display.key, display.repl) ?? display.backup;
+					if (typeof display === 'object') display = await ctx.formatTranslation(display.key, display.repl, display.backup);
 
 					const final = { name: display, value: choice.value, match: [choice.value.toString()] };
 					finalChoices.push(final);

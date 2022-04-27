@@ -8,7 +8,7 @@ export class SayCommand implements CommandEntity {
 	public parent = CommandManager;
 
 	public definition: CommandDefinition = {
-		aliases: ['say', 'echo'],
+		name: ['say', 'echo'],
 		description: 'Simon says repeat after me',
 		options: [
 			{ type: OptionType.STRING, name: 'text', description: 'text to repeat', rest: true, required: true },

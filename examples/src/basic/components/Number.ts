@@ -7,7 +7,7 @@ export class NumberCommand implements CommandEntity {
 	public parent = CommandManager;
 
 	public definition = {
-		aliases: ['num', 'ber'],
+		name: ['num', 'ber'],
 		description: 'add two numbers',
 		options: [
 			{ type: OptionType.NUMBER, name: 'first', description: 'first number' },

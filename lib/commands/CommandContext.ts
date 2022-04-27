@@ -128,16 +128,17 @@ export abstract class CommandContext {
 
 	/**
 	 * Format a translation based on who/where ran
-	 * @param key Translation key
-	 * @param repl Translation replacements
+	 * @param key Translation Key
+	 * @param repl Translation Replacements
+	 * @param backup Translation Backup
 	 * @returns Formatted translation or null
 	 */
-	public async formatTranslation(key: string, repl?: Record<string, unknown>): Promise<string> {
+	public async formatTranslation(key: string, repl?: Record<string, unknown>, backup?: string): Promise<string> {
 		return this.interface.formatTranslation(key, repl, {
 			userId: this.authorId || null,
 			channelId: this.channelId || null,
 			guildId: this.guildId || null,
-		});
+		}, backup);
 	}
 
 	/**
@@ -211,10 +212,11 @@ export abstract class CommandContext {
 	 * Send translated response, getTranstion & createResponse
 	 * @param key Translation Key
 	 * @param repl Replacements
+	 * @param backup Backup
 	 * @returns Message/Interaction
 	 */
-	public async createTranslatedResponse(key: string, repl?: Record<string, unknown>): Promise<unknown> {
-		const content = await this.formatTranslation(key, repl);
+	public async createTranslatedResponse(key: string, repl?: Record<string, unknown>, backup?: string): Promise<unknown> {
+		const content = await this.formatTranslation(key, repl, backup);
 		return this.createResponse({ content });
 	}
 
@@ -222,10 +224,11 @@ export abstract class CommandContext {
 	 * Edit translation response
 	 * @param key Translation Key
 	 * @param repl Replacements
+	 * @param backup Backup
 	 * @returns Message/Interaction
 	 */
-	public async editTranslatedResponse(key: string, repl?: Record<string, unknown>): Promise<unknown> {
-		const content = await this.formatTranslation(key, repl);
+	public async editTranslatedResponse(key: string, repl?: Record<string, unknown>, backup?: string): Promise<unknown> {
+		const content = await this.formatTranslation(key, repl, backup);
 		return this.editResponse({ content });
 	}
 
