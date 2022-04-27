@@ -27,10 +27,10 @@ export class AdvancedCommand implements CommandEntity {
 
 	public async execute(ctx: CommandContext, options: { alias: string, opts: string }): Promise<unknown> {
 		const aliases = await this.cm.getItemTranslations(this.definition.name, true);
-		if (aliases.some(a => a[0] === options.alias.toLocaleLowerCase())) return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_ADV_NO_RECURSIVE') || 'Recursive execution is not allowed.');
+		if (aliases.some(a => a[0] === options.alias.toLocaleLowerCase())) return ctx.createTranslatedResponse('BENTOCORD_ADV_NO_RECURSIVE', {}, 'Recursive execution is not allowed.');
 
 		const command = this.cm.findCommand(options.alias);
-		if (!command) return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_ADV_NOTEXIST', { command: options.alias }) || `Command "${options.alias}" does not exist in CommandManager`);
+		if (!command) return ctx.createTranslatedResponse('BENTOCORD_ADV_NOTEXIST', { command: options.alias }, 'Command "{command}" does not exist in CommandManager');
 
 		const definition = command.definition;
 

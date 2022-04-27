@@ -64,7 +64,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	}
 
 	protected async timeout(): Promise<void> {
-		const reason = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_TIMEOUT') || 'You took too much time to respond.';
+		const reason = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_TIMEOUT', {}, 'You took too much time to respond.');
 		return this.close(reason);
 	}
 
@@ -106,7 +106,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 		// only add page header if more then 1 page
 		if (!this.isSinglePage) {
-			const header = await this.ctx.formatTranslation('BENTOCORD_PAGINATION_PAGE', { page: this.currentPage + 1, total: this.maxPage }) || `[Page ${this.currentPage + 1}/${this.maxPage}]`;
+			const header = await this.ctx.formatTranslation('BENTOCORD_PAGINATION_PAGE', { page: this.currentPage + 1, total: this.maxPage }, '[Page {page}/{total}]');
 			cbb.setHeader(header);
 		}
 
@@ -145,12 +145,12 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 		// is more then one page show navigation info
 		if (!this.isSinglePage) {
-			const usage = await this.ctx.formatTranslation('BENTOCORD_PAGINATION_NAVIGATION') || 'Type `<` or `>` to switch pages, `x` to close, or `p<number>` to jump to a page (ex. `p10`).';
+			const usage = await this.ctx.formatTranslation('BENTOCORD_PAGINATION_NAVIGATION', {}, 'Type `<` or `>` to switch pages, `x` to close, or `p<number>` to jump to a page (ex. `p10`).');
 			content += usage;
 
 			// if no manage message complain :P
 			if (!this.ctx.selfHasPermission(DiscordPermission.MANAGE_MESSAGES)) {
-				const missing = await this.ctx.formatTranslation('BENTOCORD_PROMPT_MISSING_PERMISSION', { permission: 'MANAGE_MESSAGES' }) || 'It doesn\'t look like I have the `MANAGE_MESSAGE` Discord permission. Please grant it for a better experience.';
+				const missing = await this.ctx.formatTranslation('BENTOCORD_PROMPT_MISSING_PERMISSION', { permission: 'MANAGE_MESSAGES' }, 'It doesn\'t look like I have the `{permission}` Discord permission. Please grant it for a better experience.');
 				content += `\n${missing}`;
 			}
 		}

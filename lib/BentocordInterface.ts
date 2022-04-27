@@ -102,7 +102,11 @@ export class BentocordInterface implements Plugin {
 	 * @returns Translated string
 	 */
 	public async formatTranslation(key: string, repl?: Record<string, unknown>, ctx?: Record<string, string>, backup?: string): Promise<string> {
-		return backup ?? null;
+		// support basic interpolation for backup strings, simplifying a lot of logic in bentocord
+		if (!backup) return null;
+
+		for (const [k, v] of Object.entries(repl)) backup = backup.replace(new RegExp(`{${k}}`, 'gi'), v.toString());
+		return backup;
 	}
 
 	/**

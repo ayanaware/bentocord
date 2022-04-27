@@ -22,7 +22,7 @@ export class PromptManager implements Component {
 		// close all prompts onUnload
 		for (const prompt of this.prompts.values()) {
 			try {
-				const reason = await prompt.ctx.formatTranslation('BENTOCORD_PROMPTMANAGER_UNLOAD') || 'The manager is unloading.';
+				const reason = await prompt.ctx.formatTranslation('BENTOCORD_PROMPTMANAGER_UNLOAD', {}, 'The manager is unloading.');
 				await prompt.close(reason);
 			} catch { /* Failed */ }
 		}
@@ -39,7 +39,7 @@ export class PromptManager implements Component {
 		if (!prompt) return;
 
 		if (prompt.pending) {
-			const reason = await ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_NEW') || 'New prompt was opened.';
+			const reason = await ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_NEW', {}, 'New prompt was opened.');
 			await prompt.close(reason);
 		}
 

@@ -46,7 +46,7 @@ export class Prompt<T = string> {
 	}
 
 	protected async timeout(): Promise<void> {
-		const reason = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_TIMEOUT') || 'You took too much time to respond.';
+		const reason = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_TIMEOUT', {}, 'You took too much time to respond.');
 		return this.close(reason);
 	}
 
@@ -90,11 +90,11 @@ export class Prompt<T = string> {
 	}
 
 	public async open(content: string | Translateable): Promise<T> {
-		if (this.pending) await this.close(await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_NEW') || 'New prompt was opened.');
+		if (this.pending) await this.close(await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_NEW', {}, 'New prompt was opened.'));
 
 		if (typeof content === 'object') content = await this.ctx.formatTranslation(content.key, content.repl, content.backup);
 
-		const usage = await this.ctx.formatTranslation('BENTOCORD_PROMPT_USAGE') || '*You may respond via message or the `r` command.*';
+		const usage = await this.ctx.formatTranslation('BENTOCORD_PROMPT_USAGE', {}, '*You may respond via message or the `r` command.*');
 		content += `\n${usage}`;
 
 		await this.ctx.createResponse({ content });
@@ -108,9 +108,9 @@ export class Prompt<T = string> {
 		if (reason) {
 			if (typeof reason === 'object') reason = await this.ctx.formatTranslation(reason.key, reason.repl, reason.backup);
 
-			content = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_REASON', { reason }) || `Prompt has been closed: ${reason}`;
+			content = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_REASON', { reason }, 'Prompt has been closed: {reason}');
 		} else {
-			content = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED') || 'Prompt has been closed.';
+			content = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED', {}, 'Prompt has been closed.');
 		}
 
 		if (this.reject) await this.reject(reason);
@@ -149,11 +149,11 @@ export class Prompt<T = string> {
 		}
 
 		if (this.attempt++ >= 3) {
-			const canceled = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_MAX_ATTEMPTS') || 'Max invalid attempts reached.';
+			const canceled = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_MAX_ATTEMPTS', {}, 'Max invalid attempts reached.');
 			return this.close(canceled);
 		}
 
-		const error = await this.ctx.formatTranslation('BENTOCORD_PROMPT_VALIDATE_ERROR') || '**Failed to validate input. Please try again**';
+		const error = await this.ctx.formatTranslation('BENTOCORD_PROMPT_VALIDATE_ERROR', {}, '**Failed to validate input. Please try again**');
 		const content = `${this.sent}\n\n${error}`;
 
 		await this.ctx.createResponse({ content });

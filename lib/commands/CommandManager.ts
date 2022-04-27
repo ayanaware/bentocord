@@ -436,8 +436,7 @@ export class CommandManager implements Component {
 		// process suppressors
 		const suppressed = await this.executeSuppressors(ctx, definition);
 		if (suppressed) {
-			const message = await ctx.formatTranslation('BENTOCORD_SUPPRESSOR_HALT', { suppressor: suppressed.name, message: suppressed.message }) || `Execution was halted by \`${suppressed.name}\`: ${suppressed.message}`;
-			await ctx.createResponse(message);
+			await ctx.createTranslatedResponse('BENTOCORD_SUPPRESSOR_HALT', { suppressor: suppressed.name, message: suppressed.message }, 'Execution was halted by `{suppressed}`: {message}');
 			return false;
 		}
 
@@ -482,7 +481,9 @@ export class CommandManager implements Component {
 			}
 
 			if (unfufilled.length > 0) {
-				return ctx.createResponse(`Command cannot be executed. The following required permissions must be granted:\`\`\`${unfufilled.join(', ')}\`\`\``);
+				return ctx.createTranslatedResponse(
+					'BENTOCORD_COMMANDMANAGER_MISSING_PERMS', { permissions: unfufilled.join(', ') },
+					'Command cannot be executed. The following permissions must be granted:\n```{permissions}```');
 			}
 		}
 
@@ -504,7 +505,8 @@ export class CommandManager implements Component {
 			log.error(`Command ${primary}.execute() error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
-				return ctx.createResponse(`There was an error executing this command:\`\`\`${e.message}\`\`\``);
+				return ctx.createTranslatedResponse('BENTOCORD_COMMANDMANAGER_COMMAND_ERROR', { error: e.message },
+				'There was an error executing this command:\n```{error}```');
 			}
 		}
 	}
@@ -574,8 +576,7 @@ export class CommandManager implements Component {
 			if (check) return [true, 'explicit'];
 
 			// explicit deny
-			const content = await ctx.formatTranslation('BENTOCORD_PERMISSION_DENIED', { permission, where }) || `Permission \`${permission}\` has been denied on the \`${where}\` level.`;
-			await ctx.createResponse(content);
+			await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_DENIED', { permission, where },  'Permission `{permission}` has been denied on the `{where}` level.');
 
 			return [false, 'explicit'];
 		}
@@ -584,8 +585,7 @@ export class CommandManager implements Component {
 		if (defaults.user) return [true, 'implicit'];
 
 		// user is not allowed to execute this command
-		const cntent = await ctx.formatTranslation('BENTOCORD_PERMISSION_DENIED_DEFAULT', { permission }) || `Permission \`${permission}\` is denined by default. Please contact a server administrator to grant you this permission.`;
-		await ctx.createResponse(cntent);
+		await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_DENIED_DEFAULT', { permission }, 'Permission `{permission}` is denined by default. Please contact a server administrator to grant you this permission.');
 
 		return [false, 'implicit'];
 	}
@@ -744,7 +744,7 @@ export class CommandManager implements Component {
 				choices.push({ value: primary, name: `${primary} - ${description}`, match: [primary] });
 			}
 
-			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_SUBCOMMAND') || 'Please select a subcommand:';
+			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_SUBCOMMAND', {}, 'Please select a subcommand:');
 			const choice = await ctx.choice(choices, content);
 			useSub = choice;
 		} else if (promptSubs.length === 1) {
@@ -791,7 +791,7 @@ export class CommandManager implements Component {
 		// Auto prompt missing data on required option
 		if (inputs.length < 1 && (typeof option.required !== 'boolean' || option.required) && !('choices' in option)) {
 			const type = this.getTypePreview(option);
-			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_OPTION', { option: primary, type }) || `Please provide an input for option \`${primary}\` of type \`${type}\`:`;
+			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_OPTION', { option: primary, type },  'Please provide an input for option `{option}` of type `{type}`');
 			const input = await ctx.prompt<string>(content, async (s: string) => s);
 
 			inputs = option.array ? input.split(/,\s?/gi) : [input];
@@ -855,7 +855,7 @@ export class CommandManager implements Component {
 
 			const findChoice = choices.find(c => out && (c.value === out.toString() || c.value === parseInt(out.toString(), 10)));
 			if (!findChoice) {
-				const content = await ctx.formatTranslation('BENTOCORD_PROMPT_CHOICE_OPTION', { option: primary }) || `Please select one of the following choices for option \`${primary}\``;
+				const content = await ctx.formatTranslation('BENTOCORD_PROMPT_CHOICE_OPTION', { option: primary }, 'Please select one of the following choices for option `{option}`');
 
 				const finalChoices: Array<PromptChoice<number | string>> = [];
 				for (const choice of choices) {
@@ -923,7 +923,7 @@ export class CommandManager implements Component {
 			log.error(`Command "${definition.name[0]}" option error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
-				return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_COMMAND_ERROR', { error: e.message }) || `There was an error resolving command options: ${e.message}`);
+				return ctx.createTranslatedResponse('BENTOCORD_COMMAND_ERROR', { error: e.message }, 'There was an error resolving command options: {error}');
 			}
 		}
 	}
@@ -1014,7 +1014,7 @@ export class CommandManager implements Component {
 			log.error(`Command "${definition.name[0]}" error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
-				return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_COMMAND_ERROR', { error: e.message }) || `There was an error resolving command options: ${e.message}`);
+				return ctx.createTranslatedResponse('BENTOCORD_COMMAND_ERROR', { error: e.message }, 'There was an error resolving command options: {error}');
 			}
 		}
 	}

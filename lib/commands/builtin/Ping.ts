@@ -17,7 +17,7 @@ export class PingCommand implements CommandEntity {
 
 	public async execute(ctx: CommandContext): Promise<unknown> {
 		const start = process.hrtime();
-		await ctx.createResponse(await ctx.formatTranslation('BENTOCORD_PING') || 'Pong!');
+		await ctx.createTranslatedResponse('BENTOCORD_PING', {}, 'Pong!');
 		const end = process.hrtime(start);
 
 		const s = end[0];
@@ -27,10 +27,10 @@ export class PingCommand implements CommandEntity {
 		if (ctx.guild) {
 			const ws = ctx.guild.shard.latency;
 			if (ws !== Infinity) {
-				return ctx.editResponse(await ctx.formatTranslation('BENTOCORD_PING_COUNT_WS', { s, ms, ws }) || `Pong! API: \`${s}s ${ms}ms\`, Gateway: \`${ws}ms\`)`);
+				return ctx.editTranslatedResponse('BENTOCORD_PING_COUNT_WS', { s, ms, ws }, 'Pong! API: `{s}s {ms}ms`, Gateway: `{ws}ms`');
 			}
 		}
 
-		return ctx.editResponse(await ctx.formatTranslation('BENTOCORD_PING_COUNT', { s, ms }) || `Pong! \`${s}s ${ms}ms\``);
+		return ctx.editTranslatedResponse('BENTOCORD_PING_COUNT', { s, ms }, 'Pong! `{s}s {ms}ms`');
 	}
 }

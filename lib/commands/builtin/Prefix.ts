@@ -28,7 +28,7 @@ export class PrefixCommand implements CommandEntity {
 		registerSlash: false,
 	};
 
-	@Inject() private readonly commandManager: CommandManager;
+	@Inject() private readonly cm: CommandManager;
 
 	public async execute(ctx: CommandContext, options: { view?: Record<string, never>, set?: { prefix: string } }): Promise<unknown> {
 		if (options.set) return this.set(ctx, options.set.prefix);
@@ -37,13 +37,13 @@ export class PrefixCommand implements CommandEntity {
 			/* literally how */
 		}
 
-		const prefix = await this.commandManager.getPrefix(ctx.guild.id);
-		return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_PREFIX', { prefix }) || `Current prefix is \`${prefix}\``);
+		const prefix = await this.cm.getPrefix(ctx.guild.id);
+		return ctx.createTranslatedResponse('BENTOCORD_PREFIX', { prefix }, 'Current prefix is `{prefix}`');
 	}
 
 	private async set(ctx: CommandContext, prefix: string) {
-		await this.commandManager.setPrefix(ctx.guild.id, prefix);
+		await this.cm.setPrefix(ctx.guild.id, prefix);
 
-		return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_PREFIX_SET', { prefix }) || `Prefix has been set to \`${prefix}\``);
+		return ctx.createTranslatedResponse('BENTOCORD_PREFIX_SET', { prefix }, 'Prefix has been set to `{prefix}`');
 	}
 }
