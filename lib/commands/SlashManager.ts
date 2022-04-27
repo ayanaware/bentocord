@@ -132,6 +132,9 @@ export class SlashManager implements Component {
 			const definition = command.definition;
 			if (!definition || typeof definition.registerSlash === 'boolean' && !definition.registerSlash) continue;
 
+			// don't register hidden commands
+			if (definition.hidden ?? false) continue;
+
 			const cmd = await this.convertCommand(command);
 			collector.push(cmd);
 		}
@@ -206,6 +209,9 @@ export class SlashManager implements Component {
 
 			// Handle Special Subcommand & SubcommandGroup OptionTypes
 			if (this.cm.isAnySubCommand(option)) {
+				// don't register hidden subcommand/group
+				if (option.hidden ?? false) continue;
+
 				const subOption: ApplicationCommandOptionsSubCommand | ApplicationCommandOptionsSubCommandGroup = {
 					type: option.type === OptionType.SUB_COMMAND ? ApplicationCommandOptionTypes.SUB_COMMAND : ApplicationCommandOptionTypes.SUB_COMMAND_GROUP,
 					name: primary,
