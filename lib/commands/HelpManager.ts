@@ -76,7 +76,7 @@ export class HelpManager implements CommandEntity {
 	}
 
 	private async showCategoryHelp(ctx: CommandContext, category: string, commands: Map<string, CommandDetails>): Promise<unknown> {
-		const choices: Array<PromptChoice<[string, CommandDefinition]>> = [];
+		const choices: Array<PromptChoice<CommandDefinition>> = [];
 		for (const [command, details] of Array.from(commands.entries()).sort()) {
 			let description = details.command.definition.description;
 			if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl, description.backup);
@@ -84,11 +84,11 @@ export class HelpManager implements CommandEntity {
 			let final = command;
 			if (description) final = `${final} - ${description}`;
 
-			choices.push({ name: final, value: [command, details.command.definition] });
+			choices.push({ name: final, value: details.command.definition, match: [command] });
 		}
 
 		const choice = await ctx.choice(choices, { key: `BENTOCORD_HELP_CATEGORY_${category.toLocaleUpperCase()}_DESCRIPTION`, backup: category }, { resolveOnClose: true });
-		if (choice) return this.showCommandHelp(ctx, choice[1], [choice[0]]);
+		if (choice) return this.showCommandHelp(ctx, choice, []);
 	}
 
 	public async showCommandHelp(ctx: CommandContext, definition: CommandDefinition, path: Array<string>): Promise<unknown> {
@@ -151,7 +151,7 @@ export class HelpManager implements CommandEntity {
 			const choices: Array<PromptChoice<Array<string>>> = [];
 			for (let [key, desc] of list) {
 				if (typeof desc === 'object') desc = await ctx.formatTranslation(desc.key, desc.repl, desc.backup);
-				choices.push({ name: `${key} - ${desc}`, value: key.split(' ') });
+				choices.push({ name: `${key} - ${desc}`, value: key.split(' '), match: [key] });
 			}
 
 			const subCommandResponse = await ctx.formatTranslation(
@@ -198,7 +198,7 @@ export class HelpManager implements CommandEntity {
 			if (typeof desc === 'object') desc = await ctx.formatTranslation(desc.key, desc.repl, desc.backup);
 			const type = this.cm.getTypePreview(option);
 
-			choices.push({ name: `${name}${type} - ${desc}`, value: [...fullPath, name ] });
+			choices.push({ name: `${name}${type} - ${desc}`, value: [...fullPath, name ], match: [name] });
 		}
 
 		// TODO: Dynamically generate examples and/or pull from definition
