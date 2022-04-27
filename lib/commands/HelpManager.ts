@@ -59,7 +59,9 @@ export class HelpManager implements CommandEntity {
 		// apply fields
 		const unsorted: Array<[string, Array<string>]> = [];
 		for (const [category, commands] of this.cm.getCategorizedCommands()) {
-			const names = Array.from(commands.keys()).sort();
+			const names = Array.from(commands.entries())
+				.filter(([, v]) => !!v.hidden) // remove hidden
+				.map(k => k[0]).sort();
 
 			const display = await ctx.formatTranslation(`BENTOCORD_HELP_CATEGORY_${category.toLocaleUpperCase()}`, {}, category.toLocaleUpperCase());
 			unsorted.push([display, names]);
@@ -78,6 +80,9 @@ export class HelpManager implements CommandEntity {
 	private async showCategoryHelp(ctx: CommandContext, category: string, commands: Map<string, CommandDetails>): Promise<unknown> {
 		const choices: Array<PromptChoice<CommandDefinition>> = [];
 		for (const [command, details] of Array.from(commands.entries()).sort()) {
+			// skip hidden
+			if (details.hidden ?? false) continue;
+
 			let description = details.command.definition.description;
 			if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl, description.backup);
 
@@ -121,6 +126,8 @@ export class HelpManager implements CommandEntity {
 
 				// recurse & continue if options are available
 				if (!('options' in option)) continue;
+				// skip hidden, unless it was filtered
+				if (!filter && (option.hidden ?? false)) continue;
 
 				// no subcommand/group children, so add to list
 				if (!(option.options ?? []).some(o => this.cm.isAnySubCommand(o))) {
