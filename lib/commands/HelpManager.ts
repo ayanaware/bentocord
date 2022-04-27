@@ -60,7 +60,7 @@ export class HelpManager implements CommandEntity {
 		const unsorted: Array<[string, Array<string>]> = [];
 		for (const [category, commands] of this.cm.getCategorizedCommands()) {
 			const names = Array.from(commands.entries())
-				.filter(([, v]) => !!v.hidden) // remove hidden
+				.filter(([, v]) => !!v.definition.hidden) // remove hidden
 				.map(k => k[0]).sort();
 
 			const display = await ctx.formatTranslation(`BENTOCORD_HELP_CATEGORY_${category.toLocaleUpperCase()}`, {}, category.toLocaleUpperCase());
@@ -81,15 +81,15 @@ export class HelpManager implements CommandEntity {
 		const choices: Array<PromptChoice<CommandDefinition>> = [];
 		for (const [command, details] of Array.from(commands.entries()).sort()) {
 			// skip hidden
-			if (details.hidden ?? false) continue;
+			if (details.definition.hidden ?? false) continue;
 
-			let description = details.command.definition.description;
+			let description = details.definition.description;
 			if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl, description.backup);
 
 			let final = command;
 			if (description) final = `${final} - ${description}`;
 
-			choices.push({ name: final, value: details.command.definition, match: [command] });
+			choices.push({ name: final, value: details.definition, match: [command] });
 		}
 
 		const choice = await ctx.choice(choices, { key: `BENTOCORD_HELP_CATEGORY_${category.toLocaleUpperCase()}_DESCRIPTION`, backup: category }, { resolveOnClose: true });

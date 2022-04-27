@@ -52,11 +52,11 @@ export interface CommandDetails {
 	/** The command */
 	command: Command;
 
+	/** Command Definition */
+	definition: CommandDefinition;
+
 	/** Command category */
 	category?: string;
-
-	/** Hidden */
-	hidden: boolean;
 
 	/** Command permissions */
 	permissions: Array<CommandPermissionDetails>;
@@ -68,6 +68,9 @@ export interface CommandPermissionDetails {
 
 	/** Default state of this permission */
 	defaults: CommandPermissionDefaults;
+
+	/** Is this a hidden permission */
+	hidden: boolean;
 
 	/** Subcommand path for this permission */
 	path?: Array<string>;
@@ -327,7 +330,7 @@ export class CommandManager implements Component {
 		// add permissions
 		const permissions = this.getPermissionDetails(command);
 
-		const commandDetails: CommandDetails = { command, category: definition.category ?? null, hidden: definition.hidden ?? false, permissions };
+		const commandDetails: CommandDetails = { command, definition, category: definition.category ?? null, permissions };
 		this.commands.set(primary, commandDetails);
 
 		const aliases = await this.getItemTranslations(definition.name, true);
@@ -406,7 +409,7 @@ export class CommandManager implements Component {
 	public getPermissions(): Map<string, CommandPermissionDetails & { command?: Command, type: 'GROUP' | 'COMMAND' }> {
 		const collector = new Map<string, CommandPermissionDetails & { command?: Command, type: 'GROUP' | 'COMMAND'  }>();
 
-		collector.set('all', { permission: 'all', defaults: { user: false, admin: true }, type: 'GROUP' });
+		collector.set('all', { permission: 'all', defaults: { user: false, admin: true }, hidden: false, type: 'GROUP' });
 
 		for (const commandDetails of this.commands.values()) {
 			const { command, permissions } = commandDetails;
@@ -415,7 +418,7 @@ export class CommandManager implements Component {
 			// add category permissions
 			if (command.definition.category) {
 				const category = ['all', command.definition.category].join('.');
-				if (!collector.has(category)) collector.set(category, { permission: category, defaults: { user: false, admin: true }, type: 'GROUP' });
+				if (!collector.has(category)) collector.set(category, { permission: category, defaults: { user: false, admin: true }, hidden: false, type: 'GROUP' });
 			}
 
 			for (const permission of permissions) collector.set(permission.permission, { ...permission, command, type: 'COMMAND' });
@@ -522,7 +525,9 @@ export class CommandManager implements Component {
 		let defaults = definition.permissionDefaults ?? { user: true, admin: true };
 		if (typeof defaults === 'boolean') defaults = { user: defaults, admin: false };
 
-		collector.push({ permission: permissionName, defaults, path: [] });
+		const hidden = definition.hidden ?? false;
+
+		collector.push({ permission: permissionName, defaults, hidden, path: [] });
 
 		// walk options
 		const walkOptions = (options: Array<AnyCommandOption> = [], path: Array<string> = [], permPath: Array<string> = []): void => {
@@ -537,9 +542,11 @@ export class CommandManager implements Component {
 				let subDefaults = option.permissionDefaults ?? { user: true, admin: true };
 				if (typeof subDefaults === 'boolean') subDefaults = { user: subDefaults, admin: true };
 
+				const subHidden = option.hidden ?? false;
+
 				// add subcommand permissions
 				const finalName = [permissionName, ...subPermPath].join('.');
-				collector.push({ permission: finalName, defaults: subDefaults, path: subPath });
+				collector.push({ permission: finalName, defaults: subDefaults, hidden: subHidden, path: subPath });
 
 				if (Array.isArray(option.options)) walkOptions(option.options, subPath, subPermPath);
 			}
