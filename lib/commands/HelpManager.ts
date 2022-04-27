@@ -22,7 +22,7 @@ export class HelpManager implements CommandEntity {
 	@Inject() private readonly cm: CommandManager;
 
 	public definition: CommandDefinition = {
-		name: ['help', { key: 'COMMAND_HELP' }],
+		name: ['help', { key: 'BENTOCORD_COMMAND_HELP' }],
 		description: { key: 'BENTOCORD_COMMAND_HELP_DESCRIPTION', backup: 'Learn about commands and features the bot provides.' },
 		options: [
 			{ type: OptionType.STRING, name: 'input', description: { key: 'BENTOCORD_COMMAND_HELP_INPUT_DESCRIPTION', backup: 'Category, Command, or Page' }, rest: true, required: false },
