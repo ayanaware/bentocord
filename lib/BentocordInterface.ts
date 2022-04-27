@@ -105,7 +105,7 @@ export class BentocordInterface implements Plugin {
 		// support basic interpolation for backup strings, simplifying a lot of logic in bentocord
 		if (!backup) return null;
 
-		for (const [k, v] of Object.entries(repl)) backup = backup.replace(new RegExp(`{${k}}`, 'gi'), v.toString());
+		for (const [k, v] of Object.entries(repl ?? {})) backup = backup.replace(new RegExp(`{${k}}`, 'gi'), v.toString());
 		return backup;
 	}
 
