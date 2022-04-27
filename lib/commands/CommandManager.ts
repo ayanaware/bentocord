@@ -542,7 +542,9 @@ export class CommandManager implements Component {
 				let subDefaults = option.permissionDefaults ?? { user: true, admin: true };
 				if (typeof subDefaults === 'boolean') subDefaults = { user: subDefaults, admin: true };
 
-				const subHidden = option.hidden ?? false;
+				let subHidden = option.hidden ?? false;
+				// if top-levl hidden then we are too
+				if (hidden) subHidden = true;
 
 				// add subcommand permissions
 				const finalName = [permissionName, ...subPermPath].join('.');
