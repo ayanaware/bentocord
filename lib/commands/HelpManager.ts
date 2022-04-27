@@ -217,8 +217,8 @@ export class HelpManager implements CommandEntity {
 		const type = this.cm.getTypePreview(option);
 
 		const optionResponse = await ctx.formatTranslation(
-			'BENTOCORD_HELP_OPTION', { option: primary, description, type, required: option.required ?? true, command: crumb.join(' ') },
-			'**Option**: `{option}`\n**Description**: {description}\n**Type**: {type}**Required**: {required}\n**Parent Command**: `{command}`');
+			'BENTOCORD_HELP_OPTION', { option: primary, description, type, required: (option.required ?? true).toString(), command: crumb.join(' ') },
+			'**Option**: `{option}`\n**Description**: {description}\n**Type**: {type}\n**Required**: {required}\n**Parent Command**: `{command}`');
 
 		// TODO: Add choices, min/max, channel_types, etc
 
