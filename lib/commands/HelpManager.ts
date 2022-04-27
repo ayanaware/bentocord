@@ -1,7 +1,6 @@
 import { ComponentAPI, Inject } from '@ayanaware/bento';
 
 import { BentocordInterface } from '../BentocordInterface';
-import { LocalizedCodeblockBuilder } from '../builders/LocalizedCodeblockBuilder';
 import { LocalizedEmbedBuilder } from '../builders/LocalizedEmbedBuilder';
 import { Translateable } from '../interfaces/Translateable';
 import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
@@ -25,7 +24,7 @@ export class HelpManager implements CommandEntity {
 		name: ['help', { key: 'BENTOCORD_COMMAND_HELP' }],
 		description: { key: 'BENTOCORD_COMMAND_HELP_DESCRIPTION', backup: 'Learn about commands and features the bot provides.' },
 		options: [
-			{ type: OptionType.STRING, name: 'input', description: { key: 'BENTOCORD_COMMAND_HELP_INPUT_DESCRIPTION', backup: 'Category, Command, or Page' }, rest: true, required: false },
+			{ type: OptionType.STRING, name: 'input', description: { key: 'BENTOCORD_OPTION_HELP_INPUT_DESCRIPTION', backup: 'Category, Command, or Page' }, rest: true, required: false },
 		],
 	};
 
@@ -49,7 +48,7 @@ export class HelpManager implements CommandEntity {
 			return this.showCategoryHelp(ctx, category, commands);
 		}
 
-		return ctx.createTranslatedResponse('BENTOCORD_HELP_NOT_FOUND', {}, 'Could not find any relevant help from your input.');
+		return ctx.createTranslatedResponse('BENTOCORD_HELP_NOT_FOUND', {}, 'Failed to find relevant help for input');
 	}
 
 	private async showPrimaryHelp(ctx: CommandContext): Promise<unknown> {
@@ -66,7 +65,8 @@ export class HelpManager implements CommandEntity {
 		}
 
 		// add help usage details
-		// await embed.addTranslatedField('\u200b', { key: 'BENTOCORD_HELP_' });
+		await embed.addTranslatedField('\u200b', { key: 'BENTOCORD_HELP_USAGE',
+			backup: '`help commandName` or `help commandName subCommandName` - Command Details\n`help commandName optionName` - Option Details\n`help categoryName` - Category details' });
 
 		return ctx.createResponse({ embeds: [embed.toJSON()] });
 	}
@@ -150,7 +150,7 @@ export class HelpManager implements CommandEntity {
 
 			const subCommandResponse = await ctx.formatTranslation(
 				'BENTOCORD_HELP_COMMAND', { command: fullPath.join(' '), description },
-				`**Command**: \`${fullPath.join(' ')}\`\n**Description**: ${description}`);
+				'**Command**: `{command}`\n**Description**: {description}');
 
 			const subCommandHeader = await ctx.formatTranslation('BENTOCORD_HELP_HEADER_SUBCOMMANDS', {}, '**Sub Commands**:');
 
@@ -179,7 +179,7 @@ export class HelpManager implements CommandEntity {
 
 		const response = await ctx.formatTranslation(
 			'BENTOCORD_HELP_COMMAND', { command: fullPath.join(' '), description },
-			`**Command**: \`${fullPath.join(' ')}\`\n**Description**: ${description}`);
+			'**Command**: `{command}`\n**Description**: {description}');
 
 		// Display Options
 		const choices: Array<PromptChoice<Array<string>>> = [];
@@ -217,8 +217,8 @@ export class HelpManager implements CommandEntity {
 		const type = this.cm.getTypePreview(option);
 
 		const optionResponse = await ctx.formatTranslation(
-			'BENTOCORD_HELP_OPTION', { option: primary, description, command: crumb.join(' ') },
-			`**Option**: \`${primary}\`\n**Type**: ${type}\n**Description**: ${description}\n**Parent Command**: \`${crumb.join(' ')}\``);
+			'BENTOCORD_HELP_OPTION', { option: primary, description, type, required: option.required ?? true, command: crumb.join(' ') },
+			'**Option**: `{option}`\n**Description**: {description}\n**Type**: {type}**Required**: {required}\n**Parent Command**: `{command}`');
 
 		// TODO: Add choices, min/max, channel_types, etc
 
