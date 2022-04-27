@@ -57,12 +57,16 @@ export class HelpManager implements CommandEntity {
 		embed = await this.interface.getHelpEmbed(embed);
 
 		// apply fields
+		const unsorted: Array<[string, Array<string>]> = [];
 		for (const [category, commands] of this.cm.getCategorizedCommands()) {
 			const names = Array.from(commands.keys()).sort();
-			await embed.addTranslatedField(
-				{ key: `BENTOCORD_HELP_CATEGORY_${category.toLocaleUpperCase()}`, backup: category.toLocaleUpperCase() },
-				`\`${names.join('`, `')}\``, false);
+
+			const display = await ctx.formatTranslation(`BENTOCORD_HELP_CATEGORY_${category.toLocaleUpperCase()}`, {}, category.toLocaleUpperCase());
+			unsorted.push([display, names]);
 		}
+
+		// sort alphabetically and addFields
+		unsorted.sort().forEach(([display, names]) => embed.addField(display, `\`${names.join('`, `')}\``, false));
 
 		// add help usage details
 		await embed.addTranslatedField('\u200b', { key: 'BENTOCORD_HELP_USAGE',
@@ -72,17 +76,19 @@ export class HelpManager implements CommandEntity {
 	}
 
 	private async showCategoryHelp(ctx: CommandContext, category: string, commands: Map<string, CommandDetails>): Promise<unknown> {
-		const items: Array<string> = [];
+		const choices: Array<PromptChoice<[string, CommandDefinition]>> = [];
 		for (const [command, details] of Array.from(commands.entries()).sort()) {
 			let description = details.command.definition.description;
 			if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl, description.backup);
 
 			let final = command;
 			if (description) final = `${final} - ${description}`;
-			items.push(final);
+
+			choices.push({ name: final, value: [command, details.command.definition] });
 		}
 
-		return ctx.pagination(items, { key: `BENTOCORD_HELP_CATEGORY_${category.toLocaleUpperCase()}`, backup: category }, { language: 'css', resolveOnClose: true });
+		const choice = await ctx.choice(choices, { key: `BENTOCORD_HELP_CATEGORY_${category.toLocaleUpperCase()}_DESCRIPTION`, backup: category }, { resolveOnClose: true });
+		if (choice) return this.showCommandHelp(ctx, choice[1], [choice[0]]);
 	}
 
 	public async showCommandHelp(ctx: CommandContext, definition: CommandDefinition, path: Array<string>): Promise<unknown> {
