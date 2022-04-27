@@ -288,7 +288,7 @@ export class CommandManager implements Component {
 	public getCategorizedCommands(): Map<string, Map<string, CommandDetails>> {
 		const out: Map<string, Map<string, CommandDetails>> = new Map();
 		for (const [command, details] of this.commands) {
-			const category = details.category ?? 'default';
+			const category = details.category ?? 'general';
 			if (!out.has(category)) out.set(category, new Map());
 
 			out.get(category).set(command, details);

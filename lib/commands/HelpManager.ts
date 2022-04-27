@@ -66,7 +66,7 @@ export class HelpManager implements CommandEntity {
 
 		// add help usage details
 		await embed.addTranslatedField('\u200b', { key: 'BENTOCORD_HELP_USAGE',
-			backup: '`help commandName` or `help commandName subCommandName` - Command Details\n`help commandName optionName` - Option Details\n`help categoryName` - Category details' });
+			backup: '`help commandName` - Command Details\n`help commandName subCommandName` - Sub Command Details\n`help commandName optionName` - Option Details\n`help categoryName` - Category Details' });
 
 		return ctx.createResponse({ embeds: [embed.toJSON()] });
 	}
