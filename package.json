@@ -4,7 +4,7 @@
 	"description": "Bentocord is a Bento plugin designed to rapidly build fully functional Discord Bots.",
 	"main": "build/index.js",
 	"types": "build/index.d.ts",
-	"repository": "git@gitlab.com:ayanaware/bentocord.git",
+	"repository": "https://gitlab.com/ayanaware/bentocord",
 	"author": "HcgRandon <me@randon.moe>",
 	"scripts": {
 		"build": "rm -rf ./build && tsc",
@@ -17,7 +17,7 @@
 		"reflect-metadata": "^0.1.13"
 	},
 	"peerDependencies": {
-		"@ayanaware/bento": "^1.0.0-rc.14",
+		"@ayanaware/bento": "^1.0.0-rc.26",
 		"eris": "^0.16.1"
 	},
 	"devDependencies": {
@@ -30,6 +30,18 @@
 		"eslint": "^8.10.0",
 		"typescript": "^4.6.2"
 	},
-	"license": "MIT",
-	"private": false
+	"bugs": {
+		"url": "https://gitlab.com/ayanaware/bentocord/issues"
+	},
+	"keywords": [
+		"bentocord",
+		"bento",
+		"discord",
+		"bot",
+		"ayana",
+		"framework",
+		"plugin",
+		"backend"
+	],
+	"license": "MIT"
 }
