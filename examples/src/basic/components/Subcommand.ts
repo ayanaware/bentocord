@@ -9,7 +9,7 @@ export class SubCommandTest implements CommandEntity {
 	public parent = CommandManager;
 
 	public definition: CommandDefinition = {
-		aliases: ['top'],
+		name: ['top'],
 		description: 'testing subcomand and groups',
 		options: [
 			{ type: OptionType.SUB_COMMAND_GROUP, name: 'hello', description: 'group hello', options: [

@@ -15,10 +15,10 @@ export class ReplyCommand implements CommandEntity {
 	@Inject() private readonly promptManager: PromptManager;
 
 	public definition: CommandDefinition = {
-		aliases: ['r', 'reply'],
-		description: 'Reply to a pening prompt',
+		name: ['r', 'reply'],
+		description: 'Reply to a pending prompt',
 		options: [
-			{ type: OptionType.STRING, name: 'response', rest: true },
+			{ type: OptionType.STRING, name: 'response', description: 'Response', rest: true },
 		],
 	};
 

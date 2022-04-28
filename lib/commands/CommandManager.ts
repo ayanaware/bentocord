@@ -4,32 +4,42 @@ import { Component, ComponentAPI, Inject, Subscribe, Variable } from '@ayanaware
 import { Logger } from '@ayanaware/logger-api';
 
 import {
-	APIApplicationCommandOption,
-	APIChatInputApplicationCommandInteraction,
-	APIChatInputApplicationCommandInteractionData,
-	ApplicationCommandOptionType,
-	ApplicationCommandType,
-	InteractionType,
-} from 'discord-api-types';
-import { GuildChannel, Message } from 'eris';
+	AnyInteraction,
+	CommandInteraction,
+	Constants,
+	GuildChannel,
+	InteractionDataOptions,
+	InteractionDataOptionsSubCommand,
+	InteractionDataOptionsSubCommandGroup,
+	InteractionDataOptionsWithValue,
+	Message,
+} from 'eris';
 
 import { BentocordInterface } from '../BentocordInterface';
 import { BentocordVariable } from '../BentocordVariable';
 import { Discord } from '../discord/Discord';
 import { DiscordEvent } from '../discord/constants/DiscordEvent';
+import { MessageContext } from '../interfaces/MessageContext';
+import { Translateable } from '../interfaces/Translateable';
 import { PromptManager } from '../prompt/PromptManager';
 import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
 
 import { CommandContext, InteractionCommandContext, MessageCommandContext } from './CommandContext';
-import { APPLICATION_COMMANDS, APPLICATION_GUILD_COMMANDS } from './constants/API';
+import { CommandManagerEvent } from './constants/CommandManagerEvent';
 import { OptionType } from './constants/OptionType';
 import { SuppressorType } from './constants/SuppressorType';
 import type { Command } from './interfaces/Command';
-import type { AnyCommandOption, AnySubCommandOption, CommandOption } from './interfaces/CommandOption';
+import { CommandDefinition, CommandPermissionDefaults } from './interfaces/CommandDefinition';
+import type {
+	AnyCommandOption,
+	AnySubCommandOption,
+	AnyValueCommandOption,
+	CommandOptionChoiceCallable,
+	CommandOptionSubCommand,
+	CommandOptionSubCommandGroup,
+} from './interfaces/CommandOption';
 import type { Resolver } from './interfaces/Resolver';
 import type { Suppressor, SuppressorOption } from './interfaces/Suppressor';
-import type { ApplicationCommand, ApplicationCommandOption } from './interfaces/discord/ApplicationCommand';
-import type { InteractionDataOption } from './interfaces/discord/Interaction';
 import type { CommandEntity } from './interfaces/entity/CommandEntity';
 import type { ResolverEntity } from './interfaces/entity/ResolverEntity';
 import type { SuppressorEntity } from './interfaces/entity/SuppressorEntity';
@@ -38,12 +48,38 @@ import { Tokenizer } from './internal/Tokenizer';
 import { Resolvers } from './resolvers';
 import { Suppressors } from './supressors';
 
-export interface SyncOptions {
-	/** Should unspecified commands be removed */
-	delete?: boolean | string;
-	/** Register in this guild or globally */
-	guildId?: string;
+export interface CommandDetails {
+	/** The command */
+	command: Command;
+
+	/** Command Definition */
+	definition: CommandDefinition;
+
+	/** Command category */
+	category?: string;
+
+	/** Command permissions */
+	permissions: Array<CommandPermissionDetails>;
 }
+
+export interface CommandPermissionDetails {
+	/** The permission name */
+	permission: string;
+
+	/** Default state of this permission */
+	defaults: CommandPermissionDefaults;
+
+	/** Is this a hidden permission */
+	hidden: boolean;
+
+	/** Subcommand path for this permission */
+	path?: Array<string>;
+}
+
+/**
+ * Used to "bubble up" events as a Command executes, when it isn't really an "error"
+ */
+export const NON_ERROR_HALT = '__NON_ERROR_HALT__';
 
 const log = Logger.get(null);
 export class CommandManager implements Component {
@@ -58,15 +94,13 @@ export class CommandManager implements Component {
 
 	@Inject() private readonly promptManager: PromptManager;
 
-	private readonly commands: Map<string, Command> = new Map();
+	private readonly commands: Map<string, CommandDetails> = new Map();
 	private readonly aliases: Map<string, string> = new Map();
 
 	private readonly resolvers: Map<OptionType | string, Resolver<unknown>> = new Map();
 	private readonly suppressors: Map<SuppressorType | string, Suppressor> = new Map();
 
 	private selfId: string = null;
-
-	private readonly testPrefix = 'test-';
 
 	public async onLoad(): Promise<void> {
 		// Load built-in resolvers
@@ -76,19 +110,10 @@ export class CommandManager implements Component {
 		Suppressors.forEach(suppressor => this.addSuppressor(suppressor));
 	}
 
-	public async onUnload(): Promise<void> {
-		// Remove reply command
-		this.removeCommand('r');
-	}
-
-	public async onVerify(): Promise<void> {
-		return this.syncTestGuildCommands();
-	}
-
 	public async onChildLoad(entity: CommandEntity | ResolverEntity | SuppressorEntity): Promise<void> {
 		try {
 			if (typeof (entity as CommandEntity).definition === 'object') {
-				this.addCommand(entity as CommandEntity);
+				return this.addCommand(entity as CommandEntity);
 			} else if (typeof (entity as ResolverEntity).option !== 'undefined') {
 				this.addResolver(entity as ResolverEntity);
 			} else if (typeof (entity as SuppressorEntity).suppressor !== 'undefined') {
@@ -129,8 +154,16 @@ export class CommandManager implements Component {
 		this.resolvers.delete(type);
 	}
 
-	private async executeResolver<T = unknown>(ctx: CommandContext, option: CommandOption<T>, input: string) {
-		const resolver = this.resolvers.get(option.type) as Resolver<T>;
+	public getResolvers(): Map<OptionType | string, Resolver<unknown>> {
+		return this.resolvers;
+	}
+
+	public findResolver(type: OptionType | string): Resolver<unknown> {
+		return this.resolvers.get(type);
+	}
+
+	private async executeResolver<T = unknown>(ctx: CommandContext, option: AnyValueCommandOption, input: string) {
+		const resolver = this.findResolver(option.type) as Resolver<T>;
 		if (!resolver) return null;
 
 		return resolver.resolve(ctx, option, input);
@@ -180,31 +213,150 @@ export class CommandManager implements Component {
 	}
 
 	/**
+	 * Get prefix for a guild
+	 * @param snowflake guildId
+	 * @returns prefix
+	 */
+	public async getPrefix(snowflake?: string): Promise<string> {
+		let prefix = this.defaultPrefix;
+		if (snowflake) {
+			const customPrefix = await this.interface.getPrefix(snowflake);
+			if (customPrefix) prefix = customPrefix;
+		}
+
+		return prefix;
+	}
+
+	/**
+	 * Set prefix for a guild
+	 * @param snowflake guildId
+	 * @param prefix new prefix
+	 */
+	public async setPrefix(snowflake: string, prefix: string): Promise<void> {
+		return this.interface.setPrefix(snowflake, prefix);
+	}
+
+	/**
+	 * Get primary name of command alias or option name
+	 * @param name string or array of string and translateables. First element is always a string
+	 * @returns string
+	 */
+	public getPrimaryName(name: string | [string, ...Array<string | Translateable>]): string {
+		let primary = name;
+		if (Array.isArray(primary)) primary = primary[0];
+
+		return primary.toLocaleLowerCase().replace(/\s/g, '');
+	}
+
+	/**
+	 * Get all translations for a possibly translatable
+	 * @param item Array<string | Translatable>
+	 * @returns Tuple <string, Array<{ lang: string }>>
+	 */
+	public async getItemTranslations(items: string | Translateable | Array<string | Translateable>, normalize = false): Promise<Array<[string, Record<string, string>]>> {
+		if (!Array.isArray(items)) items = [items];
+
+		const collector: Array<[string, Record<string, string>]> = [];
+
+		for (const item of items) {
+			const iteration: [string, Record<string, string>] = ['', {}];
+
+			if (typeof item === 'object') {
+				iteration[0] = await this.interface.formatTranslation(item.key, item.repl, {}, item.backup ?? item.key);
+				iteration[1] = await this.interface.formatTranslationMap(item.key, item.repl) ?? {};
+			} else if (typeof item === 'string') {
+				iteration[0] = item;
+			}
+
+			if (normalize) {
+				// Thx to infinitestory for Discord's validation regex
+				iteration[0] = iteration[0].toLocaleLowerCase().replace(/[^-_\p{L}\p{N}\p{sc=Devanagari}\p{sc=Thai}]|\s/gu, '');
+				iteration[1] = Object.fromEntries(Object.entries(iteration[1]).map(([k, v]) =>
+					[k, v.toLocaleLowerCase().replace(/[^-_\p{L}\p{N}\p{sc=Devanagari}\p{sc=Thai}]|\s/gu, '')]));
+			}
+
+			collector.push(iteration);
+		}
+
+		return collector;
+	}
+
+	/**
+	 * Get all commands and their details
+	 */
+	public getCommands(): Map<string, CommandDetails> {
+		return this.commands;
+	}
+
+	public getCategorizedCommands(): Map<string, Map<string, CommandDetails>> {
+		const out: Map<string, Map<string, CommandDetails>> = new Map();
+		for (const [command, details] of this.commands) {
+			const category = details.category ?? 'general';
+			if (!out.has(category)) out.set(category, new Map());
+
+			out.get(category).set(command, details);
+		}
+
+		return out;
+	}
+
+	public isSubCommand(option: AnyCommandOption): option is CommandOptionSubCommand {
+		return option.type === OptionType.SUB_COMMAND;
+	}
+
+	public isSubCommandGroup(option: AnyCommandOption): option is CommandOptionSubCommandGroup {
+		return option.type === OptionType.SUB_COMMAND_GROUP;
+	}
+
+	public isAnySubCommand(option: AnyCommandOption): option is CommandOptionSubCommand | CommandOptionSubCommandGroup {
+		return this.isSubCommand(option) || this.isSubCommandGroup(option);
+	}
+
+	/**
 	 * Add command
 	 * @param command Command
 	 */
-	public addCommand(command: Command): void {
+	public async addCommand(command: Command): Promise<void> {
 		if (typeof command.execute !== 'function') throw new Error('Execute must be a function');
 		if (typeof command.definition !== 'object') throw new Error('Definition must be an object');
 		const definition = command.definition;
 
-		if (definition.aliases.length < 1) throw new Error('At least one alias must be defined');
-		// ensure all aliases are lowercase
-		definition.aliases = definition.aliases.map(a => a.toLocaleLowerCase());
-
-		// first alias is primary alias
-		const primary = definition.aliases[0];
+		if (definition.name.length < 1) throw new Error('At least one name must be defined');
+		const primary = this.getPrimaryName(definition.name);
 
 		// check dupes & save
 		if (this.commands.has(primary)) throw new Error(`Command name "${primary}" already exists`);
-		this.commands.set(primary, command);
+
+		// add permissions
+		const permissions = this.getPermissionDetails(command);
+
+		const commandDetails: CommandDetails = { command, definition, category: definition.category ?? null, permissions };
+		this.commands.set(primary, commandDetails);
+
+		const aliases = await this.getItemTranslations(definition.name, true);
 
 		// register alias => primary alias
-		for (const alias of definition.aliases) {
-			if (this.aliases.has(alias)) throw new Error(`${primary}: Attempted to register existing alias: ${alias}`);
+		for (const [aliasName, translations] of aliases) {
+			// check if alias exists and references a different command
+			const existing = this.aliases.get(aliasName);
+			if (existing && existing !== primary) throw new Error(`${primary}: Attempted to register existing alias "${aliasName}", which is registered to "${existing}"`);
 
-			this.aliases.set(alias, primary);
+			this.aliases.set(aliasName, primary);
+
+			// register translations
+			for (const [lang, translation] of Object.entries(translations)) {
+				const existingTranslation = this.aliases.get(translation);
+				if (existingTranslation && existingTranslation !== primary) {
+					log.warn(`${primary}: Skipping "${lang}" translation alias "${translation}", because it is already registered to "${existingTranslation}"`);
+					continue;
+				}
+
+				this.aliases.set(translation, primary);
+			}
 		}
+
+		// emit event
+		this.api.emit(CommandManagerEvent.COMMAND_ADD, command);
 	}
 
 	/**
@@ -216,7 +368,8 @@ export class CommandManager implements Component {
 		if (!command) throw new Error('Failed to find Command');
 
 		const definition = command.definition;
-		const primary = definition.aliases[0];
+
+		const primary = this.getPrimaryName(definition.name);
 
 		// remove any aliases
 		for (const [alias, name] of this.aliases.entries()) {
@@ -225,6 +378,9 @@ export class CommandManager implements Component {
 
 		// remove reference
 		this.commands.delete(primary);
+
+		// emit event
+		this.api.emit(CommandManagerEvent.COMMAND_REMOVE, command);
 	}
 
 	/**
@@ -243,12 +399,79 @@ export class CommandManager implements Component {
 		const command = this.commands.get(primary);
 		if (!command) return null;
 
-		return command;
+		return command.command;
+	}
+
+	/**
+	 * Get all valid command related permissions, include all and categories
+	 * @returns Map of permission => CommandPermissionDetails
+	 */
+	public getPermissions(): Map<string, CommandPermissionDetails & { command?: Command, type: 'GROUP' | 'COMMAND' }> {
+		const collector = new Map<string, CommandPermissionDetails & { command?: Command, type: 'GROUP' | 'COMMAND'  }>();
+
+		collector.set('all', { permission: 'all', defaults: { user: false, admin: true }, hidden: false, type: 'GROUP' });
+
+		for (const commandDetails of this.commands.values()) {
+			const { command, permissions } = commandDetails;
+			if (!command) continue;
+
+			// add category permissions
+			if (command.definition.category) {
+				const category = ['all', command.definition.category].join('.');
+				if (!collector.has(category)) collector.set(category, { permission: category, defaults: { user: false, admin: true }, hidden: false, type: 'GROUP' });
+			}
+
+			for (const permission of permissions) collector.set(permission.permission, { ...permission, command, type: 'COMMAND' });
+		}
+
+		return collector;
+	}
+
+	/**
+	 * Runs pre-flight checks such as perms & suppressors before executing command
+	 * @param command Command
+	 * @param ctx CommandContext
+	 * @returns boolean, if false you should not execute the command
+	 */
+	public async prepareCommand(command: Command, ctx: CommandContext): Promise<boolean> {
+		const definition = command.definition;
+
+		// process suppressors
+		const suppressed = await this.executeSuppressors(ctx, definition);
+		if (suppressed) {
+			await ctx.createTranslatedResponse('BENTOCORD_SUPPRESSOR_HALT', { suppressor: suppressed.name, message: suppressed.message }, 'Execution was halted by `{suppressed}`: {message}');
+			return false;
+		}
+
+		// check permission
+		const primary = this.getPrimaryName(definition.name);
+
+		const permissionName = definition.permissionName ?? primary;
+		const path = [permissionName];
+
+		// check perm for explicit deny
+		const [state, type] = await this.checkPermission(ctx, path, definition.permissionDefaults);
+		if (type === 'explicit') return state;
+
+		// check category for explicit deny
+		if (definition.category) {
+			const [group, groupType] = await this.checkPermission(ctx, ['all', definition.category], { user: true, admin: true });
+			if (groupType === 'explicit') return group;
+		}
+
+		// check all for explicit deny
+		const [all, allType] = await this.checkPermission(ctx, ['all'], { user: true, admin: true });
+		if (allType === 'explicit') return all;
+
+		// handle implicit deny
+		if (!state) return false;
+
+		return true;
 	}
 
 	public async executeCommand(command: Command, ctx: CommandContext, options: Record<string, unknown>): Promise<unknown> {
 		const definition = command.definition;
-		const primary = definition.aliases[0];
+		const primary = this.getPrimaryName(definition.name);
 
 		// selfPermissions
 		if (ctx.guild && Array.isArray(definition.selfPermissions) && definition.selfPermissions.length > 0) {
@@ -261,7 +484,9 @@ export class CommandManager implements Component {
 			}
 
 			if (unfufilled.length > 0) {
-				return ctx.createResponse(`Command cannot be executed. The following required permissions must be granted:\`\`\`${unfufilled.join(', ')}\`\`\``);
+				return ctx.createTranslatedResponse(
+					'BENTOCORD_COMMANDMANAGER_MISSING_PERMS', { permissions: unfufilled.join(', ') },
+					'Command cannot be executed. The following permissions must be granted:\n```{permissions}```');
 			}
 		}
 
@@ -269,207 +494,112 @@ export class CommandManager implements Component {
 		try {
 			// TODO: Use Typescript metadata to ensure .execute() and options match
 
+			const start = process.hrtime();
 			await command.execute(ctx, options);
-			log.debug(`Command "${primary}" executed by "${ctx.author.id}"`);
+			const end = process.hrtime(start);
+
+			const nano = end[0] * 1e9 + end[1];
+			const mili = nano / 1e6;
+
+			this.api.emit(CommandManagerEvent.COMMAND_SUCCESS, command, ctx, options, mili);
+			log.debug(`Command "${primary}" executed by "${ctx.author.id}", took ${mili}ms`);
 		} catch (e) {
+			this.api.emit(CommandManagerEvent.COMMAND_FAILURE, command, ctx, options, e);
 			log.error(`Command ${primary}.execute() error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
-				return ctx.createResponse(`There was an error executing this command:\`\`\`${e.message}\`\`\``);
+				return ctx.createTranslatedResponse('BENTOCORD_COMMANDMANAGER_ERROR', { error: e.message },
+				'There was an error executing this command: `{error}`');
 			}
 		}
 	}
 
-	/**
-	 * Sync Slash Commands with Discord
-	 * @param commandsIn Array of ApplicationCommand
-	 * @param opts SyncOptions
-	 * @returns Discord Slash Bulk Update Response Payload
-	 */
-	public async syncCommands(commandsIn: Array<ApplicationCommand>, opts?: SyncOptions): Promise<unknown> {
-		opts = Object.assign({ delete: true, prefix: null }, opts);
-
-		// want to avoid reference weirdness so we preform a deep copy of commands
-		// has the added benifit of yeeting any properties / functions we dont care about
-		const commands: Array<ApplicationCommand> = JSON.parse(JSON.stringify(commandsIn)) as Array<ApplicationCommand>;
-
-		const applicationId = this.discord.application.id;
-		if (!applicationId) throw new Error('Failed to infer application_id');
-
-		// Determine route
-		let apiRoute = APPLICATION_COMMANDS(applicationId);
-		if (opts.guildId) apiRoute = APPLICATION_GUILD_COMMANDS(applicationId, opts.guildId);
-
-		const discordCommands = await this.discord.client.requestHandler.request('GET', apiRoute, true) as Array<ApplicationCommand>;
-		const commandIds: Set<string> = new Set();
-
-		const bulkOverwrite: Array<ApplicationCommand> = [];
-		for (const command of commands) {
-			if (opts.guildId) command.guild_id = opts.guildId;
-
-			// Update command if it already exists
-			const discordCommand = discordCommands.find(c => c.name === command.name);
-			if (discordCommand && discordCommand.id) {
-				command.id = discordCommand.id;
-				commandIds.add(discordCommand.id); // consumed
-			}
-
-			bulkOverwrite.push(command);
-		}
-
-		// Delete is string... Only delete other commands starting with this string
-		if (typeof opts.delete === 'string') {
-			for (const discordCommand of discordCommands) {
-				if (!discordCommand.name.startsWith(opts.delete)) bulkOverwrite.push(discordCommand);
-			}
-		} else if ((typeof opts.delete === 'boolean' && !opts.delete) || typeof opts.delete !== 'boolean') {
-			for (const discordCommand of discordCommands) {
-				if (!Array.from(commandIds).includes(discordCommand.id)) {
-					bulkOverwrite.push(discordCommand);
-					commandIds.add(discordCommand.id);
-				}
-			}
-		}
-
-		return this.discord.client.requestHandler.request('PUT', apiRoute, true, bulkOverwrite as any);
-	}
-
-	/**
-	 * Sync test- prefixed Slash Commands with TestGuilds
-	 */
-	public async syncTestGuildCommands(): Promise<void> {
-		// get test guild list
-		const testGuilds = this.api.getVariable<string>({ name: BentocordVariable.BENTOCORD_TEST_GUILDS, default: '' }).split(',').map(g => g.trim()).filter(v => !!v);
-		if (testGuilds.length < 1) return;
-
-		// prefix commands with test-
-		let commands = await this.convertCommands();
-		commands = commands.map(c => ({ ...c, name: `${this.testPrefix}${c.name}` }));
-
-		for (const guildId of testGuilds) {
-			await this.syncCommands(commands, { delete: this.testPrefix, guildId });
-		}
-
-		log.info(`Successfully synced "${commands.length}" slash commnads in: "${testGuilds.join(', ')}"`);
-	}
-
-	/**
-	 * Convert all slash supporting Bentocord commands to Discord ApplicationCommand
-	 * @returns Array of ApplicationCommand
-	 */
-	public async convertCommands(): Promise<Array<ApplicationCommand>> {
-		const collector: Array<ApplicationCommand> = [];
-
-		for (const command of this.commands.values()) {
-			const definition = command.definition;
-			if (!definition || typeof definition.registerSlash === 'boolean' && !definition.registerSlash) continue;
-
-			collector.push(await this.convertCommand(definition.aliases[0]));
-		}
-
-		return collector;
-	}
-
-	/**
-	 * Convert Bentocord Command into Discord ApplicationCommand
-	 * @param command
-	 */
-	public async convertCommand(name: string): Promise<ApplicationCommand> {
-		const command = this.findCommand(name);
-		if (!command) throw new Error(`Failed to find Command "${name}"`);
-
+	public getPermissionDetails(command: Command): Array<CommandPermissionDetails> {
 		const definition = command.definition;
-		if (!definition) throw new Error(`Command "${name}" lacks definition`);
 
-		if (typeof definition.registerSlash === 'boolean' && !definition.registerSlash) throw new Error(`${name}: Command "${definition.aliases[0]}" has disabled slash conversion`);
+		const collector: Array<CommandPermissionDetails> = [];
 
-		// infer application_id
-		const applicationId = this.discord.application.id;
-		if (!applicationId) throw new Error('Failed to find application_id');
+		const primary = this.getPrimaryName(definition.name);
+		const permissionName = definition.permissionName ?? primary;
 
-		let description = definition.description;
-		if (typeof description === 'object') description = await this.interface.formatTranslation(description.key, description.repl) || description.backup;
+		let defaults = definition.permissionDefaults ?? { user: true, admin: true };
+		if (typeof defaults === 'boolean') defaults = { user: defaults, admin: false };
 
-		const appCommand: ApplicationCommand = {
-			type: ApplicationCommandType.ChatInput,
-			name: definition.aliases[0],
-			description,
+		const hidden = definition.hidden ?? false;
 
-			// eslint-disable-next-line @typescript-eslint/naming-convention
-			application_id: applicationId,
-			// eslint-disable-next-line @typescript-eslint/naming-convention
-			default_permission: true,
+		collector.push({ permission: permissionName, defaults, hidden, path: [] });
+
+		// walk options
+		const walkOptions = (options: Array<AnyCommandOption> = [], path: Array<string> = [], permPath: Array<string> = []): void => {
+			for (const option of (options ?? [])) {
+				if (option.type !== OptionType.SUB_COMMAND && option.type !== OptionType.SUB_COMMAND_GROUP) continue;
+				const subPrimary = this.getPrimaryName(option.name);
+				const subPath = [...path, subPrimary];
+
+				const subName = option.permissionName ?? subPrimary;
+				const subPermPath = [...permPath, subName];
+
+				let subDefaults = option.permissionDefaults ?? { user: true, admin: true };
+				if (typeof subDefaults === 'boolean') subDefaults = { user: subDefaults, admin: true };
+
+				let subHidden = option.hidden ?? false;
+				// if top-levl hidden then we are too
+				if (hidden) subHidden = true;
+
+				// add subcommand permissions
+				const finalName = [permissionName, ...subPermPath].join('.');
+				collector.push({ permission: finalName, defaults: subDefaults, hidden: subHidden, path: subPath });
+
+				if (Array.isArray(option.options)) walkOptions(option.options, subPath, subPermPath);
+			}
 		};
 
-		// convert options
-		if (Array.isArray(definition.options)) appCommand.options = await this.convertOptions(definition.options);
-
-		return appCommand;
-	}
-
-	/**
-	 * Convert Bentocord CommandOption to Discord ApplicationCommandOption Counterpart
-	 * @param options Array of CommandOptions
-	 * @returns ApplicationCommandOption Structure
-	 */
-	private async convertOptions(options: Array<AnyCommandOption>) {
-		const collector: Array<APIApplicationCommandOption> = [];
-
-		if (!options) options = [];
-		// drop SubCommandGroupOption & SubCommandOption special types
-		for (const option of options) {
-			let name = option.name;
-			if (Array.isArray(name)) name = name[0];
-			name = name.toLocaleLowerCase();
-
-			// support translated descriptions
-			let description = option.description;
-			if (typeof description === 'object') description = await this.interface.formatTranslation(description.key, description.repl) || description.backup;
-
-			const appOption: ApplicationCommandOption = { type: null, name, description };
-
-			// Handle Special Subcommand & SubcommandGroup OptionTypes
-			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {
-				appOption.type = option.type === OptionType.SUB_COMMAND ? ApplicationCommandOptionType.Subcommand : ApplicationCommandOptionType.SubcommandGroup;
-				appOption.options = await this.convertOptions(option.options);
-
-				collector.push(appOption);
-
-				continue;
-			}
-
-			// Convert to Discord ApplicationCommandOptionType
-			const resolver = this.resolvers.get(option.type);
-			appOption.type = resolver ? resolver.convert : ApplicationCommandOptionType.String;
-
-			// Prepend type information to description
-			const typeInfo = this.getTypePreview(option);
-			appOption.description = `${typeInfo} ${appOption.description}`;
-
-			// Bentocord Array support
-			if (option.array) appOption.type = ApplicationCommandOptionType.String;
-
-			// choices support
-			if (option.choices) {
-				let choices = option.choices;
-				if (typeof choices === 'function') choices = await choices();
-
-				appOption.choices = choices;
-			}
-
-			// required support
-			appOption.required = typeof option.required === 'boolean' ? option.required : true;
-
-			// failed to convert option
-			if (option.type === null) continue;
-
-			collector.push(appOption);
-		}
+		walkOptions(definition.options);
 
 		return collector;
 	}
 
-	private getTypePreview(option: CommandOption) {
+	private async checkPermission(ctx: CommandContext, path: string | Array<string>, def?: CommandPermissionDefaults | boolean): Promise<[boolean, 'explicit' | 'implicit']> {
+		const permCtx: MessageContext = { userId: ctx.authorId, channelId: ctx.channelId };
+		if (ctx.guild) {
+			permCtx.guildId = ctx.guildId;
+			permCtx.roleIds = ctx.member.roles;
+		}
+
+		let permission = path;
+		if (Array.isArray(permission)) permission = permission.join('.');
+
+		// handle default
+		let defaults = def ?? { user: true, admin: true };
+		if (typeof defaults === 'boolean') defaults = { user: defaults, admin: true };
+
+		// if admin default true & member has administrator, bypass checks
+		// prevents lockout of administrators
+		if (defaults.admin && ctx.member && ctx.member.permissions.has('administrator')) return [true, 'implicit'];
+
+		const [check, where] = await this.interface.checkPermission(permission, permCtx);
+
+		// handle explicit allow/deny
+		if (typeof check === 'boolean') {
+			// explicit allow
+			if (check) return [true, 'explicit'];
+
+			// explicit deny
+			await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_DENIED', { permission, where },  'Permission `{permission}` has been denied on the `{where}` level.');
+
+			return [false, 'explicit'];
+		}
+
+		// all users have permission
+		if (defaults.user) return [true, 'implicit'];
+
+		// user is not allowed to execute this command
+		await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_DENIED_DEFAULT', { permission }, 'Permission `{permission}` is denined by default. Please contact a server administrator to grant you this permission.');
+
+		return [false, 'implicit'];
+	}
+
+	public getTypePreview(option: AnyValueCommandOption): string {
 		// Prepend type information to description
 		let typeBuild = '[';
 		if (typeof option.type === 'number') typeBuild += OptionType[option.type];
@@ -482,41 +612,51 @@ export class CommandManager implements Component {
 		return typeBuild;
 	}
 
-	public async fufillInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, data: APIChatInputApplicationCommandInteractionData): Promise<Record<string, unknown>> {
-		return this.processInteractionOptions(ctx, options, data.options);
+	public async fufillInteractionOptions(ctx: CommandContext, definition: CommandDefinition, data: CommandInteraction['data']): Promise<Record<string, unknown>> {
+		const primary = this.getPrimaryName(definition.name);
+
+		return this.processInteractionOptions(ctx, definition.options, data.options, [primary]);
 	}
 
-	private async processInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, optionData: Array<InteractionDataOption>) {
+	private async processInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, optionData: Array<InteractionDataOptions>, path: Array<string> = []) {
 		let collector: Record<string, unknown> = {};
 
 		if (!options) options = [];
 		if (!optionData) optionData = [];
 
 		for (const option of options) {
+			const primary = this.getPrimaryName(option.name);
+
 			// Handle SubCommand & SubCommandGroup
-			if (option.type === OptionType.SUB_COMMAND || option.type === OptionType.SUB_COMMAND_GROUP) {
-				const subOption = option as AnySubCommandOption;
-
-				let names: string | Array<string> = subOption.name;
-				if (!Array.isArray(names)) names = [names];
-				const final = names;
-				const primary = final[0];
-
-				const subOptionData = optionData.find(d => final.some(f => f.toLocaleLowerCase() === d.name.toLocaleLowerCase()));
+			if (this.isAnySubCommand(option)) {
+				const subOptionData = optionData.find(d => primary === d.name.toLocaleLowerCase()) as InteractionDataOptionsSubCommand | InteractionDataOptionsSubCommandGroup;
 				if (!subOptionData) continue;
 
+				// check category permission
+				const category = ctx.command.definition.category;
+				if (category) {
+					const [group, type] = await this.checkPermission(ctx, ['all', category], { user: true, admin: true });
+					if (!group && type === 'explicit') throw NON_ERROR_HALT;
+				}
+
+				// check permission
+				const permissionName = option.permissionName ?? primary;
+				const subPath = [...path, permissionName];
+
+				if (!(await this.checkPermission(ctx, subPath, option.permissionDefaults))[0]) throw NON_ERROR_HALT;
+
 				// process suppressors
-				const suppressed = await this.executeSuppressors(ctx, subOption);
+				const suppressed = await this.executeSuppressors(ctx, option);
 				if (suppressed) throw new Error(`Suppressor \`${suppressed.name}\` halted execution: ${suppressed.message}`);
 
-				collector = { ...collector, [primary]: await this.processInteractionOptions(ctx, subOption.options, subOptionData.options) };
+				collector = { ...collector, [primary]: await this.processInteractionOptions(ctx, option.options, subOptionData.options, subPath) };
 				break;
 			}
 
-			const data = optionData.find(d => d.name.toLocaleLowerCase() === option.name.toLocaleLowerCase());
+			const data = optionData.find(d => d.name.toLocaleLowerCase() === primary) as InteractionDataOptionsWithValue;
 
 			const value: string = data?.value.toString();
-			collector = { ...collector, [option.name]: await this.resolveOption(ctx, option, value) };
+			collector = { ...collector, [primary]: await this.resolveOption(ctx, option, value) };
 		}
 
 		return collector;
@@ -527,51 +667,63 @@ export class CommandManager implements Component {
 	 * @param options Array of CommandOption
 	 * @param input User input
 	 */
-	public async fufillTextOptions(ctx: CommandContext, options: Array<AnyCommandOption>, input: string): Promise<Record<string, unknown>> {
+	public async fufillTextOptions(ctx: CommandContext, definition: CommandDefinition, input: string): Promise<Record<string, unknown>> {
 		const tokens = new Tokenizer(input).tokenize();
 
 		// TODO: Build allowedOptions
 		const output = new Parser(tokens).parse();
 
-		return this.processTextOptions(ctx, options, output);
+		const primary = this.getPrimaryName(definition.name);
+
+		return this.processTextOptions(ctx, definition.options, output, 0, [primary]);
 	}
 
-	private async processTextOptions(ctx: CommandContext, options: Array<AnyCommandOption>, output: ParserOutput, index = 0): Promise<Record<string, unknown>> {
+	private async processTextOptions(ctx: CommandContext, options: Array<AnyCommandOption>, output: ParserOutput, index = 0, path: Array<string> = []): Promise<Record<string, unknown>> {
 		let collector: Record<string, unknown> = {};
 
 		if (!options) options = [];
 
 		let promptSubs: Array<AnySubCommandOption> = [];
 		for (const option of options) {
-			if (option.type === OptionType.SUB_COMMAND_GROUP || option.type === OptionType.SUB_COMMAND) {
-				const subOption = option as AnySubCommandOption;
-				let names = subOption.name;
-				if (!Array.isArray(names)) names = [names];
-				const final = names;
-				const primary = final[0];
+			const names = await this.getItemTranslations(option.name, true);
+			const primary = names[0][0];
 
+			if (this.isAnySubCommand(option)) {
 				// track this suboption for prompt
-				promptSubs.push(subOption);
+				promptSubs.push(option);
 
 				// phrase is a single element
 				const phrase = output.phrases[index];
 				// validate arg matches subcommand or group name
-				if (!phrase || names.every(n => n.toLocaleLowerCase() !== phrase.value.toLocaleLowerCase())) continue;
+				if (!phrase || names.every(n => n[0] !== phrase.value.toLocaleLowerCase())) continue;
 
 				index++;
 
+				// check category permission
+				const category = ctx.command.definition.category;
+				if (category) {
+					const [group, type] = await this.checkPermission(ctx, ['all', category], { user: true, admin: true });
+					if (!group && type === 'explicit') throw NON_ERROR_HALT;
+				}
+
+				// check permission
+				const permissionName = option.permissionName ?? primary;
+				const subPath = [...path, permissionName];
+
+				if (!(await this.checkPermission(ctx, subPath, option.permissionDefaults))[0]) throw NON_ERROR_HALT;
+
 				// process suppressors
-				const suppressed = await this.executeSuppressors(ctx, subOption);
+				const suppressed = await this.executeSuppressors(ctx, option);
 				if (suppressed) throw new Error(`Suppressor \`${suppressed.name}\` halted execution: ${suppressed.message}`);
 
 				// process nested option
-				collector = { ...collector, [primary]: await this.processTextOptions(ctx, subOption.options, output, index) };
+				collector = { ...collector, [primary]: await this.processTextOptions(ctx, option.options, output, index, subPath) };
 				promptSubs = []; // collected successfully
 				break;
 			}
 
 			let value: string;
-			const textOption = output.options.find(o => o.key.toLocaleLowerCase() === option.name.toLocaleLowerCase());
+			const textOption = output.options.find(o => o.key.toLocaleLowerCase() === primary.toLocaleLowerCase());
 			if (textOption) {
 				value = textOption.value;
 			} else {
@@ -585,7 +737,7 @@ export class CommandManager implements Component {
 				value = phrases.map(p => p.value).join(' ');
 			}
 
-			collector = { ...collector, [option.name]: await this.resolveOption(ctx, option, value) };
+			collector = { ...collector, [primary]: await this.resolveOption(ctx, option, value) };
 		}
 
 		// Prompt for subcommand option
@@ -593,48 +745,62 @@ export class CommandManager implements Component {
 		if (promptSubs.length > 1) {
 			const choices: Array<PromptChoice<string>> = [];
 			for (const sub of promptSubs) {
-				let names: string | Array<string> = sub.name;
-				if (!Array.isArray(names)) names = [names];
-				const primary = names[0];
+				const primary = this.getPrimaryName(sub.name);
 
 				let description = sub.description;
-				if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl) || description.backup;
+				if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl, description.backup);
 
 				choices.push({ value: primary, name: `${primary} - ${description}`, match: [primary] });
 			}
 
-			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_SUBCOMMAND') || 'Please select a subcommand:';
+			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_SUBCOMMAND', {}, 'Please select a subcommand:');
 			const choice = await ctx.choice(choices, content);
 			useSub = choice;
 		} else if (promptSubs.length === 1) {
-			useSub = promptSubs[0]?.name[0];
+			const sub = promptSubs[0];
+			const primary = this.getPrimaryName(sub.name);
+			useSub = primary;
 		}
 
 		if (useSub) {
-			const subOption = options.find(o => {
-				let name = o.name;
-				if (!Array.isArray(name)) name = [name];
+			for (const option of options) {
+				const primary = this.getPrimaryName(option.name);
+				if (primary !== useSub.toLocaleLowerCase()) continue;
+				if (!this.isAnySubCommand(option)) continue;
 
-				return name.some(n => n.toLocaleLowerCase() === useSub.toLocaleLowerCase());
-			}) as AnySubCommandOption;
+				// check category permission
+				const category = ctx.command.definition.category;
+				if (category) {
+					const [group, type] = await this.checkPermission(ctx, ['all', category], { user: true, admin: true });
+					if (!group && type === 'explicit') throw NON_ERROR_HALT;
+				}
 
-			if (subOption) collector = { ...collector, [useSub]: await this.processTextOptions(ctx, subOption.options, output, index) };
+				// check permission
+				const permissionName = option.permissionName ?? primary;
+				const subPath = [...path, permissionName];
+
+				if (!(await this.checkPermission(ctx, subPath, option.permissionDefaults))[0]) throw NON_ERROR_HALT;
+
+				if (option) collector = { ...collector, [useSub]: await this.processTextOptions(ctx, option.options, output, index, subPath) };
+			}
 		}
 
 		return collector;
 	}
 
-	private async resolveOption<T = unknown>(ctx: CommandContext, option: CommandOption<T>, raw: string): Promise<T | Array<T>> {
+	private async resolveOption<T = unknown>(ctx: CommandContext, option: AnyValueCommandOption, raw: string): Promise<T | Array<T>> {
 		if (raw === undefined) raw = '';
 
 		// array support
 		let inputs: Array<string> = option.array ? raw.split(/,\s?/gi) : [raw];
 		inputs = inputs.filter(i => !!i);
 
+		const primary = this.getPrimaryName(option.name);
+
 		// Auto prompt missing data on required option
-		if (inputs.length < 1 && (typeof option.required !== 'boolean' || option.required) && typeof option.choices === 'undefined') {
+		if (inputs.length < 1 && (typeof option.required !== 'boolean' || option.required) && !('choices' in option)) {
 			const type = this.getTypePreview(option);
-			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_OPTION', { option: option.name, type }) || `Please provide an input for option \`${option.name}\` of type \`${type}\`:`;
+			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_OPTION', { option: primary, type },  'Please provide an input for option `{option}` of type `{type}`');
 			const input = await ctx.prompt<string>(content, async (s: string) => s);
 
 			inputs = option.array ? input.split(/,\s?/gi) : [input];
@@ -643,10 +809,18 @@ export class CommandManager implements Component {
 
 		const value: Array<T> = [];
 		for (const input of inputs) {
-			let result = await this.executeResolver<T>(ctx, option, input);
+			const result = await this.executeResolver<T>(ctx, option, input);
 
 			// Reduce Choose Prompt
-			if (Array.isArray(result) && result.length > 1) {
+			if (Array.isArray(result)) {
+				if (result.length === 0) {
+					continue;
+				} else if (result.length === 1) {
+					// single element array
+					value.push(result[0]);
+					continue;
+				}
+
 				const resolver = this.resolvers.get(option.type) as Resolver<T>;
 
 				const choices: Array<PromptChoice<T>> = [];
@@ -664,11 +838,11 @@ export class CommandManager implements Component {
 					choices.push({ value: item, name: display, match });
 				}
 
-				result = await ctx.choice<T>(choices);
-			}
+				const choice = await ctx.choice<T>(choices);
+				value.push(choice);
 
-			// either single element array or reducer failed
-			if (Array.isArray(result)) result = result[0];
+				continue;
+			}
 
 			if (result != null) value.push(result);
 		}
@@ -679,22 +853,34 @@ export class CommandManager implements Component {
 		if (!option.array && Array.isArray(out)) out = out[0];
 
 		// default value
-		if ((out == null || (Array.isArray(out) && out.length === 0)) && option.default !== undefined) out = option.default;
+		if ((out == null || (Array.isArray(out) && out.length === 0)) && option.default !== undefined) out = option.default as unknown as T;
 
 		// handle choices
-		if (option.choices) {
-			let choices = option.choices;
+		if ('choices' in option) {
+			let choices: CommandOptionChoiceCallable<number | string> = option.choices;
 			if (typeof choices === 'function') choices = await choices();
+
+			if (choices.length === 0) throw new Error('No choices available for this option.');
 
 			const findChoice = choices.find(c => out && (c.value === out.toString() || c.value === parseInt(out.toString(), 10)));
 			if (!findChoice) {
-				const content = await ctx.formatTranslation('BENTOCORD_PROMPT_CHOICE_OPTION', { option: option.name }) || `Please select one of the following choices for option \`${option.name}\``;
-				out = await ctx.choice<T>(choices.map(c => ({ name: c.name, value: c.value as unknown as T, match: [c.name] })), content);
+				const content = await ctx.formatTranslation('BENTOCORD_PROMPT_CHOICE_OPTION', { option: primary }, 'Please select one of the following choices for option `{option}`');
+
+				const finalChoices: Array<PromptChoice<number | string>> = [];
+				for (const choice of choices) {
+					let display = choice.name;
+					if (typeof display === 'object') display = await ctx.formatTranslation(display.key, display.repl, display.backup);
+
+					const final = { name: display, value: choice.value, match: [choice.value.toString()] };
+					finalChoices.push(final);
+				}
+
+				out = await ctx.choice<number | string>(finalChoices, content) as unknown as T;
 			}
 		}
 
 		// required value
-		if ((out == null || (Array.isArray(out) && out.length === 0)) && (typeof option.required !== 'boolean' || option.required)) throw new Error(`Failed to resolve required option "${option.name}"`);
+		if ((out == null || (Array.isArray(out) && out.length === 0)) && (typeof option.required !== 'boolean' || option.required)) throw new Error(`Failed to resolve required option "${primary}"`);
 
 		// TODO: Transform function
 		return out;
@@ -702,24 +888,23 @@ export class CommandManager implements Component {
 
 	@Subscribe(Discord, DiscordEvent.SHARD_READY)
 	@Subscribe(Discord, DiscordEvent.SHARD_RESUME)
-	private async refreshSelfId() {
+	private async handleShardStateChange() {
 		const self = await this.discord.client.getSelf();
 		if (self.id) this.selfId = self.id;
 	}
 
-	@Subscribe(Discord, DiscordEvent.RAW_WS)
-	private async handleInteractionCreate(pkt: { op: number, t?: string, d?: Record<string, unknown> }) {
-		if (pkt.op !== 0 || pkt.t !== 'INTERACTION_CREATE') return; // Limit to Interaction Create
-
+	@Subscribe(Discord, DiscordEvent.INTERACTION_CREATE)
+	private async handleInteractionCreate(interaction: AnyInteraction) {
 		// Only handle APPLICATION_COMMAND interactions
-		const interaction = pkt.d as unknown as APIChatInputApplicationCommandInteraction;
-		if (interaction.type !== InteractionType.ApplicationCommand) return;
+		if (interaction.type !== Constants.InteractionTypes.APPLICATION_COMMAND) return;
+		interaction = interaction as CommandInteraction;
 
 		const data = interaction.data;
 
 		let command = this.findCommand(data.name);
 		if (!command) {
-			if (data.name.startsWith(this.testPrefix)) command = this.findCommand(data.name.replace(new RegExp(`^${this.testPrefix}`, 'i'), ''));
+			const testPrefix = await this.interface.getTestCommandPrefix();
+			if (data.name.startsWith(testPrefix)) command = this.findCommand(data.name.replace(new RegExp(`^${testPrefix}`, 'i'), ''));
 			if (!command) return; // command or test-command not found
 		}
 
@@ -727,59 +912,89 @@ export class CommandManager implements Component {
 		if (typeof definition.registerSlash === 'boolean' && !definition.registerSlash) return; // slash disabled
 
 		const ctx = new InteractionCommandContext(this, this.promptManager, command, interaction);
-		try {
-			// process suppressors
-			const suppressed = await this.executeSuppressors(ctx, definition);
-			if (suppressed) {
-				const message = await ctx.formatTranslation('BENTOCORD_SUPPRESSOR_HALT', { suppressor: suppressed.name, message: suppressed.message }) || `Execution was halted by \`${suppressed.name}\`: ${suppressed.message}`;
-				return ctx.createResponse(message);
-			}
+		ctx.alias = data.name;
 
-			const options = await this.fufillInteractionOptions(ctx, definition.options, data);
+		try {
+			// prepare context
+			await ctx.prepare();
+
+			// pre-flight checks, perms, suppressors, etc
+			if (!(await this.prepareCommand(command, ctx))) return;
+
+			// fufill options
+			const options = await this.fufillInteractionOptions(ctx, definition, data);
+
 			return this.executeCommand(command, ctx, options);
 		} catch (e) {
-			log.error(`Command "${definition.aliases[0]}" option error:\n${util.inspect(e)}`);
+			// halt requested (this is lazy, I'll fix it later, probably)
+			if (e === NON_ERROR_HALT) return;
+
+			log.error(`Command "${definition.name[0]}" option error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
-				return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_COMMAND_ERROR', { error: e.message }) || `There was an error resolving command options: ${e.message}`);
+				return ctx.createTranslatedResponse('BENTOCORD_COMMANDMANAGER_ERROR', { error: e.message }, 'There was an error processing command: `{error}`');
 			}
 		}
 	}
 
 	@Subscribe(Discord, DiscordEvent.MESSAGE_CREATE)
-	private async handleMessageCreate(message: Message) {
+	public async handleMessageCreate(message: Message): Promise<any> {
 		// Deny messages without content, channel, or author
 		if (!message.content || !message.channel || !message.author) return;
 
 		// raw message
 		const raw = message.content;
 
-		let prefix = this.defaultPrefix;
+		let prefixes = [this.defaultPrefix];
+
+		// guild prefix override
 		if (message.guildID) {
 			const guildPrefix = await this.interface.getPrefix(message.guildID);
-			if (guildPrefix) prefix = guildPrefix;
+			if (guildPrefix) prefixes = [guildPrefix];
 		}
 
-		// escape prefix
-		prefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+		// extra prefixes support
+		const extraPrefixes = await this.interface.getExtraPrefixes();
+		if (Array.isArray(extraPrefixes) && extraPrefixes.length > 0) prefixes = [...prefixes, ...extraPrefixes];
+
+		// escape prefixes
+		prefixes = prefixes.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 
 		// first capture group prefix
-		let build = `^(?<prefix>${prefix}`;
+		let build = `^(?<prefix>${prefixes.join('|')}`;
 		// if we have selfId allow mentions
 		if (this.selfId) build = `${build}|<(?:@|@!)${this.selfId}>`;
 		// find command and arguments
 		build = `${build})\\s?(?<name>[\\w]+)\\s?(?<args>.+)?$`;
 
 		// example of finished regex: `/^(?<prefix>=|<@!?185476724627210241>)\s?(?<name>[\w]+)\s?(?<args>.+)?$/si`
-		const matches = new RegExp(build, 'si').exec(raw);
+		const matches = new RegExp(build, 'siu').exec(raw);
 
 		// message is not a command
 		if (!matches) return;
-		const name = matches.groups.name;
-		const args = matches.groups.args;
+		let name = matches.groups.name;
+		let args = matches.groups.args;
 
-		const command = this.findCommand(name);
-		if (!command) return; // command not found
+		let command = this.findCommand(name);
+		if (!command) {
+			if (message.guildID && !message.author.bot) {
+				const [newName, newArguments] = await this.interface.resolveAlias(name, args, message);
+				if (newName) {
+					command = this.findCommand(newName);
+					if (command) {
+						name = newName;
+						args = newArguments;
+						// continue with normal command execution
+					} else {
+						return; // command not found
+					}
+				} else {
+					return; // command not found
+				}
+			} else {
+				return; // not in guild, or author is a bot
+			}
+		}
 
 		const definition = command.definition;
 
@@ -788,21 +1003,27 @@ export class CommandManager implements Component {
 
 		// CommandContext
 		const ctx = new MessageCommandContext(this, this.promptManager, command, message);
-		try {
-			// process suppressors
-			const suppressed = await this.executeSuppressors(ctx, definition);
-			if (suppressed) {
-				const suppressedMessage = await ctx.formatTranslation('BENTOCORD_SUPPRESSOR_HALT', { suppressor: suppressed.name, message: suppressed.message }) || `Execution was halted by \`${suppressed.name}\`: ${suppressed.message}`;
-				return ctx.createResponse(suppressedMessage);
-			}
+		ctx.alias = name;
 
-			const options = await this.fufillTextOptions(ctx, definition.options, args);
+		try {
+			// prepare context
+			await ctx.prepare();
+
+			// pre-flight checks, perms, suppressors, etc
+			if (!(await this.prepareCommand(command, ctx))) return;
+
+			// fufill options
+			const options = await this.fufillTextOptions(ctx, definition, args);
+
 			return this.executeCommand(command, ctx, options);
 		} catch (e) {
-			log.error(`Command "${definition.aliases[0]}" error:\n${util.inspect(e)}`);
+			// halt requested (this is lazy, I'll fix it later, probably)
+			if (e === NON_ERROR_HALT) return;
+
+			log.error(`Command "${definition.name[0]}" error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
-				return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_COMMAND_ERROR', { error: e.message }) || `There was an error resolving command options: ${e.message}`);
+				return ctx.createTranslatedResponse('BENTOCORD_COMMANDMANAGER_ERROR', { error: e.message }, 'There was an error processing command: `{error}`');
 			}
 		}
 	}

@@ -9,7 +9,7 @@ export class UserTest implements CommandEntity {
 	public parent = CommandManager;
 
 	public definition: CommandDefinition = {
-		aliases: ['usertest'],
+		name: ['usertest'],
 		description: 'Test away all day',
 		options: [
 			{ type: OptionType.USER, array: true, name: 'users', description: 'users', rest: true, required: false },

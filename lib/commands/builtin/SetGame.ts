@@ -16,11 +16,11 @@ export class SetGameCommand implements CommandEntity {
 	public parent = CommandManager;
 
 	public definition: CommandDefinition = {
-		aliases: ['setgame'],
-		description: 'Set Discord Activity',
+		name: ['setgame', { key: 'BENTOCORD_COMMAND_SETGAME' }],
+		description: { key: 'BENTOCORD_COMMAND_SETGAME_DESCRIPTION', backup: 'Set the bot\'s game status' },
 		options: [
-			{ type: OptionType.STRING, name: 'message', description: 'activity name', rest: true },
-			{ type: OptionType.NUMBER, name: 'type', description: 'activity type', choices: [
+			{ type: OptionType.STRING, name: ['activity', { key: 'BENTOCORD_OPTION_ACTIVITY' }], description: { key: 'BENTOCORD_OPTION_ACTIVITY_DESCRIPTION', backup: 'Activity name' }, rest: true },
+			{ type: OptionType.INTEGER, name: ['type', { key: 'BENTOCORD_OPTION_TYPE' }], description: { key: 'BENTOCORD_OPTION_TYPE_DESCRIPTION', backup: 'Type' }, choices: [
 				{ name: 'playing', value: 0 },
 				{ name: 'streaming', value: 1 },
 				{ name: 'listening', value: 2 },
@@ -30,16 +30,17 @@ export class SetGameCommand implements CommandEntity {
 		],
 
 		suppressors: [SuppressorType.BOT_OWNER],
+		hidden: true,
 
 		registerSlash: false,
 	};
 
 	@Inject(Discord) private readonly discord: Discord;
 
-	public async execute(ctx: CommandContext, options: { type: number, message: string }): Promise<unknown> {
-		const game: ActivityPartial<BotActivityType> = { type: options.type as BotActivityType, name: options.message };
+	public async execute(ctx: CommandContext, options: { type: number, activity: string }): Promise<unknown> {
+		const game: ActivityPartial<BotActivityType> = { type: options.type as BotActivityType, name: options.activity };
 
 		this.discord.client.editStatus('online', game);
-		return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_PRESENCE_UPDATED') || 'Presence Updated!');
+		return ctx.createTranslatedResponse('BENTOCORD_PRESENCE_UPDATED', {}, 'Presence Updated!');
 	}
 }

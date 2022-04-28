@@ -1,26 +1,31 @@
-import { ApplicationCommandOptionType } from 'discord-api-types';
-import { AnyGuildChannel } from 'eris';
+import { AnyGuildChannel, Constants } from 'eris';
 
 import { CommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
-import { CommandOption } from '../interfaces/CommandOption';
+import { CommandOptionChannel } from '../interfaces/CommandOption';
 import { Resolver } from '../interfaces/Resolver';
 
 export class ChannelResolver implements Resolver<AnyGuildChannel> {
 	public option = OptionType.CHANNEL;
-	public convert = ApplicationCommandOptionType.Channel;
+	public convert = Constants.ApplicationCommandOptionTypes.CHANNEL;
 
-	public async reduce(ctx: CommandContext, option: CommandOption<AnyGuildChannel>, channel: AnyGuildChannel): Promise<{ display: string, extra?: string }> {
+	public async reduce(ctx: CommandContext, option: CommandOptionChannel, channel: AnyGuildChannel): Promise<{ display: string, extra?: string }> {
 		return { display: `#${channel.name}`, extra: channel.id };
 	}
 
-	public async resolve(ctx: CommandContext, option: CommandOption<AnyGuildChannel>, input: string): Promise<AnyGuildChannel | Array<AnyGuildChannel>> {
+	public async resolve(ctx: CommandContext, option: CommandOptionChannel, input: string): Promise<AnyGuildChannel | Array<AnyGuildChannel>> {
 		const guild = ctx.guild;
 		if (!guild) return null;
 
 		const channels = ctx.guild.channels;
 
-		return Array.from(channels.filter(c => this.checkChannel(input, c)).values());
+		const channelTypes = option.channelTypes ?? [];
+
+		// filter matching channelType
+		const find = Array.from(channels.filter(c => this.checkChannel(input, c)).filter(c => channelTypes.length === 0 || channelTypes.includes(c.type)).values());
+		if (find.length > 0) return find;
+
+		return Array.from(channels.filter(c => channelTypes.length === 0 || channelTypes.includes(c.type)).values());
 	}
 
 	private checkChannel(input: string, channel: AnyGuildChannel) {

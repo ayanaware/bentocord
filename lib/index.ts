@@ -8,7 +8,11 @@ export * from './builders/EmbedBuilder';
 export * from './builders/LocalizedEmbedBuilder';
 
 export * from './commands/CommandManager';
+export * from './commands/SlashManager';
 export * from './commands/CommandContext';
+export * from './commands/HelpManager';
+export * from './commands/constants/CommandManagerEvent';
+export * from './commands/constants/DiscordLocales';
 export * from './commands/constants/OptionType';
 export * from './commands/constants/SuppressorType';
 export * from './commands/interfaces/Command';
@@ -25,8 +29,11 @@ export * from './discord/constants/DiscordEvent';
 export * from './discord/constants/DiscordPermission';
 
 export * from './interfaces/Translateable';
+export * from './interfaces/MessageContext';
+export * from './interfaces/PermissionScope';
 
 export * from './prompt/Prompt';
 export * from './prompt/PromptManager';
-export * from './prompt/prompts/PaginationPrompt';
 export * from './prompt/prompts/ChoicePrompt';
+export * from './prompt/prompts/ConfirmPrompt';
+export * from './prompt/prompts/PaginationPrompt';

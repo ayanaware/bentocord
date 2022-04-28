@@ -14,22 +14,21 @@
 	},
 	"dependencies": {
 		"@ayanaware/logger-api": "^2.0.0",
-		"discord-api-types": "^0.23.1",
 		"reflect-metadata": "^0.1.13"
 	},
 	"peerDependencies": {
 		"@ayanaware/bento": "^1.0.0-rc.14",
-		"eris": "^0.15.1"
+		"eris": "^0.16.1"
 	},
 	"devDependencies": {
-		"@ayanaware/bento": "^1.0.0-rc.25",
-		"@ayanaware/eslint-plugin": "^1.0.4",
+		"@ayanaware/bento": "^1.0.0-rc.26",
+		"@ayanaware/eslint-plugin": "^1.0.7",
 		"@ayanaware/logger": "^2.2.1",
-		"@types/node": "^16.9.1",
-		"@types/ws": "^7.4.7",
-		"eris": "^0.15.1",
-		"eslint": "^7.32.0",
-		"typescript": "^4.4.3"
+		"@types/node": "^17.0.21",
+		"@types/ws": "^8.5.2",
+		"eris": "^0.16.1",
+		"eslint": "^8.10.0",
+		"typescript": "^4.6.2"
 	},
 	"license": "MIT",
 	"private": false

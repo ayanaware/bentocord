@@ -1,20 +1,22 @@
 import { Message } from 'eris';
 
+import { CommandContext } from '../../commands/CommandContext';
 import { Translateable } from '../../interfaces/Translateable';
 import { PROMPT_CLOSE } from '../Prompt';
 
-import { PaginationPrompt } from './PaginationPrompt';
+import { PaginationOptions, PaginationPrompt } from './PaginationPrompt';
 
 export class ConfirmPrompt extends PaginationPrompt<boolean> {
-	protected async timeout(): Promise<void> {
-		this.removeReactions().catch(() => { /* no-op */ });
+	public constructor(ctx: CommandContext, items?: Array<string | Translateable>, options: PaginationOptions = {}) {
+		options = Object.assign({
+			resolveOnClose: false,
+		} as PaginationOptions, options);
 
-		const reason = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_TIMEOUT') || 'You took too much time to respond.';
-		return this.close(reason);
+		super(ctx, items, options);
 	}
 
 	public async open(content: string | Translateable): Promise<boolean> {
-		if (typeof content === 'object') content = await this.ctx.formatTranslation(content.key, content.repl) || content.backup;
+		if (typeof content === 'object') content = await this.ctx.formatTranslation(content.key, content.repl, content.backup);
 		this.content = content;
 
 		await this.render();

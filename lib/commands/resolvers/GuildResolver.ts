@@ -1,20 +1,19 @@
-import { ApplicationCommandOptionType } from 'discord-api-types';
-import { Guild } from 'eris';
+import { Constants, Guild } from 'eris';
 
 import { CommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
-import { CommandOption } from '../interfaces/CommandOption';
+import { CommandOptionGuild } from '../interfaces/CommandOption';
 import { Resolver } from '../interfaces/Resolver';
 
 export class GuildResolver implements Resolver<Guild> {
 	public option = OptionType.GUILD;
-	public convert = ApplicationCommandOptionType.String;
+	public convert = Constants.ApplicationCommandOptionTypes.STRING;
 
-	public async reduce?(ctx: CommandContext, option: CommandOption<Guild>, guild: Guild): Promise<{ display: string, extra?: string }> {
+	public async reduce?(ctx: CommandContext, option: CommandOptionGuild, guild: Guild): Promise<{ display: string, extra?: string }> {
 		return { display: guild.name, extra: guild.id };
 	}
 
-	public async resolve(ctx: CommandContext, option: CommandOption<Guild>, input: string): Promise<Array<Guild>> {
+	public async resolve(ctx: CommandContext, option: CommandOptionGuild, input: string): Promise<Array<Guild>> {
 		const client = ctx.discord.client;
 
 		const guilds = client.guilds;

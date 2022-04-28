@@ -1,20 +1,20 @@
-import type { ApplicationCommandOptionType } from 'discord-api-types';
+import { ApplicationCommandOptionsWithValue } from 'eris';
 
 import type { CommandContext } from '../CommandContext';
-import type { OptionType } from '../constants/OptionType';
+import { OptionType } from '../constants/OptionType';
 
-import type { CommandOption } from './CommandOption';
+import type { AnyValueCommandOption } from './CommandOption';
 
-export interface Resolver<T> {
+export interface Resolver<T = unknown> {
 	/** Bentocord Option Type */
 	option: OptionType | string;
 
 	/** Discord CommandOptionType to use */
-	convert: ApplicationCommandOptionType;
+	convert: ApplicationCommandOptionsWithValue['type'];
 
 	/** Reduce display helper (if you returned array in resolve) */
-	reduce?(ctx: CommandContext, option: CommandOption<T>, resolved: T): Promise<{ display: string, extra?: string }>;
+	reduce?(ctx: CommandContext, option: AnyValueCommandOption, resolved: T): Promise<{ display: string, extra?: string }>;
 
 	/** Resolver function */
-	resolve(ctx: CommandContext, option: CommandOption<T>, input: string): Promise<T | Array<T>>;
+	resolve(ctx: CommandContext, option: AnyValueCommandOption, input: string): Promise<T | Array<T>>;
 }

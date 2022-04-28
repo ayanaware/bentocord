@@ -11,14 +11,14 @@ export class AdvancedCommand implements CommandEntity {
 	public api!: ComponentAPI;
 	public parent = CommandManager;
 
-	@Inject() private readonly commandManager: CommandManager;
+	@Inject() private readonly cm: CommandManager;
 
 	public definition: CommandDefinition = {
-		aliases: ['adv'],
-		description: 'Meta Command. Takes passed arg and redirects to relevant command',
+		name: ['advanced', { key: 'BENTOCORD_COMMAND_ADV' }],
+		description: { key: 'BENTOCORD_COMMAND_ADV_DESCRIPTION', backup: 'Run non-slash exposed commands' },
 		options: [
-			{ type: OptionType.STRING, name: 'alias', description: 'command name or alias' },
-			{ type: OptionType.STRING, name: 'opts', description: 'option string to parse', required: false, rest: true },
+			{ type: OptionType.STRING, name: ['alias', { key: 'BENTOCORD_OPTION_ALIAS' }], description: { key: 'BENTOCORD_OPTION_ALIAS_DESCRIPTION', backup: 'Command name or alias' } },
+			{ type: OptionType.STRING, name: ['options', { key: 'BENTOCORD_OPTION_OPTIONS' }], description: { key: 'BENTOCORD_OPTION_OPTIONS_DESCRIPTION', backup: 'Command arguments to pass' }, required: false, rest: true },
 		],
 
 		registerSlash: true,
@@ -26,12 +26,20 @@ export class AdvancedCommand implements CommandEntity {
 	};
 
 	public async execute(ctx: CommandContext, options: { alias: string, opts: string }): Promise<unknown> {
-		if (this.definition.aliases.some(a => a.toLocaleLowerCase() === options.alias.toLocaleLowerCase())) return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_ADV_NO_RECURSIVE') || 'Recursive execution is not allowed.');
+		const aliases = await this.cm.getItemTranslations(this.definition.name, true);
+		if (aliases.some(a => a[0] === options.alias.toLocaleLowerCase())) return ctx.createTranslatedResponse('BENTOCORD_ADV_NO_RECURSIVE', {}, 'Recursive execution is not allowed.');
 
-		const command = this.commandManager.findCommand(options.alias);
-		if (!command) return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_ADV_NOTEXIST', { command: options.alias }) || `Command "${options.alias}" does not exist in CommandManager`);
+		const command = this.cm.findCommand(options.alias);
+		if (!command) return ctx.createTranslatedResponse('BENTOCORD_ADV_NOTEXIST', { command: options.alias }, 'Command "{command}" does not exist in CommandManager');
 
-		const cmdOptions = await this.commandManager.fufillTextOptions(ctx, command.definition.options, options.opts);
-		return this.commandManager.executeCommand(command, ctx, cmdOptions);
+		const definition = command.definition;
+
+		// pre-flight checks, perms, suppressors, etc
+		if (!(await this.cm.prepareCommand(command, ctx))) return;
+
+		// fufill options
+		const cmdOptions = await this.cm.fufillTextOptions(ctx, definition, options.opts);
+
+		return this.cm.executeCommand(command, ctx, cmdOptions);
 	}
 }

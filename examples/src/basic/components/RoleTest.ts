@@ -10,7 +10,7 @@ export class RoleTest implements CommandEntity {
 	private roles: Set<string> = new Set();
 
 	public definition = {
-		aliases: ['roletest'],
+		name: ['roletest'],
 		description: 'asdfasdf',
 		options: [
 			{ type: OptionType.SUB_COMMAND, name: 'private', description: 'WHITELISTONLY', suppressors: [{ type: SuppressorType.ROLE, args: this.getRoles.bind(this) }] },

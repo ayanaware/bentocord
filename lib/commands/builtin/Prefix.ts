@@ -14,29 +14,36 @@ export class PrefixCommand implements CommandEntity {
 	public parent = CommandManager;
 
 	public definition: CommandDefinition = {
-		aliases: ['prefix'],
-		description: 'Set command prefix',
+		name: ['prefix', { key: 'BENTOCORD_COMMAND_PREFIX' }],
+		description: { key: 'BENTOCORD_COMMAND_PREFIX_DESCRIPTION', backup: 'Manage command prefix' },
 		options: [
-			{ type: OptionType.STRING, name: 'prefix', description: 'new prefix', required: false },
+			{ type: OptionType.SUB_COMMAND, name: ['view', 'get', { key: 'BENTOCORD_COMMAND_PREFIX_VIEW' }], description: { key: 'BENTOCORD_COMMAND_PREFIX_VIEW_DESCRIPTION', backup: 'View prefix' } },
+			{ type: OptionType.SUB_COMMAND, name: ['set', { key: 'BENTOCORD_COMMAND_PREFIX_SET' }], description: { key: 'BENTOCORD_COMMAND_PREFIX_SET_DESCRIPTION', backup: 'Set prefix' }, options: [
+				{ type: OptionType.STRING, name: ['prefix', { key: 'BENTOCORD_OPTION_PREFIX' }], description: { key: 'BENTOCORD_OPTION_PREFIX_DESCRIPTION', backup: 'New prefix' } },
+			], permissionDefaults: { user: false, admin: true } },
 		],
 
-		suppressors: [SuppressorType.GUILD, SuppressorType.GUILD_ADMIN],
+		suppressors: [SuppressorType.GUILD],
 
 		registerSlash: false,
 	};
 
-	@Inject() private readonly interface: BentocordInterface;
+	@Inject() private readonly cm: CommandManager;
 
-	public async execute(ctx: CommandContext, options: { prefix?: string }): Promise<unknown> {
-		if (options.prefix) return this.set(ctx, options.prefix);
+	public async execute(ctx: CommandContext, options: { view?: Record<string, never>, set?: { prefix: string } }): Promise<unknown> {
+		if (options.set) return this.set(ctx, options.set.prefix);
 
-		const prefix = await this.interface.getPrefix(ctx.guild.id);
-		return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_PREFIX', { prefix }) || `Current prefix is \`${prefix}\``);
+		if (!options.view) {
+			/* literally how */
+		}
+
+		const prefix = await this.cm.getPrefix(ctx.guild.id);
+		return ctx.createTranslatedResponse('BENTOCORD_PREFIX', { prefix }, 'Current prefix is `{prefix}`');
 	}
 
 	private async set(ctx: CommandContext, prefix: string) {
-		await this.interface.setPrefix(ctx.guild.id, prefix);
+		await this.cm.setPrefix(ctx.guild.id, prefix);
 
-		return ctx.createResponse(await ctx.formatTranslation('BENTOCORD_PREFIX_SET', { prefix }) || `Prefix has been set to \`${prefix}\``);
+		return ctx.createTranslatedResponse('BENTOCORD_PREFIX_SET', { prefix }, 'Prefix has been set to `{prefix}`');
 	}
 }

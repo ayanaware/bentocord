@@ -18,6 +18,9 @@ export interface PaginationOptions {
 
 	/** Works in tandum with focused, add string above and/or below the focused index */
 	flare?: { above?: string | Translateable, below?: string | Translateable, padStart?: number };
+
+	/** When this pagination is closed should we resovle or reject */
+	resolveOnClose?: boolean;
 }
 
 export enum PaginationControls {
@@ -33,8 +36,6 @@ export enum PaginationControls {
 }
 
 export class PaginationPrompt<T = void> extends Prompt<T> {
-	public language: string;
-
 	public itemsPerPage = 10;
 	public currentPage = 0;
 
@@ -46,9 +47,9 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	public constructor(ctx: CommandContext, items?: Array<string | Translateable>, options: PaginationOptions = {}) {
 		super(ctx);
 		this.items = items || [];
-		this.options = options;
-
-		this.language = options.language;
+		this.options = Object.assign({
+			resolveOnClose: true,
+		} as PaginationOptions, options);
 
 		this.itemsPerPage = options.itemsPerPage || this.itemsPerPage;
 		if (typeof options.focused === 'number') this.currentPage = Math.ceil(options.focused / this.itemsPerPage) - 1 || 0;
@@ -63,13 +64,12 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	}
 
 	protected async timeout(): Promise<void> {
-		this.removeReactions().catch(() => { /* no-op */ });
-
-		this.resolve();
+		const reason = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_TIMEOUT', {}, 'You took too much time to respond.');
+		return this.close(reason);
 	}
 
 	public async open(content: string | Translateable): Promise<T> {
-		if (typeof content === 'object') content = await this.ctx.formatTranslation(content.key, content.repl) || content.backup;
+		if (typeof content === 'object') content = await this.ctx.formatTranslation(content.key, content.repl, content.backup);
 		this.content = content;
 
 		await this.render();
@@ -83,6 +83,10 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 	public async close(reason?: string | Translateable): Promise<void> {
 		this.removeReactions().catch(() => { /* no-op */ });
+
+		const resolveOnClose = this.options.resolveOnClose;
+		if (typeof resolveOnClose === 'boolean' && resolveOnClose) return this.resolve();
+
 		return super.close(reason);
 	}
 
@@ -94,7 +98,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 			return;
 		}
 
-		const cbb = new CodeblockBuilder(this.language);
+		const cbb = new CodeblockBuilder(this.options.language);
 
 		// constrain
 		if (this.currentPage < 0) this.currentPage = 0;
@@ -102,7 +106,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 		// only add page header if more then 1 page
 		if (!this.isSinglePage) {
-			const header = await this.ctx.formatTranslation('BENTOCORD_PAGINATION_PAGE', { page: this.currentPage + 1, total: this.maxPage }) || `[Page ${this.currentPage + 1}/${this.maxPage}]`;
+			const header = await this.ctx.formatTranslation('BENTOCORD_PAGINATION_PAGE', { page: this.currentPage + 1, total: this.maxPage }, '[Page {page}/{total}]');
 			cbb.setHeader(header);
 		}
 
@@ -141,12 +145,12 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 		// is more then one page show navigation info
 		if (!this.isSinglePage) {
-			const usage = await this.ctx.formatTranslation('BENTOCORD_PAGINATION_NAVIGATION') || 'Type `<` or `>` to switch pages, `x` to close, or `p<number>` to jump to a page (ex. `p10`).';
+			const usage = await this.ctx.formatTranslation('BENTOCORD_PAGINATION_NAVIGATION', {}, 'Type `<` or `>` to switch pages, `x` to close, or `p<number>` to jump to a page (ex. `p10`).');
 			content += usage;
 
 			// if no manage message complain :P
 			if (!this.ctx.selfHasPermission(DiscordPermission.MANAGE_MESSAGES)) {
-				const missing = await this.ctx.formatTranslation('BENTOCORD_PROMPT_MISSING_PERMISSION', { permission: 'MANAGE_MESSAGES' }) || 'It doesn\'t look like I have the `MANAGE_MESSAGE` Discord permission. Please grant it for a better experience.';
+				const missing = await this.ctx.formatTranslation('BENTOCORD_PROMPT_MISSING_PERMISSION', { permission: 'MANAGE_MESSAGES' }, 'It doesn\'t look like I have the `{permission}` Discord permission. Please grant it for a better experience.');
 				content += `\n${missing}`;
 			}
 		}
@@ -156,7 +160,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	}
 
 	protected async addReactions(): Promise<void> {
-		const messageId = this.ctx.responseId;
+		const messageId = await this.ctx.getResponseId();
 		if (!messageId || !this.ctx.channel) return;
 		const channel = this.ctx.channel;
 
@@ -175,7 +179,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	}
 
 	protected async removeReactions(): Promise<void> {
-		const messageId = this.ctx.responseId;
+		const messageId = await this.ctx.getResponseId();
 		const channel = this.ctx.channel;
 		const selfId = this.ctx.discord.client.user.id;
 		if (!messageId || !channel || !selfId) return;
@@ -206,8 +210,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		if (close) {
 			Promise.all([this.removeReactions(), this.deleteMessage(message)]).catch(() => { /* no-op */ });
 
-			this.resolve();
-			return;
+			return this.resolve();
 		}
 
 		switch (input) {
@@ -253,7 +256,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 	public async handleReaction(message: Message, emoji: Emoji): Promise<void> {
 		if (this.isSinglePage) return;
-		if (message.id !== this.ctx.responseId) return;
+		if (message.id !== await this.ctx.getResponseId()) return;
 
 		switch (emoji.name) {
 			case PaginationControls.EMOJI_FIRST: {
@@ -277,9 +280,8 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 			}
 
 			case PaginationControls.EMOJI_CLOSE: {
-				this.resolve();
 				Promise.all([this.deleteReaction(emoji), this.removeReactions()]).catch(() => { /* no-op */ });
-				return;
+				return this.resolve();
 			}
 		}
 

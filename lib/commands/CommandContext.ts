@@ -1,13 +1,12 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import { EntityAPI } from '@ayanaware/bento';
 
-import { APIApplicationCommandInteraction, InteractionResponseType } from 'discord-api-types';
 import {
 	AllowedMentions,
-	BaseData,
+	AnyChannel,
+	CommandInteraction,
+	Constants,
 	EmbedOptions,
 	Guild,
-	GuildTextableChannel,
 	Member,
 	Message,
 	MessageContent,
@@ -23,11 +22,14 @@ import type { Translateable } from '../interfaces/Translateable';
 import type { PromptValidate } from '../prompt/Prompt';
 import type { PromptManager } from '../prompt/PromptManager';
 import type { PromptChoice } from '../prompt/prompts/ChoicePrompt';
-import type { PaginationOptions } from '../prompt/prompts/PaginationPrompt';
+import { PaginationOptions } from '../prompt/prompts/PaginationPrompt';
 
 import type { CommandManager } from './CommandManager';
-import { INTERACTION_MESSAGE, INTERACTION_RESPONSE } from './constants/API';
 import type { Command } from './interfaces/Command';
+
+const { ChannelTypes } = Constants;
+
+export type AnyCommandContext = MessageCommandContext | InteractionCommandContext;
 
 export interface ResponseContent {
 	content?: string;
@@ -42,6 +44,8 @@ export abstract class CommandContext {
 	public readonly command: Command;
 	public type: 'message' | 'interaction';
 
+	public alias: string;
+
 	public authorId: string;
 	public author: User;
 
@@ -53,13 +57,16 @@ export abstract class CommandContext {
 
 	public member?: Member;
 
+	public messageId?: string;
+	public message?: Message;
+
 	public readonly interface: BentocordInterface;
 	public readonly discord: Discord;
 
 	public readonly manager: CommandManager;
 	public readonly promptManager: PromptManager;
 
-	public responseId: string;
+	protected responseId: string;
 
 	public constructor(manager: CommandManager, promptManager: PromptManager, command: Command) {
 		this.manager = manager;
@@ -73,10 +80,23 @@ export abstract class CommandContext {
 		this.interface = this.api.getEntity(BentocordInterface);
 	}
 
+	protected isTextableChannel(channel: unknown): channel is TextableChannel {
+		const cast = channel as AnyChannel;
+		if (!cast || typeof cast.type !== 'number') return false;
+
+		const textableIds: Array<number> = [
+			ChannelTypes.DM,
+			ChannelTypes.GUILD_TEXT, ChannelTypes.GUILD_NEWS,
+			ChannelTypes.GUILD_NEWS_THREAD, ChannelTypes.GUILD_PUBLIC_THREAD, ChannelTypes.GUILD_PRIVATE_THREAD,
+		];
+
+		return textableIds.includes(cast.type);
+	}
+
 	/**
 	 * Check if command author is a owner
 	 */
-	public async isOwner(): Promise<boolean> {
+	public async isBotOwner(): Promise<boolean> {
 		return this.interface.isOwner(this.authorId);
 	}
 
@@ -108,16 +128,17 @@ export abstract class CommandContext {
 
 	/**
 	 * Format a translation based on who/where ran
-	 * @param key Translation key
-	 * @param repl Translation replacements
+	 * @param key Translation Key
+	 * @param repl Translation Replacements
+	 * @param backup Translation Backup
 	 * @returns Formatted translation or null
 	 */
-	public async formatTranslation(key: string, repl?: Record<string, unknown>): Promise<string> {
+	public async formatTranslation(key: string, repl?: Record<string, unknown>, backup?: string): Promise<string> {
 		return this.interface.formatTranslation(key, repl, {
 			userId: this.authorId || null,
 			channelId: this.channelId || null,
 			guildId: this.guildId || null,
-		});
+		}, backup);
 	}
 
 	/**
@@ -161,7 +182,7 @@ export abstract class CommandContext {
 	 * @returns boolean
 	 */
 	public async confirm(content?: string | Translateable, items?: Array<string | Translateable>): Promise<boolean> {
-		if (!content) content = await this.formatTranslation('BENTOCORD_PROMPT_CONFIRM') || 'Please confirm you wish to continue [y/n]:';
+		if (!content) content = await this.formatTranslation('BENTOCORD_PROMPT_CONFIRM', {}, 'Please confirm you wish to continue [y/n]:');
 		return this.promptManager.createConfirmPrompt(this, content, items);
 	}
 
@@ -191,10 +212,11 @@ export abstract class CommandContext {
 	 * Send translated response, getTranstion & createResponse
 	 * @param key Translation Key
 	 * @param repl Replacements
+	 * @param backup Backup
 	 * @returns Message/Interaction
 	 */
-	public async createTranslatedResponse(key: string, repl?: Record<string, unknown>): Promise<unknown> {
-		const content = await this.formatTranslation(key, repl);
+	public async createTranslatedResponse(key: string, repl?: Record<string, unknown>, backup?: string): Promise<unknown> {
+		const content = await this.formatTranslation(key, repl, backup);
 		return this.createResponse({ content });
 	}
 
@@ -202,118 +224,119 @@ export abstract class CommandContext {
 	 * Edit translation response
 	 * @param key Translation Key
 	 * @param repl Replacements
+	 * @param backup Backup
 	 * @returns Message/Interaction
 	 */
-	public async editTranslatedResponse(key: string, repl?: Record<string, unknown>): Promise<unknown> {
-		const content = await this.formatTranslation(key, repl);
+	public async editTranslatedResponse(key: string, repl?: Record<string, unknown>, backup?: string): Promise<unknown> {
+		const content = await this.formatTranslation(key, repl, backup);
 		return this.editResponse({ content });
 	}
+
+	public abstract getResponseId(): Promise<string>;
 
 	public abstract acknowledge(): Promise<void>;
 
 	public abstract createResponse(response: string | ResponseContent): Promise<unknown>;
 	public abstract editResponse(response: string | ResponseContent): Promise<unknown>;
 	public abstract deleteResponse(): Promise<void>;
+
+	public abstract deleteExecutionMessage(): Promise<void>;
 }
 
 export class InteractionCommandContext extends CommandContext {
 	public type: 'interaction' = 'interaction';
-	public interaction: APIApplicationCommandInteraction;
+	public interaction: CommandInteraction;
 
-	public channel?: GuildTextableChannel;
-
-	private hasResponded = false;
-
-	public constructor(manager: CommandManager, promptManager: PromptManager, command: Command, interaction: APIApplicationCommandInteraction) {
+	public constructor(manager: CommandManager, promptManager: PromptManager, command: Command, interaction: CommandInteraction) {
 		super(manager, promptManager, command);
 		this.interaction = interaction;
+	}
 
+	public async prepare(): Promise<void> {
 		const client = this.discord.client;
 
-		this.channelId = interaction.channel_id;
+		this.channelId = this.interaction.channel.id;
 
-		if (interaction.guild_id) {
-			this.authorId = interaction.member.user.id;
-			this.author = new User(interaction.member.user as unknown as BaseData, client);
+		let channel = client.getChannel(this.channelId);
+		if (!channel) channel = await client.getRESTChannel(this.channelId);
+		if (!this.isTextableChannel(channel)) throw new Error('InteractionCommandContext: Channel is not textable.');
+		this.channel = channel;
 
-			this.guildId = interaction.guild_id;
+		if (this.interaction.guildID) {
+			this.authorId = this.interaction.member.user.id;
+			this.author = this.interaction.member.user;
 
-			const guild = client.guilds.get(interaction.guild_id);
-			if (guild) this.guild = guild;
+			this.guildId = this.interaction.guildID;
+
+			const guild = client.guilds.get(this.interaction.guildID);
+			if (!guild) throw new Error('InteractionCommandContext: Guild not found');
+			this.guild = guild;
 
 			const member = guild.members.get(this.authorId);
 			if (member) this.member = member;
-
-			const channel = guild.channels.get(interaction.channel_id) as GuildTextableChannel;
-			if (channel) this.channel = channel;
 		} else {
-			this.authorId = interaction.user.id;
-			this.author = new User(interaction.user as unknown as BaseData, client);
-
-			this.channel = client.getChannel(interaction.channel_id) as TextChannel;
+			this.authorId = this.interaction.user.id;
+			this.author = this.interaction.user;
 		}
 	}
 
-	public async acknowledge(): Promise<void> {
-		if (this.hasResponded) return;
+	public async getResponseId(): Promise<string> {
+		if (this.responseId !== '@original') return this.responseId;
 
-		const response = {
-			type: InteractionResponseType.DeferredChannelMessageWithSource,
-		};
-
-		const client = this.discord.client;
-		await client.requestHandler.request('POST', INTERACTION_RESPONSE(this.interaction.id, this.interaction.token), false, response);
-		this.hasResponded = true;
-
-		const message = await client.requestHandler.request('GET', INTERACTION_MESSAGE(this.interaction.application_id, this.interaction.token, '@original'), false) as { id?: string };
+		const message = await this.interaction.getOriginalMessage();
+		this.message = message;
+		this.messageId = message.id;
 		this.responseId = message.id;
+
+		return this.responseId;
+	}
+
+	public async acknowledge(): Promise<void> {
+		if (this.interaction.acknowledged) return;
+
+		await this.interaction.acknowledge();
+		this.responseId = '@original';
 	}
 
 	public async createResponse(response: string | ResponseContent): Promise<unknown> {
-		if (this.hasResponded) return this.editResponse(response);
+		if (this.interaction.acknowledged) return this.editResponse(response);
 
 		if (typeof response === 'string') response = { content: response };
-		// TODO: handle allowed_mentions
 
-		const content = {
-			type: InteractionResponseType.ChannelMessageWithSource,
-			data: {
-				content: response.content,
-				embeds: response.embeds,
-				allowed_mentions: response.allowedMentions,
-			},
-		};
-
-		const client = this.discord.client;
-
-		await client.requestHandler.request('POST', INTERACTION_RESPONSE(this.interaction.id, this.interaction.token), false, content as any) as Record<string, unknown>;
-		this.hasResponded = true;
-
-		const message = await client.requestHandler.request('GET', INTERACTION_MESSAGE(this.interaction.application_id, this.interaction.token, '@original'), false) as { id?: string };
-		this.responseId = message.id;
+		await this.interaction.createMessage(response);
+		this.responseId = '@original';
 	}
 
 	public async editResponse(response: string | ResponseContent): Promise<unknown> {
-		if (!this.hasResponded) return this.createResponse(response);
+		if (!this.interaction.acknowledged) return this.createResponse(response);
 
 		if (typeof response === 'string') response = { content: response };
-		// TODO: handle allowed_mentions
 
-		const content = {
-			content: response.content,
-			embeds: response.embeds,
-			allowed_mentions: response.allowedMentions,
-		};
+		if (!this.responseId) {
+			// create a new message
+			const msg = await this.interaction.createFollowup(response);
+			this.responseId = msg.id;
 
-		const client = this.discord.client;
-		await client.requestHandler.request('PATCH', INTERACTION_MESSAGE(this.interaction.application_id, this.interaction.token, '@original'), true, content);
+			return msg;
+		}
+
+		return this.interaction.editMessage(this.responseId, response);
 	}
 
 	public async deleteResponse(): Promise<void> {
-		if (!this.hasResponded) return;
+		if (!this.interaction.acknowledged || !this.responseId) return;
 
-		const client = this.discord.client;
-		await client.requestHandler.request('DELETE', INTERACTION_MESSAGE(this.interaction.application_id, this.interaction.token, '@original'));
+		await this.interaction.deleteMessage(this.responseId);
+		this.responseId = null;
+	}
+
+	public async deleteExecutionMessage(): Promise<void> {
+		if (!this.interaction.acknowledged) await this.acknowledge();
+
+		try {
+			await this.interaction.deleteOriginalMessage();
+			this.responseId = null;
+		} catch { /* NO-OP */ }
 	}
 }
 
@@ -322,26 +345,39 @@ export class MessageCommandContext extends CommandContext {
 	public type: 'message' = 'message';
 
 	public message: Message;
+	public messageId: string;
 
 	public constructor(manager: CommandManager, promptManager: PromptManager, command: Command, message: Message) {
 		super(manager, promptManager, command);
-
 		this.message = message;
+		this.messageId = message.id;
+	}
 
-		this.channelId = message.channel.id;
-		this.channel = message.channel;
+	public async prepare(): Promise<void> {
+		const client = this.discord.client;
 
-		this.authorId = message.author.id;
-		this.author = message.author;
+		this.channelId = this.message.channel.id;
 
-		if ((message.channel as TextChannel).guild) {
-			const guild = (message.channel as TextChannel).guild;
+		let channel = client.getChannel(this.channelId);
+		if (!channel) channel = await client.getRESTChannel(this.channelId);
+		if (!this.isTextableChannel(channel)) throw new Error('MessageCommandContext: Channel is not textable.');
+		this.channel = channel;
+
+		this.authorId = this.message.author.id;
+		this.author = this.message.author;
+
+		if ('guild' in this.channel) {
+			const guild = this.channel.guild;
 
 			this.guildId = guild.id;
 			this.guild = guild;
 
-			if (message.member) this.member = message.member;
+			if (this.message.member) this.member = this.message.member;
 		}
+	}
+
+	public async getResponseId(): Promise<string> {
+		return this.responseId;
 	}
 
 	public async acknowledge(): Promise<void> {
@@ -383,5 +419,11 @@ export class MessageCommandContext extends CommandContext {
 		if (!this.responseId) return;
 
 		return this.channel.deleteMessage(this.responseId);
+	}
+
+	public async deleteExecutionMessage(): Promise<void> {
+		try {
+			await this.message.delete();
+		} catch { /* NO-OP */ }
 	}
 }

@@ -22,7 +22,7 @@ export class PromptManager implements Component {
 		// close all prompts onUnload
 		for (const prompt of this.prompts.values()) {
 			try {
-				const reason = await prompt.ctx.formatTranslation('BENTOCORD_PROMPTMANAGER_UNLOAD') || 'The manager is unloading.';
+				const reason = await prompt.ctx.formatTranslation('BENTOCORD_PROMPTMANAGER_UNLOAD', {}, 'The manager is unloading.');
 				await prompt.close(reason);
 			} catch { /* Failed */ }
 		}
@@ -38,10 +38,12 @@ export class PromptManager implements Component {
 		const prompt = this.prompts.get(key);
 		if (!prompt) return;
 
-		const reason = await ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_NEW') || 'New prompt was opened.';
-		await prompt.close(reason);
+		if (prompt.pending) {
+			const reason = await ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_NEW', {}, 'New prompt was opened.');
+			await prompt.close(reason);
+		}
 
-		this.prompts.delete(reason);
+		this.prompts.delete(key);
 	}
 
 	public async createPrompt<T>(ctx: CommandContext, content: string | Translateable, validate?: PromptValidate<T>): Promise<T> {
@@ -65,7 +67,6 @@ export class PromptManager implements Component {
 		this.prompts.set(key, prompt);
 
 		const result = await prompt.open(content);
-
 		this.prompts.delete(key);
 
 		return result;
@@ -103,6 +104,11 @@ export class PromptManager implements Component {
 		const prompt = this.prompts.get(key);
 		if (!prompt) return;
 
+		if (!prompt.pending) {
+			this.prompts.delete(key);
+			return;
+		}
+
 		return prompt.handleResponse(response, message);
 	}
 
@@ -116,7 +122,9 @@ export class PromptManager implements Component {
 		const key = `${message.channel.id}.${reactor.id}`;
 		const prompt = this.prompts.get(key);
 		if (!prompt) return;
-		if (message.id !== prompt.ctx.responseId) return;
+
+		const responseId = await prompt.ctx.getResponseId();
+		if (message.id !== responseId) return;
 
 		return prompt.handleReaction(message, emoji);
 	}
