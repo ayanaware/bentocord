@@ -745,6 +745,7 @@ export class CommandManager implements Component {
 		if (promptSubs.length > 1) {
 			const choices: Array<PromptChoice<string>> = [];
 			for (const sub of promptSubs) {
+				if (sub.hidden ?? false) continue; // don't show hidden subcommands/groups
 				const primary = this.getPrimaryName(sub.name);
 
 				let description = sub.description;

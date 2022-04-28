@@ -159,16 +159,20 @@ export class HelpManager implements CommandEntity {
 			const choices: Array<PromptChoice<Array<string>>> = [];
 			for (let [key, desc] of list) {
 				if (typeof desc === 'object') desc = await ctx.formatTranslation(desc.key, desc.repl, desc.backup);
-				choices.push({ name: `${key} - ${desc}`, value: key.split(' '), match: [key] });
+
+				choices.push({ name: `${key}${desc ? ` - ${desc}` : ''}`, value: key.split(' '), match: [key] });
 			}
 
-			const subCommandResponse = await ctx.formatTranslation(
-				'BENTOCORD_HELP_COMMAND', { command: fullPath.join(' '), description },
-				'**Command**: `{command}`\n**Description**: {description}');
+			// build list of data
+			const data: Map<string, string> = new Map();
+			data.set(await ctx.formatTranslation('BENTOCORD_WORD_COMMAND', {}, 'Command'), `\`${fullPath.join(' ')}\``);
+			data.set(await ctx.formatTranslation('BENTOCORD_WORD_DESCRIPTION', {}, 'Description'), description);
 
-			const subCommandHeader = await ctx.formatTranslation('BENTOCORD_HELP_HEADER_SUBCOMMANDS', {}, '**Sub Commands**:');
+			const response = Array.from(data.entries()).map(([k, v]) => `**${k}**${v ? `: ${v}` : ''}`).join('\n');
 
-			const choice = await ctx.choice(choices, `${subCommandResponse}\n\n${subCommandHeader}`, { resolveOnClose: true });
+			const subCommandHeader = await ctx.formatTranslation('BENTOCORD_WORD_SUBCOMMANDS', {}, 'Sub Commands');
+
+			const choice = await ctx.choice(choices, `${response}\n\n**${subCommandHeader}**:`, { resolveOnClose: true });
 
 			// user picked something remove first element and invoke ourself again
 			if (choice) return this.showCommandHelp(ctx, definition, choice.slice(1));
@@ -191,9 +195,12 @@ export class HelpManager implements CommandEntity {
 		let description = command.description;
 		if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl, description.backup);
 
-		const response = await ctx.formatTranslation(
-			'BENTOCORD_HELP_COMMAND', { command: fullPath.join(' '), description },
-			'**Command**: `{command}`\n**Description**: {description}');
+		// build list of data
+		const data: Map<string, string> = new Map();
+		data.set(await ctx.formatTranslation('BENTOCORD_WORD_COMMAND', {}, 'Command'), `\`${fullPath.join(' ')}\``);
+		data.set(await ctx.formatTranslation('BENTOCORD_WORD_DESCRIPTION', {}, 'Description'), description);
+
+		const response = Array.from(data.entries()).map(([k, v]) => `**${k}**${v ? `: ${v}` : ''}`).join('\n');
 
 		// Display Options
 		const choices: Array<PromptChoice<Array<string>>> = [];
@@ -206,14 +213,14 @@ export class HelpManager implements CommandEntity {
 			if (typeof desc === 'object') desc = await ctx.formatTranslation(desc.key, desc.repl, desc.backup);
 			const type = this.cm.getTypePreview(option);
 
-			choices.push({ name: `${name}${type} - ${desc}`, value: [...fullPath, name ], match: [name] });
+			choices.push({ name: `${name}${type}${desc ? ` - ${desc}` : ''}`, value: [...fullPath, name ], match: [name] });
 		}
 
 		// TODO: Dynamically generate examples and/or pull from definition
 
 		if (choices.length > 0) {
-			const optionHeader = await ctx.formatTranslation('BENTOCORD_HELP_HEADER_OPTIONS', {}, '**Options**:');
-			const choice = await ctx.choice(choices, `${response}\n\n${optionHeader}`, { resolveOnClose: true });
+			const optionHeader = await ctx.formatTranslation('BENTOCORD_WORD_OPTIONS', {}, 'Options');
+			const choice = await ctx.choice(choices, `${response}\n\n**${optionHeader}**:`, { resolveOnClose: true });
 
 			// user picked something remove first element and invoke showCommandHelp again
 			if (choice) return this.showCommandHelp(ctx, definition, choice.slice(1));
@@ -230,14 +237,19 @@ export class HelpManager implements CommandEntity {
 
 		const type = this.cm.getTypePreview(option);
 
-		const optionResponse = await ctx.formatTranslation(
-			'BENTOCORD_HELP_OPTION', { option: primary, description, type, required: (option.required ?? true).toString(), command: crumb.join(' ') },
-			'**Option**: `{option}`\n**Description**: {description}\n**Type**: {type}\n**Required**: {required}\n**Parent Command**: `{command}`');
+		const data: Map<string, string> = new Map();
+		data.set(await ctx.formatTranslation('BENTOCORD_WORD_OPTION', {}, 'Option'), primary);
+		data.set(await ctx.formatTranslation('BENTOCORD_WORD_DESCRIPTION', {}, 'Description'), description);
+		data.set(await ctx.formatTranslation('BENTOCORD_WORD_TYPE', {}, 'Type'), type);
+		data.set(await ctx.formatTranslation('BENTOCORD_WORD_COMMAND', {}, 'Command'), `\`${crumb.join(' ')}\``);
+		data.set(await ctx.formatTranslation('BENTOCORD_WORD_REQUIRED', {}, 'Required'), type);
+
+		const response = Array.from(data.entries()).map(([k, v]) => `**${k}**${v ? `: ${v}` : ''}`).join('\n');
 
 		// TODO: Add choices, min/max, channel_types, etc
 
 		// TODO: Dynamically generate example values based on type
 
-		return ctx.createResponse(optionResponse);
+		return ctx.createResponse(response);
 	}
 }
