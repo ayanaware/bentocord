@@ -125,7 +125,8 @@ export class HelpManager implements CommandEntity {
 				}
 
 				// recurse & continue if options are available
-				if (!('options' in option)) continue;
+				if (!this.cm.isAnySubCommand(option)) continue;
+
 				// skip hidden, unless it was filtered
 				if (!filter && (option.hidden ?? false)) continue;
 
