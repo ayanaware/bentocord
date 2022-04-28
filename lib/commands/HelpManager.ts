@@ -242,7 +242,7 @@ export class HelpManager implements CommandEntity {
 		data.set(await ctx.formatTranslation('BENTOCORD_WORD_DESCRIPTION', {}, 'Description'), description);
 		data.set(await ctx.formatTranslation('BENTOCORD_WORD_TYPE', {}, 'Type'), type);
 		data.set(await ctx.formatTranslation('BENTOCORD_WORD_COMMAND', {}, 'Command'), `\`${crumb.join(' ')}\``);
-		data.set(await ctx.formatTranslation('BENTOCORD_WORD_REQUIRED', {}, 'Required'), type);
+		data.set(await ctx.formatTranslation('BENTOCORD_WORD_REQUIRED', {}, 'Required'), (option.required ?? true).toString());
 
 		const response = Array.from(data.entries()).map(([k, v]) => `**${k}**${v ? `: ${v}` : ''}`).join('\n');
 
