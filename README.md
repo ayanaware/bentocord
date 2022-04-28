@@ -48,7 +48,7 @@ BENTOCORD_BUILTIN_COMMANDS | boolean | Should Bentocord load it's built-in Comma
 Bentocord uses a replaceable entity, [BentocordInterface](https://gitlab.com/ayanaware/bentocord/-/blob/master/lib/BentocordInterface.ts), to offer extendable functionality. Bentocord tries to offer sane defaults but for things like Storage, Localization, and other Application specific features you will need to provide a replacement entity. I often refer to this replacement entity as BentocordOverride.
 
 
-It should be easy enough to implement your BentocordOverride. Simply create a normal Bento Entity. Extend BentocordInterface and override functions you wish to take control over. You can find all the functions and their description [here](https://gitlab.com/ayanaware/bentocord/-/blob/master/lib/interfaces/StorageLike.ts). Then simply make use of `bento.replaceEntity()`.
+It should be easy enough to implement your BentocordOverride. Simply create a normal Bento Entity. Extend BentocordInterface and override functions you wish to take control over. You can find all the functions and their description [here](https://gitlab.com/ayanaware/bentocord/-/blob/master/lib/BentocordInterface.ts). Then simply make use of `bento.replaceEntity()`.
 
 >**IMPORTANT**: A BentocordOverride implementation should include basic caching for many of the possibly "expensive" calls. Such as `getPrefix`, `formatTranslation`, and many more. Functions such as these can and will be hit many times a second, and only increase as your bot grows. Some of these call's even take place on `MESSAGE_CREATE`. It is extreamly bad practice to hit your backend every call. Both for your backends sake and application responsiveness to your users. So add some caching :)
 
