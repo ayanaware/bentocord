@@ -60,7 +60,7 @@ export class HelpManager implements CommandEntity {
 		const unsorted: Array<[string, Array<string>]> = [];
 		for (const [category, commands] of this.cm.getCategorizedCommands()) {
 			const names = Array.from(commands.entries())
-				.filter(([, v]) => !!v.definition.hidden) // remove hidden
+				.filter(([, v]) => !v.definition.hidden) // remove hidden
 				.map(k => k[0]).sort();
 
 			const display = await ctx.formatTranslation(`BENTOCORD_HELP_CATEGORY_${category.toLocaleUpperCase()}`, {}, category.toLocaleUpperCase());
