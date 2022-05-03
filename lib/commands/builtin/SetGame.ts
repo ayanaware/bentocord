@@ -26,26 +26,26 @@ export class SetGameCommand implements CommandEntity {
 		description: { key: 'BENTOCORD_COMMAND_SETGAME_DESCRIPTION', backup: 'Set the bot\'s game status' },
 		options: [
 			{ type: OptionType.SUB_COMMAND, name: ['playing'], description: { key: 'BENTOCORD_COMMAND_SETGAME_PLAYING_DESCRIPTION', backup: 'Set the bot status to playing' }, options: [
-				{ type: OptionType.STRING, name: ['activity'], description: { key: 'BENTOCORD_OPTION_ACTIVITY_DESCRIPTION', backup: 'The activity to set' } },
+				{ type: OptionType.STRING, name: ['activity'], description: { key: 'BENTOCORD_OPTION_ACTIVITY_DESCRIPTION', backup: 'The activity to set' }, rest: true },
 			] },
 			{ type: OptionType.SUB_COMMAND, name: ['streaming'], description: { key: 'BENTOCORD_COMMAND_SETGAME_STREAMING_DESCRIPTION', backup: 'Set the bot status to streaming' }, options: [
-				{ type: OptionType.STRING, name: ['activity'], description: { key: 'BENTOCORD_OPTION_ACTIVITY_DESCRIPTION', backup: 'The activity to set' } },
 				{ type: OptionType.STRING, name: ['url'], description: { key: 'BENTOCORD_OPTION_URL_DESCRIPTION', backup: 'The activity url' } },
+				{ type: OptionType.STRING, name: ['activity'], description: { key: 'BENTOCORD_OPTION_ACTIVITY_DESCRIPTION', backup: 'The activity to set' }, rest: true },
 			] },
 			{ type: OptionType.SUB_COMMAND, name: ['listening'], description: { key: 'BENTOCORD_COMMAND_SETGAME_LISTENING_DESCRIPTION', backup: 'Set the bot status to listening' }, options: [
-				{ type: OptionType.STRING, name: ['activity'], description: { key: 'BENTOCORD_OPTION_ACTIVITY_DESCRIPTION', backup: 'The activity to set' } },
+				{ type: OptionType.STRING, name: ['activity'], description: { key: 'BENTOCORD_OPTION_ACTIVITY_DESCRIPTION', backup: 'The activity to set' }, rest: true },
 			] },
 			{ type: OptionType.SUB_COMMAND, name: ['watching'], description: { key: 'BENTOCORD_COMMAND_SETGAME_WATCHING_DESCRIPTION', backup: 'Set the bot status to watching' }, options: [
-				{ type: OptionType.STRING, name: ['activity'], description: { key: 'BENTOCORD_OPTION_ACTIVITY_DESCRIPTION', backup: 'The activity to set' } },
+				{ type: OptionType.STRING, name: ['activity'], description: { key: 'BENTOCORD_OPTION_ACTIVITY_DESCRIPTION', backup: 'The activity to set' }, rest: true },
 			] },
 			{ type: OptionType.SUB_COMMAND, name: ['competing'], description: { key: 'BENTOCORD_COMMAND_SETGAME_COMPETING_DESCRIPTION', backup: 'Set the botstatus to competing' }, options: [
-				{ type: OptionType.STRING, name: ['activity'], description: { key: 'BENTOCORD_OPTION_ACTIVITY_DESCRIPTION', backup: 'The activity to set' } },
+				{ type: OptionType.STRING, name: ['activity'], description: { key: 'BENTOCORD_OPTION_ACTIVITY_DESCRIPTION', backup: 'The activity to set' }, rest: true },
 			] },
 
 			// support for custom status
 			{ type: OptionType.SUB_COMMAND, name: ['custom'], description: { key: 'BENTOCORD_COMMAND_SETGAME_CUSTOM_DESCRIPTION', backup: 'Set the bot status to a custom type' }, options: [
 				{ type: OptionType.NUMBER, name: ['type'], description: { key: 'BENTOCORD_OPTION_TYPE_DESCRIPTION', backup: 'The type of custom status' } },
-				{ type: OptionType.STRING, name: ['activity'], description: { key: 'BENTOCORD_OPTION_ACTIVITY_DESCRIPTION', backup: 'The activity to set' } },
+				{ type: OptionType.STRING, name: ['activity'], description: { key: 'BENTOCORD_OPTION_ACTIVITY_DESCRIPTION', backup: 'The activity to set' }, rest: true },
 			] },
 		],
 
