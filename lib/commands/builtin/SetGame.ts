@@ -16,9 +16,9 @@ export class SetGameCommand implements CommandEntity {
 	public name = '@ayanaware/bentocord:SetGameCommand';
 	public api!: ComponentAPI;
 	public parent = CommandManager;
+	public replaceable = true;
 
 	@Inject(Discord) private readonly discord: Discord;
-
 	private activity: ActivityPartial<BotActivityType>;
 
 	public definition: CommandDefinition = {
@@ -95,7 +95,7 @@ export class SetGameCommand implements CommandEntity {
 	 * Store the activity for the bot, and apply it to all ready shards.
 	 * @param activity The activity to set the bot to.
 	 */
-	public async setActivity(activity: ActivityPartial<BotActivityType>): Promise<void> {
+	protected async setActivity(activity: ActivityPartial<BotActivityType>): Promise<void> {
 		this.activity = activity;
 
 		for (const [, shard] of this.discord.client.shards) await this.restoreActivity(shard.id);
@@ -105,7 +105,7 @@ export class SetGameCommand implements CommandEntity {
 	 * Fetch activity for the bot
 	 * @returns The activity for the bot.
 	 */
-	public async getActivity(): Promise<ActivityPartial<BotActivityType>> {
+	protected async getActivity(): Promise<ActivityPartial<BotActivityType>> {
 		return this.activity;
 	}
 
@@ -115,13 +115,13 @@ export class SetGameCommand implements CommandEntity {
 	 * @param shard The shard to transform the activity for
 	 * @returns The transformed activity
 	 */
-	public async formatActivity(activity: ActivityPartial<BotActivityType>, shard: Shard): Promise<ActivityPartial<BotActivityType>> {
+	protected async formatActivity(activity: ActivityPartial<BotActivityType>, shard: Shard): Promise<ActivityPartial<BotActivityType>> {
 		return activity;
 	}
 
 	@Subscribe(Discord, DiscordEvent.SHARD_READY)
 	@Subscribe(Discord, DiscordEvent.SHARD_RESUME)
-	public async restoreActivity(id: number): Promise<void> {
+	protected async restoreActivity(id: number): Promise<void> {
 		// attempt to get shard
 		const shard = this.discord.client.shards.get(id);
 		if (!shard || !shard.ready) return;
