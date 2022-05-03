@@ -918,15 +918,15 @@ export class CommandManager implements Component {
 		const ctx = new InteractionCommandContext(this, this.promptManager, command, interaction);
 		ctx.alias = data.name;
 
-		// handle ignoreMode
-		if (this.ignoreMode && !(await ctx.isBotOwner())) {
-			log.warn(`Skipped Command "${data.name}" execution by "${ctx.author.id}", because the bot is in ignoreMode.`);
-			return;
-		}
-
 		try {
 			// prepare context
 			await ctx.prepare();
+
+			// handle ignoreMode
+			if (this.ignoreMode && !(await ctx.isBotOwner())) {
+				log.warn(`Skipped Command "${data.name}" execution by "${ctx.author.id}", because the bot is in ignoreMode.`);
+				return;
+			}
 
 			// pre-flight checks, perms, suppressors, etc
 			if (!(await this.prepareCommand(command, ctx))) return;
@@ -1015,15 +1015,15 @@ export class CommandManager implements Component {
 		const ctx = new MessageCommandContext(this, this.promptManager, command, message);
 		ctx.alias = name;
 
-		// handle ignoreMode
-		if (this.ignoreMode && !(await ctx.isBotOwner())) {
-			log.warn(`Skipped Command "${name}" execution by "${ctx.author.id}", because the bot is in ignoreMode.`);
-			return;
-		}
-
 		try {
 			// prepare context
 			await ctx.prepare();
+
+			// handle ignoreMode
+			if (this.ignoreMode && !(await ctx.isBotOwner())) {
+				log.warn(`Skipped Command "${name}" execution by "${ctx.author.id}", because the bot is in ignoreMode.`);
+				return;
+			}
 
 			// pre-flight checks, perms, suppressors, etc
 			if (!(await this.prepareCommand(command, ctx))) return;
