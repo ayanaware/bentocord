@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Plugin, PluginAPI, Variable } from '@ayanaware/bento';
 
-import { Message } from 'eris';
+import { ActivityPartial, BotActivityType, Message, Shard } from 'eris';
 
 import { BentocordVariable } from './BentocordVariable';
 import type { LocalizedEmbedBuilder } from './builders/LocalizedEmbedBuilder';
@@ -29,6 +29,12 @@ export class BentocordInterface implements Plugin {
 	protected readonly prefixes: Map<string, string> = new Map();
 	protected readonly permissions: Map<string, boolean> = new Map();
 
+	protected activity: ActivityPartial<BotActivityType>;
+
+	/**
+	 * Used to determine what shards this process controls.
+	 * @returns Shard Data
+	 */
 	public async getShardData(): Promise<ShardData> {
 		return { shardIds: [0], shardCount: 1 };
 	}
@@ -42,6 +48,18 @@ export class BentocordInterface implements Plugin {
 		const owners = this.owners.split(',').map(o => o.trim());
 		return owners.includes(userId);
 	}
+
+	// HELP
+	public async getHelpEmbed(embed: LocalizedEmbedBuilder): Promise<LocalizedEmbedBuilder> {
+		const name = this.api.getProperty<string>('APPLICATION_NAME') || 'Bentocord';
+		const version = this.api.getProperty('APPLICATION_VERSION') || '';
+
+		embed.setAuthor(`${name} ${version}`);
+
+		return embed;
+	}
+
+	// PREFIXES
 
 	/**
 	 * Get the prefix for a given snowflake (ex: guildId).
@@ -76,14 +94,11 @@ export class BentocordInterface implements Plugin {
 		return 'test-';
 	}
 
-	public async getHelpEmbed(embed: LocalizedEmbedBuilder): Promise<LocalizedEmbedBuilder> {
-		const name = this.api.getProperty<string>('APPLICATION_NAME') || 'Bentocord';
-		const version = this.api.getProperty('APPLICATION_VERSION') || '';
-
-		embed.setAuthor(`${name} ${version}`);
-
-		return embed;
+	public async resolveAlias(name: string, args: string, message: Message): Promise<Array<string>> {
+		return [undefined, undefined];
 	}
+
+	// LOCALIZATION
 
 	public async formatNumber(num: number, ctx?: Record<string, string>): Promise<string> {
 		return null;
@@ -127,6 +142,8 @@ export class BentocordInterface implements Plugin {
 	public async convertTranslationMap(translations: Record<string, string>): Promise<Record<string, string>> {
 		return translations;
 	}
+
+	// PERMISSIONS
 
 	/**
 	 * Get the permission for a given snowflake.
@@ -230,9 +247,5 @@ export class BentocordInterface implements Plugin {
 		}
 
 		return [null, null];
-	}
-
-	public async resolveAlias(name: string, args: string, message: Message): Promise<Array<string>> {
-		return [undefined, undefined];
 	}
 }

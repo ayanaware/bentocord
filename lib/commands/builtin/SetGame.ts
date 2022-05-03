@@ -18,7 +18,7 @@ export class SetGameCommand implements CommandEntity {
 	public parent = CommandManager;
 	public replaceable = true;
 
-	@Inject(Discord) private readonly discord: Discord;
+	@Inject() private readonly discord: Discord;
 	private activity: ActivityPartial<BotActivityType>;
 
 	public definition: CommandDefinition = {

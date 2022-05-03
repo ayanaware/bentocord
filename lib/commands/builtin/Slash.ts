@@ -12,6 +12,7 @@ export class SlashCommand implements CommandEntity {
 	public name = '@ayanaware/bentocord:Slash';
 	public api!: ComponentAPI;
 	public parent = CommandManager;
+	public replaceable = true;
 
 	@Inject() private readonly sm: SlashManager;
 

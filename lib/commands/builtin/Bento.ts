@@ -11,6 +11,7 @@ export class BentoCommand implements CommandEntity {
 	public name = '@ayanaware/bentocord:BentoCommand';
 	public api!: ComponentAPI;
 	public parent = CommandManager;
+	public replaceable = true;
 
 	public definition: CommandDefinition = {
 		name: ['bento', 'bentocord', { key: 'BENTOCORD_COMMAND_BENTO' }],

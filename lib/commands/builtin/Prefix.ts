@@ -12,6 +12,7 @@ export class PrefixCommand implements CommandEntity {
 	public name = '@ayanaware/bentocord:PrefixCommand';
 	public api!: ComponentAPI;
 	public parent = CommandManager;
+	public replaceable = true;
 
 	public definition: CommandDefinition = {
 		name: ['prefix', { key: 'BENTOCORD_COMMAND_PREFIX' }],

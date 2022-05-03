@@ -10,6 +10,7 @@ export class AdvancedCommand implements CommandEntity {
 	public name = '@ayanaware/bentocord:AdvancedCommand';
 	public api!: ComponentAPI;
 	public parent = CommandManager;
+	public replaceable = true;
 
 	@Inject() private readonly cm: CommandManager;
 

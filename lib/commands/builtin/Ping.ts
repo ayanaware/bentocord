@@ -9,6 +9,7 @@ export class PingCommand implements CommandEntity {
 	public name = '@ayanaware/bentocord:PingCommand';
 	public api!: ComponentAPI;
 	public parent = CommandManager;
+	public replaceable = true;
 
 	public definition: CommandDefinition = {
 		name: ['ping', 'pong', { key: 'BENTOCORD_COMMAND_PING' }, { key: 'BENTOCORD_COMMAND_PONG' }],
