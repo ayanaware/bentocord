@@ -36,10 +36,11 @@ This means Bentocord expects you to set all Variables you care about before `Ben
 Key | Type | Description | Default
 --- | --- | --- | ---
 BENTOCORD_TOKEN | string | [Discord Authentication Token](https://discord.com/developers/docs/intro#bots-and-apps) | null
-BENTOCORD_COMMAND_PREFIX | string | The default prefix to use for Bentocord's Command Handler | bentocord
 BENTOCORD_BOT_OWNERS | list* | Discord user id list | null
-BENTOCORD_TEST_GUILDS | list* | Discord server id list to auto register `test-` prefixed slash commands to | null
+BENTOCORD_IGNORE_MODE | boolean | This will disable much of the bot for users not in `BENTOCORD_BOT_OWNERS` | false
+BENTOCORD_COMMAND_PREFIX | string | The default prefix to use for Bentocord's Command Handler | bentocord
 BENTOCORD_BUILTIN_COMMANDS | boolean | Should Bentocord load it's built-in Commands (ex: ping, bento) | true
+BENTOCORD_TEST_GUILDS | list* | Discord server id list to auto register `test-` prefixed slash commands to | null
 
 >\* = comma seperated list of items
 
