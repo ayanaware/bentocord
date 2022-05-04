@@ -588,7 +588,16 @@ export class CommandManager implements Component {
 			if (check) return [true, 'explicit'];
 
 			// explicit deny
-			await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_DENIED', { permission, where },  'Permission `{permission}` has been denied on the `{where}` level.');
+			if (where === 'global') {
+				await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_GLOBAL_DENIED', { permission },
+					'Permission `{permission}` is denied globally. As this can only be done by a bot owner, it was likely intentional.');
+			} else if (where === 'user') {
+				await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_USER_DENIED', { permission },
+					'Permission `{permission}` is globally denied for you. As this can only be done by a bot owner, it was likely intentional.');
+			} else {
+				await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_DENIED', { permission, where },
+					'Permission `{permission}` has been denied on the `{where}` level.');
+			}
 
 			return [false, 'explicit'];
 		}
