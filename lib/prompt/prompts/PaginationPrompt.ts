@@ -207,11 +207,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 	public async handleResponse(input: string, message?: Message): Promise<void> {
 		const close = PROMPT_CLOSE.some(c => c.toLocaleLowerCase() === input.toLocaleLowerCase());
-		if (close) {
-			Promise.all([this.removeReactions(), this.deleteMessage(message)]).catch(() => { /* no-op */ });
-
-			return this.resolve();
-		}
+		if (close) return this.close();
 
 		switch (input) {
 			case PaginationControls.EMOJI_FIRST:
@@ -280,8 +276,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 			}
 
 			case PaginationControls.EMOJI_CLOSE: {
-				Promise.all([this.deleteReaction(emoji), this.removeReactions()]).catch(() => { /* no-op */ });
-				return this.resolve();
+				return this.close();
 			}
 		}
 
