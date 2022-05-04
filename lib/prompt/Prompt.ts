@@ -3,6 +3,7 @@ import { Logger } from '@ayanaware/logger-api';
 import { Emoji, Message } from 'eris';
 
 import type { CommandContext } from '../commands/CommandContext';
+import { NON_ERROR_HALT } from '../commands/constants/CommandManager';
 import { DiscordPermission } from '../discord/constants/DiscordPermission';
 import { Translateable } from '../interfaces/Translateable';
 
@@ -113,13 +114,14 @@ export class Prompt<T = string> {
 			content = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED', {}, 'Prompt has been closed.');
 		}
 
-		if (this.reject) await this.reject(reason);
-
 		try {
 			await this.ctx.createResponse({ content });
 		} catch (e) {
 			log.error(`Failed to show prompt close message: ${e}.`);
 		}
+
+		// A prompt closing is not an error
+		if (this.reject) return this.reject(NON_ERROR_HALT);
 	}
 
 	public async handleResponse(input: string, message?: Message): Promise<void> {

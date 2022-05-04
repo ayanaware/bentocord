@@ -1,3 +1,8 @@
+/**
+ * Used to "bubble up" events as a Command executes, when it isn't really an "error"
+ */
+export const NON_ERROR_HALT = '__NON_ERROR_HALT__';
+
 export enum CommandManagerEvent {
 	/**
 	 * Emitted when a command is registered.

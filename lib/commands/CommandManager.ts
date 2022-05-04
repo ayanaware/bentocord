@@ -25,7 +25,7 @@ import { PromptManager } from '../prompt/PromptManager';
 import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
 
 import { CommandContext, InteractionCommandContext, MessageCommandContext } from './CommandContext';
-import { CommandManagerEvent } from './constants/CommandManagerEvent';
+import { CommandManagerEvent, NON_ERROR_HALT } from './constants/CommandManager';
 import { OptionType } from './constants/OptionType';
 import { SuppressorType } from './constants/SuppressorType';
 import type { Command } from './interfaces/Command';
@@ -75,11 +75,6 @@ export interface CommandPermissionDetails {
 	/** Subcommand path for this permission */
 	path?: Array<string>;
 }
-
-/**
- * Used to "bubble up" events as a Command executes, when it isn't really an "error"
- */
-export const NON_ERROR_HALT = '__NON_ERROR_HALT__';
 
 const log = Logger.get(null);
 export class CommandManager implements Component {
