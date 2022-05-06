@@ -84,6 +84,10 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	public async close(reason?: string | Translateable): Promise<void> {
 		this.removeReactions().catch(() => { /* no-op */ });
 
+		// re-render to remove navigation messages
+		this.closing = true;
+		await this.render();
+
 		const resolveOnClose = this.options.resolveOnClose;
 		if (typeof resolveOnClose === 'boolean' && resolveOnClose) return this.resolve();
 
@@ -144,7 +148,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		if (this.content) content = `${this.content}\n${content}`;
 
 		// is more then one page show navigation info
-		if (!this.isSinglePage) {
+		if (!this.isSinglePage && !this.closing) {
 			const usage = await this.ctx.formatTranslation('BENTOCORD_PAGINATION_NAVIGATION', {}, 'Type `<` or `>` to switch pages, `x` to close, or `p<number>` to jump to a page (ex. `p10`).');
 			content += usage;
 

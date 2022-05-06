@@ -20,6 +20,8 @@ export class Prompt<T = string> {
 	public pending = false;
 	public sent: string;
 
+	public closing = false;
+
 	protected resolve: (value?: T | PromiseLike<T>) => Promise<void>;
 	protected reject: (reason?: any) => Promise<void>;
 	protected timer: NodeJS.Timeout;
