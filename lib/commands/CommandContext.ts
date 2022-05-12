@@ -1,11 +1,11 @@
 import { EntityAPI } from '@ayanaware/bento';
 
 import {
-	AllowedMentions,
+	AdvancedMessageContentEdit,
 	AnyChannel,
 	CommandInteraction,
 	Constants,
-	EmbedOptions,
+	FileContent,
 	Guild,
 	Member,
 	Message,
@@ -30,13 +30,6 @@ import type { Command } from './interfaces/Command';
 const { ChannelTypes } = Constants;
 
 export type AnyCommandContext = MessageCommandContext | InteractionCommandContext;
-
-export interface ResponseContent {
-	content?: string;
-	embeds?: Array<EmbedOptions>;
-
-	allowedMentions?: AllowedMentions;
-}
 
 export abstract class CommandContext {
 	private readonly api: EntityAPI;
@@ -236,11 +229,15 @@ export abstract class CommandContext {
 
 	public abstract acknowledge(): Promise<void>;
 
-	public abstract createResponse(response: string | ResponseContent): Promise<unknown>;
-	public abstract editResponse(response: string | ResponseContent): Promise<unknown>;
+	public abstract createResponse(response: MessageContent, files?: Array<FileContent>): Promise<unknown>;
+	public abstract editResponse(response: MessageContent, files?: Array<FileContent>): Promise<unknown>;
 	public abstract deleteResponse(): Promise<void>;
 
 	public abstract deleteExecutionMessage(): Promise<void>;
+
+	public abstract createMessage(content: MessageContent, files?: Array<FileContent>): Promise<unknown>;
+	public abstract editMessage(messageId: string, content: MessageContent, files?: Array<FileContent>): Promise<unknown>;
+	public abstract deleteMessage(messageId: string): Promise<void>;
 }
 
 export class InteractionCommandContext extends CommandContext {
@@ -298,35 +295,41 @@ export class InteractionCommandContext extends CommandContext {
 		this.responseId = '@original';
 	}
 
-	public async createResponse(response: string | ResponseContent): Promise<unknown> {
-		if (this.interaction.acknowledged) return this.editResponse(response);
+	public async createResponse(response: MessageContent, files?: Array<FileContent>): Promise<unknown> {
+		if (this.interaction.acknowledged) return this.editResponse(response, files);
 
-		if (typeof response === 'string') response = { content: response };
-
-		await this.interaction.createMessage(response);
+		await this.interaction.createMessage(response, files);
 		this.responseId = '@original';
 	}
 
-	public async editResponse(response: string | ResponseContent): Promise<unknown> {
-		if (!this.interaction.acknowledged) return this.createResponse(response);
-
-		if (typeof response === 'string') response = { content: response };
+	public async editResponse(response: MessageContent, files?: Array<FileContent>): Promise<unknown> {
+		if (!this.interaction.acknowledged) return this.createResponse(response, files);
 
 		if (!this.responseId) {
 			// create a new message
-			const msg = await this.interaction.createFollowup(response);
+			const msg = await this.interaction.createFollowup(response, files);
 			this.responseId = msg.id;
 
 			return msg;
 		}
 
-		return this.interaction.editMessage(this.responseId, response);
+		try {
+			return await this.interaction.editMessage(this.responseId, response, files);
+		} catch (e) {
+			// issue editing, create a new message
+			const msg = await this.interaction.createFollowup(response, files);
+			this.responseId = msg.id;
+
+			return msg;
+		}
 	}
 
 	public async deleteResponse(): Promise<void> {
-		if (!this.interaction.acknowledged || !this.responseId) return;
+		if (!this.responseId) return;
 
-		await this.interaction.deleteMessage(this.responseId);
+		if (this.responseId === '@original') await this.interaction.deleteOriginalMessage();
+		else await this.interaction.deleteMessage(this.responseId);
+
 		this.responseId = null;
 	}
 
@@ -337,6 +340,18 @@ export class InteractionCommandContext extends CommandContext {
 			await this.interaction.deleteOriginalMessage();
 			this.responseId = null;
 		} catch { /* NO-OP */ }
+	}
+
+	public async createMessage(content: MessageContent, files?: Array<FileContent>): Promise<unknown> {
+		return this.interaction.createFollowup(content, files);
+	}
+
+	public async editMessage(messageId: string, content: MessageContent, files?: Array<FileContent>): Promise<unknown> {
+		return this.interaction.editMessage(messageId, content, files);
+	}
+
+	public async deleteMessage(messageId: string): Promise<void> {
+		return this.interaction.deleteMessage(messageId);
 	}
 }
 
@@ -381,38 +396,37 @@ export class MessageCommandContext extends CommandContext {
 	}
 
 	public async acknowledge(): Promise<void> {
-		// NO-OP on Message Context
+		if (this.responseId) return;
+
+		await this.createResponse('...');
 	}
 
-	public async createResponse(response: string | ResponseContent): Promise<unknown> {
-		if (this.responseId) return this.editResponse(response);
+	public async createResponse(response: MessageContent, files?: Array<FileContent>): Promise<unknown> {
+		if (this.responseId) return this.editResponse(response, files);
 
-		if (typeof response === 'string') response = { content: response };
-
-		const content: MessageContent = {
-			content: response.content,
-			embed: response.embeds ? response.embeds[0] : null,
-			allowedMentions: response.allowedMentions,
-		};
-
-		const message = await this.channel.createMessage(content);
+		const message = await this.channel.createMessage(response, files);
 		this.responseId = message.id;
 
 		return message;
 	}
 
-	public async editResponse(response: string | ResponseContent): Promise<unknown> {
-		if (!this.responseId) return this.createResponse(response);
+	public async editResponse(response: MessageContent, files?: Array<FileContent>): Promise<unknown> {
+		if (!this.responseId) return this.createResponse(response, files);
 
 		if (typeof response === 'string') response = { content: response };
 
-		const content: MessageContent = {
-			content: response.content,
-			embed: response.embeds ? response.embeds[0] : null,
-			allowedMentions: response.allowedMentions,
-		};
+		const content: AdvancedMessageContentEdit = response;
+		if (files) content.file = files;
 
-		return this.channel.editMessage(this.responseId, content);
+		try {
+			return await this.channel.editMessage(this.responseId, content);
+		} catch (e) {
+			// issue editing, create a new message
+			const message = await this.channel.createMessage(content, files);
+			this.responseId = message.id;
+
+			return message;
+		}
 	}
 
 	public async deleteResponse(): Promise<void> {
@@ -425,5 +439,22 @@ export class MessageCommandContext extends CommandContext {
 		try {
 			await this.message.delete();
 		} catch { /* NO-OP */ }
+	}
+
+	public async createMessage(content: MessageContent, files?: Array<FileContent>): Promise<unknown> {
+		return this.channel.createMessage(content, files);
+	}
+
+	public async editMessage(messageId: string, content: MessageContent, files?: Array<FileContent>): Promise<unknown> {
+		if (typeof content === 'string') content = { content };
+
+		const edit: AdvancedMessageContentEdit = content;
+		if (files) edit.file = files;
+
+		return this.channel.editMessage(messageId, edit);
+	}
+
+	public async deleteMessage(messageId: string): Promise<void> {
+		return this.channel.deleteMessage(messageId);
 	}
 }

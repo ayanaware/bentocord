@@ -40,7 +40,9 @@ export class PromptManager implements Component {
 
 		if (prompt.pending) {
 			const reason = await ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_NEW', {}, 'New prompt was opened.');
-			await prompt.close(reason);
+			try {
+				await prompt.close(reason);
+			} catch { /* NO-OP */}
 		}
 
 		this.prompts.delete(key);
