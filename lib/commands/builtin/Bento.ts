@@ -17,6 +17,7 @@ export class BentoCommand implements CommandEntity {
 		name: ['bento', 'bentocord', { key: 'BENTOCORD_COMMAND_BENTO' }],
 		description: { key: 'BENTOCORD_COMMAND_BENTO_DESCRIPTION', backup: 'Display bentocord details' },
 
+		hidden: true,
 		registerSlash: false,
 	};
 

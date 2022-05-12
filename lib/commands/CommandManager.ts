@@ -84,8 +84,8 @@ export class CommandManager implements Component {
 	@Variable({ name: BentocordVariable.BENTOCORD_COMMAND_PREFIX, default: 'bentocord' })
 	public defaultPrefix: string;
 
-	@Variable({ name: BentocordVariable.BENTOCORD_IGNORE_MODE, default: false })
-	public ignoreMode: boolean = false;
+	@Variable({ name: BentocordVariable.BENTOCORD_IGNORE_MODE, default: 'false' })
+	public ignoreMode: string;
 
 	@Inject() private readonly interface: BentocordInterface;
 	@Inject() private readonly discord: Discord;
@@ -488,11 +488,11 @@ export class CommandManager implements Component {
 			}
 		}
 
+		const start = process.hrtime();
 		// Command Execution
 		try {
 			// TODO: Use Typescript metadata to ensure .execute() and options match
 
-			const start = process.hrtime();
 			await command.execute(ctx, options);
 			const end = process.hrtime(start);
 
@@ -502,6 +502,19 @@ export class CommandManager implements Component {
 			this.api.emit(CommandManagerEvent.COMMAND_SUCCESS, command, ctx, options, mili);
 			log.debug(`Command "${primary}" executed by "${ctx.author.id}", took ${mili}ms`);
 		} catch (e) {
+			// halt requested (this is lazy, I'll fix it later, probably)
+			if (e === NON_ERROR_HALT) {
+				const end = process.hrtime(start);
+
+				const nano = end[0] * 1e9 + end[1];
+				const mili = nano / 1e6;
+
+				this.api.emit(CommandManagerEvent.COMMAND_SUCCESS, command, ctx, options, mili);
+				log.debug(`Command "${primary}" executed by "${ctx.author.id}", took ${mili}ms`);
+
+				return;
+			}
+
 			this.api.emit(CommandManagerEvent.COMMAND_FAILURE, command, ctx, options, e);
 			log.error(`Command ${primary}.execute() error:\n${util.inspect(e)}`);
 
@@ -909,12 +922,8 @@ export class CommandManager implements Component {
 
 		const data = interaction.data;
 
-		let command = this.findCommand(data.name);
-		if (!command) {
-			const testPrefix = await this.interface.getTestCommandPrefix();
-			if (data.name.startsWith(testPrefix)) command = this.findCommand(data.name.replace(new RegExp(`^${testPrefix}`, 'i'), ''));
-			if (!command) return; // command or test-command not found
-		}
+		const command = this.findCommand(data.name);
+		if (!command) return; // command not found
 
 		const definition = command.definition;
 		if (typeof definition.registerSlash === 'boolean' && !definition.registerSlash) return; // slash disabled
@@ -927,7 +936,7 @@ export class CommandManager implements Component {
 			await ctx.prepare();
 
 			// handle ignoreMode
-			if (this.ignoreMode && !(await ctx.isBotOwner())) {
+			if (this.ignoreMode === 'true' && !(await ctx.isBotOwner())) {
 				log.warn(`Skipped Command "${data.name}" execution by "${ctx.author.id}", because the bot is in ignoreMode.`);
 				return;
 			}
@@ -1024,7 +1033,7 @@ export class CommandManager implements Component {
 			await ctx.prepare();
 
 			// handle ignoreMode
-			if (this.ignoreMode && !(await ctx.isBotOwner())) {
+			if (this.ignoreMode === 'true' && !(await ctx.isBotOwner())) {
 				log.warn(`Skipped Command "${name}" execution by "${ctx.author.id}", because the bot is in ignoreMode.`);
 				return;
 			}

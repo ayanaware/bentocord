@@ -26,7 +26,7 @@ export class AdvancedCommand implements CommandEntity {
 		disablePrefix: true,
 	};
 
-	public async execute(ctx: CommandContext, options: { alias: string, opts: string }): Promise<unknown> {
+	public async execute(ctx: CommandContext, options: { alias: string, options: string }): Promise<unknown> {
 		const aliases = await this.cm.getItemTranslations(this.definition.name, true);
 		if (aliases.some(a => a[0] === options.alias.toLocaleLowerCase())) return ctx.createTranslatedResponse('BENTOCORD_ADV_NO_RECURSIVE', {}, 'Recursive execution is not allowed.');
 
@@ -39,7 +39,7 @@ export class AdvancedCommand implements CommandEntity {
 		if (!(await this.cm.prepareCommand(command, ctx))) return;
 
 		// fufill options
-		const cmdOptions = await this.cm.fufillTextOptions(ctx, definition, options.opts);
+		const cmdOptions = await this.cm.fufillTextOptions(ctx, definition, options.options);
 
 		return this.cm.executeCommand(command, ctx, cmdOptions);
 	}

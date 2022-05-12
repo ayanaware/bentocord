@@ -13,9 +13,7 @@ import {
 } from 'eris';
 
 import { BentocordInterface } from '../BentocordInterface';
-import { BentocordVariable } from '../BentocordVariable';
 import { Discord } from '../discord/Discord';
-import { DiscordEvent } from '../discord/constants/DiscordEvent';
 
 import { CommandManager } from './CommandManager';
 import { OptionType } from './constants/OptionType';
@@ -39,29 +37,6 @@ export class SlashManager implements Component {
 	@Inject() private readonly interface: BentocordInterface;
 	@Inject() private readonly discord: Discord;
 	@Inject() private readonly cm: CommandManager;
-
-	private hasSynced = false;
-
-	/**
-	 * Sync test- prefixed Slash Commands with TestGuilds
-	 */
-	public async syncTestGuildCommands(): Promise<void> {
-		// get test guild list
-		const testGuilds = this.api.getVariable<string>({ name: BentocordVariable.BENTOCORD_TEST_GUILDS, default: '' }).split(',').map(g => g.trim()).filter(v => !!v);
-		if (testGuilds.length < 1) return;
-
-		const testPrefix = await this.interface.getTestCommandPrefix();
-
-		// prefix commands with test-
-		let commands = await this.convertCommands();
-		commands = commands.map(c => ({ ...c, name: `${testPrefix}${c.name}` }));
-
-		for (const guildId of testGuilds) {
-			await this.syncCommands(commands, { delete: testPrefix, guildId });
-		}
-
-		log.info(`Successfully synced "${commands.length}" slash commnads in: "${testGuilds.join(', ')}"`);
-	}
 
 	/**
 	 * Sync Slash Commands with Discord
@@ -298,14 +273,5 @@ export class SlashManager implements Component {
 		}
 
 		return collector;
-	}
-
-	@Subscribe(Discord, DiscordEvent.SHARD_READY)
-	@Subscribe(Discord, DiscordEvent.SHARD_RESUME)
-	private async handleStateChange(shardId: number) {
-		if (this.hasSynced || shardId !== 0) return;
-
-		await this.syncTestGuildCommands();
-		this.hasSynced = true;
 	}
 }

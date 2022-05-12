@@ -90,10 +90,6 @@ export class BentocordInterface implements Plugin {
 		return [];
 	}
 
-	public async getTestCommandPrefix(): Promise<string> {
-		return 'test-';
-	}
-
 	public async resolveAlias(name: string, args: string, message: Message): Promise<Array<string>> {
 		return [undefined, undefined];
 	}
