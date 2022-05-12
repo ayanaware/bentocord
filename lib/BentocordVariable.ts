@@ -28,6 +28,4 @@ export enum BentocordVariable {
 	 * Should the optional built-in commands be registered?
 	 */
 	BENTOCORD_BUILTIN_COMMANDS = 'BENTOCORD_BUILTIN_COMMANDS',
-
-	BENTOCORD_TEST_GUILDS = 'BENTOCORD_TEST_GUILDS',
 }
