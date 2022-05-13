@@ -142,6 +142,10 @@ export class SlashManager implements Component {
 			description: description[0],
 		};
 
+		// dm_permission support
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+		(appCommand as any).dm_permission = definition.allowDM ?? true;
+
 		// add name localizations (convert for discord needed)
 		if (Object.keys(translations).length > 0) {
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
