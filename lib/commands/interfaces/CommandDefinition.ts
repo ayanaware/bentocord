@@ -41,8 +41,11 @@ export interface CommandDefinition {
 	/** Discord Permissions this command requires */
 	selfPermissions?: Array<DiscordPermission>;
 
+	/** Can this command be used in Direct Messages */
+	allowDM?: boolean;
+
 	/** Should this command be registered as a slash command? */
-	registerSlash?: boolean | undefined;
+	registerSlash?: boolean;
 
 	/** Disable execution via message w/ prefix */
 	disablePrefix?: boolean;

@@ -13,10 +13,12 @@ export * from './commands/CommandManager';
 export * from './commands/CommandContext';
 export * from './commands/HelpManager';
 export * from './commands/SlashManager';
+
 export * from './commands/constants/CommandManager';
 export * from './commands/constants/DiscordLocales';
 export * from './commands/constants/OptionType';
 export * from './commands/constants/SuppressorType';
+
 export * from './commands/interfaces/Command';
 export * from './commands/interfaces/CommandDefinition';
 export * from './commands/interfaces/CommandOption';

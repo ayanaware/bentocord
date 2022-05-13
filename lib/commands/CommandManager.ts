@@ -433,6 +433,13 @@ export class CommandManager implements Component {
 	 */
 	public async prepareCommand(command: Command, ctx: CommandContext): Promise<boolean> {
 		const definition = command.definition;
+		const primary = this.getPrimaryName(definition.name);
+
+		// handle allowDM
+		if (ctx.channel.type === Constants.ChannelTypes.DM && !(definition.allowDM ?? true)) {
+			await ctx.createTranslatedResponse('BENTOCORD_COMMAND_DM_DISABLED', {}, 'This command cannot be used in direct messages');
+			return false;
+		}
 
 		// process suppressors
 		const suppressed = await this.executeSuppressors(ctx, definition);
@@ -441,14 +448,17 @@ export class CommandManager implements Component {
 			return false;
 		}
 
-		// check permission
-		const primary = this.getPrimaryName(definition.name);
+		// handle ignoreMode
+		if (this.ignoreMode === 'true' && !(await ctx.isBotOwner())) {
+			log.warn(`Skipped Command "${primary}" execution by "${ctx.author.id}", because the bot is in ignoreMode.`);
+			return;
+		}
 
+		// check permission
 		const permissionName = definition.permissionName ?? primary;
-		const path = [permissionName];
 
 		// check perm for explicit deny
-		const [state, type] = await this.checkPermission(ctx, path, definition.permissionDefaults);
+		const [state, type] = await this.checkPermission(ctx, [permissionName], definition.permissionDefaults);
 		if (type === 'explicit') return state;
 
 		// check category for explicit deny
@@ -935,12 +945,6 @@ export class CommandManager implements Component {
 			// prepare context
 			await ctx.prepare();
 
-			// handle ignoreMode
-			if (this.ignoreMode === 'true' && !(await ctx.isBotOwner())) {
-				log.warn(`Skipped Command "${data.name}" execution by "${ctx.author.id}", because the bot is in ignoreMode.`);
-				return;
-			}
-
 			// pre-flight checks, perms, suppressors, etc
 			if (!(await this.prepareCommand(command, ctx))) return;
 
@@ -1031,12 +1035,6 @@ export class CommandManager implements Component {
 		try {
 			// prepare context
 			await ctx.prepare();
-
-			// handle ignoreMode
-			if (this.ignoreMode === 'true' && !(await ctx.isBotOwner())) {
-				log.warn(`Skipped Command "${name}" execution by "${ctx.author.id}", because the bot is in ignoreMode.`);
-				return;
-			}
 
 			// pre-flight checks, perms, suppressors, etc
 			if (!(await this.prepareCommand(command, ctx))) return;

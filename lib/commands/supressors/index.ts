@@ -1,5 +1,6 @@
 import { BotOwnerSuppressor } from './BotOwnerSuppressor';
 import { ChannelSuppressor } from './ChannelSuppressor';
+import { DMSuppressor } from './DMSuppressor';
 import { GuildAdminSuppressor } from './GuildAdminSuppressor';
 import { GuildOwnerSuppressor } from './GuildOwnerSuppressor';
 import { GuildSuppressor } from './GuildSuppressor';
@@ -14,4 +15,5 @@ export const Suppressors = [
 	new ChannelSuppressor(),
 	new RoleSuppressor(),
 	new GuildSuppressor(),
+	new DMSuppressor(),
 ];

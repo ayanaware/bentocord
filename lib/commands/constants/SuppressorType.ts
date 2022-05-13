@@ -16,4 +16,8 @@ export enum SuppressorType {
 	ROLE,
 	/** Guild: guildIds[] */
 	GUILD,
+
+	// Other
+	/** DM */
+	DM,
 }
