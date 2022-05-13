@@ -54,6 +54,8 @@ export abstract class CommandContext {
 	public messageId?: string;
 	public message?: Message;
 
+	/** The bot's user id */
+	public selfId: string;
 	/** The bot's user object */
 	public self: ExtendedUser;
 	/** The bot's member object if available */
@@ -159,7 +161,7 @@ export abstract class CommandContext {
 		if (!this.channel || !this.guild) return false;
 		const channel = this.channel as TextChannel;
 
-		return channel.permissionsOf(this.self.id).has(permission) || false;
+		return channel.permissionsOf(this.selfId).has(permission) || false;
 	}
 
 	/**
@@ -256,6 +258,7 @@ export class InteractionCommandContext extends CommandContext {
 	public async prepare(): Promise<void> {
 		const client = this.discord.client;
 		this.self = client.user;
+		this.selfId = client.user.id;
 
 		this.channelId = this.interaction.channel.id;
 
@@ -379,6 +382,7 @@ export class MessageCommandContext extends CommandContext {
 	public async prepare(): Promise<void> {
 		const client = this.discord.client;
 		this.self = client.user;
+		this.selfId = client.user.id;
 
 		this.channelId = this.message.channel.id;
 
