@@ -28,6 +28,17 @@ export * from './commands/interfaces/entity/CommandEntity';
 export * from './commands/interfaces/entity/ResolverEntity';
 export * from './commands/interfaces/entity/SuppressorEntity';
 
+export * from './commands/options/BigIntegerOption';
+export * from './commands/options/BooleanOption';
+export * from './commands/options/ChannelOption';
+export * from './commands/options/EmojiOption';
+export * from './commands/options/GuildOption';
+export * from './commands/options/IntegerOption';
+export * from './commands/options/NumberOption';
+export * from './commands/options/RoleOption';
+export * from './commands/options/StringOption';
+export * from './commands/options/UserOption';
+
 export * from './commands/builtin/Advanced';
 export * from './commands/builtin/Bento';
 export * from './commands/builtin/Ping';
