@@ -5,6 +5,7 @@ import {
 	AnyChannel,
 	CommandInteraction,
 	Constants,
+	ExtendedUser,
 	FileContent,
 	Guild,
 	Member,
@@ -52,6 +53,11 @@ export abstract class CommandContext {
 
 	public messageId?: string;
 	public message?: Message;
+
+	/** The bot's user object */
+	public self: ExtendedUser;
+	/** The bot's member object if available */
+	public selfMember?: Member;
 
 	public readonly interface: BentocordInterface;
 	public readonly discord: Discord;
@@ -152,10 +158,8 @@ export abstract class CommandContext {
 	public selfHasPermission(permission: DiscordPermission): boolean {
 		if (!this.channel || !this.guild) return false;
 		const channel = this.channel as TextChannel;
-		const selfId = this.discord.client.user.id;
-		if (!selfId) return;
 
-		return channel.permissionsOf(selfId).has(permission) || false;
+		return channel.permissionsOf(this.self.id).has(permission) || false;
 	}
 
 	/**
@@ -251,6 +255,7 @@ export class InteractionCommandContext extends CommandContext {
 
 	public async prepare(): Promise<void> {
 		const client = this.discord.client;
+		this.self = client.user;
 
 		this.channelId = this.interaction.channel.id;
 
@@ -263,14 +268,17 @@ export class InteractionCommandContext extends CommandContext {
 			this.authorId = this.interaction.member.user.id;
 			this.author = this.interaction.member.user;
 
+			this.member = this.interaction.member;
+
 			this.guildId = this.interaction.guildID;
 
 			const guild = client.guilds.get(this.interaction.guildID);
 			if (!guild) throw new Error('InteractionCommandContext: Guild not found');
 			this.guild = guild;
 
-			const member = guild.members.get(this.authorId);
-			if (member) this.member = member;
+			// selfMember
+			const selfMember = guild.members.get(client.user.id);
+			if (selfMember) this.selfMember = selfMember;
 		} else {
 			this.authorId = this.interaction.user.id;
 			this.author = this.interaction.user;
@@ -370,6 +378,7 @@ export class MessageCommandContext extends CommandContext {
 
 	public async prepare(): Promise<void> {
 		const client = this.discord.client;
+		this.self = client.user;
 
 		this.channelId = this.message.channel.id;
 
@@ -387,7 +396,11 @@ export class MessageCommandContext extends CommandContext {
 			this.guildId = guild.id;
 			this.guild = guild;
 
-			if (this.message.member) this.member = this.message.member;
+			this.member = this.message.member;
+
+			// selfMember
+			const selfMember = guild.members.get(client.user.id);
+			if (selfMember) this.selfMember = selfMember;
 		}
 	}
 

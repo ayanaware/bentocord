@@ -185,7 +185,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	protected async removeReactions(): Promise<void> {
 		const messageId = await this.ctx.getResponseId();
 		const channel = this.ctx.channel;
-		const selfId = this.ctx.discord.client.user.id;
+		const selfId = this.ctx.self.id;
 		if (!messageId || !channel || !selfId) return;
 
 		// if we have manage message, just yeet all the reactions
