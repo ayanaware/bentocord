@@ -8,10 +8,13 @@ export enum OptionType {
 	BOOLEAN,
 	/** integer */
 	INTEGER,
-	/** number */
-	NUMBER,
 	/** string */
 	STRING,
+
+	/** number (double) */
+	NUMBER,
+	/** bigint */
+	BIG_INTEGER,
 
 	// DISCORD
 	/** User, Member if in guild */

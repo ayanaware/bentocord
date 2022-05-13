@@ -45,7 +45,7 @@ import type { ResolverEntity } from './interfaces/entity/ResolverEntity';
 import type { SuppressorEntity } from './interfaces/entity/SuppressorEntity';
 import { ParsedItem, Parser, ParserOutput } from './internal/Parser';
 import { Tokenizer } from './internal/Tokenizer';
-import { Resolvers } from './resolvers';
+import { Resolvers } from './options';
 import { Suppressors } from './supressors';
 
 export interface CommandDetails {

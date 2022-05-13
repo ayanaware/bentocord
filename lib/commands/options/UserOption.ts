@@ -2,21 +2,23 @@ import { Collection, Constants, Member, User } from 'eris';
 
 import { CommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
-import { CommandOptionUser } from '../interfaces/CommandOption';
+import type { CommandOptionValue } from '../interfaces/CommandOption';
 import { Resolver } from '../interfaces/Resolver';
 
-export class UserResolver implements Resolver<User|Member> {
+export type OptionUser = CommandOptionValue<OptionType.USER, User | Member>;
+
+export class UserOptionResolver implements Resolver<User|Member> {
 	public option = OptionType.USER;
 	public convert = Constants.ApplicationCommandOptionTypes.USER;
 
-	public async reduce(ctx: CommandContext, option: CommandOptionUser, user: User | Member): Promise<{ display: string, extra?: string }> {
+	public async reduce(ctx: CommandContext, option: OptionUser, user: User | Member): Promise<{ display: string, extra?: string }> {
 		let display = `${user.username}#${user.discriminator}`;
 		if ((user as Member).nick) display = `${(user as Member).nick} (${display})`;
 
 		return { display, extra: user.id };
 	}
 
-	public async resolve(ctx: CommandContext, option: CommandOptionUser, input: string): Promise<Array<User|Member>> {
+	public async resolve(ctx: CommandContext, option: OptionUser, input: string): Promise<Array<User|Member>> {
 		const client = ctx.discord.client;
 
 		// TODO: Possibly limit this to just self & user who is executing command

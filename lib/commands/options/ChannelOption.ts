@@ -2,18 +2,39 @@ import { AnyGuildChannel, Constants } from 'eris';
 
 import { CommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
-import { CommandOptionChannel } from '../interfaces/CommandOption';
+import { CommandOptionValue } from '../interfaces/CommandOption';
 import { Resolver } from '../interfaces/Resolver';
 
-export class ChannelResolver implements Resolver<AnyGuildChannel> {
+export interface ChannelOption extends CommandOptionValue<OptionType.CHANNEL> {
+	channelTypes?: Array<Constants['ChannelTypes'][keyof Constants['ChannelTypes']]>;
+}
+
+// Common channel types helper
+export const AllTextChannelTypes = [
+	Constants.ChannelTypes.GUILD_TEXT,
+	Constants.ChannelTypes.DM,
+	Constants.ChannelTypes.GROUP_DM,
+	Constants.ChannelTypes.GUILD_NEWS,
+	Constants.ChannelTypes.GUILD_STORE,
+	Constants.ChannelTypes.GUILD_NEWS_THREAD,
+	Constants.ChannelTypes.GUILD_PUBLIC_THREAD,
+	Constants.ChannelTypes.GUILD_PRIVATE_THREAD,
+];
+
+export const AllVoiceChannelTypes = [
+	Constants.ChannelTypes.GUILD_VOICE,
+	Constants.ChannelTypes.GUILD_STAGE_VOICE,
+];
+
+export class ChannelOptionResolver implements Resolver<AnyGuildChannel> {
 	public option = OptionType.CHANNEL;
 	public convert = Constants.ApplicationCommandOptionTypes.CHANNEL;
 
-	public async reduce(ctx: CommandContext, option: CommandOptionChannel, channel: AnyGuildChannel): Promise<{ display: string, extra?: string }> {
+	public async reduce(ctx: CommandContext, option: ChannelOption, channel: AnyGuildChannel): Promise<{ display: string, extra?: string }> {
 		return { display: `#${channel.name}`, extra: channel.id };
 	}
 
-	public async resolve(ctx: CommandContext, option: CommandOptionChannel, input: string): Promise<AnyGuildChannel | Array<AnyGuildChannel>> {
+	public async resolve(ctx: CommandContext, option: ChannelOption, input: string): Promise<AnyGuildChannel | Array<AnyGuildChannel>> {
 		const guild = ctx.guild;
 		if (!guild) return null;
 

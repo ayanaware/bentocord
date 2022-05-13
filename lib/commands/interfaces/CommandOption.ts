@@ -1,7 +1,15 @@
-import { AnyGuildChannel, ChannelTypes, Constants, Emoji, Guild, Member, Role, User } from 'eris';
-
 import { Translateable } from '../../interfaces/Translateable';
 import { OptionType } from '../constants/OptionType';
+import type { BigIntegerOption } from '../options/BigIntegerOption';
+import type { BooleanOption } from '../options/BooleanOption';
+import type { ChannelOption } from '../options/ChannelOption';
+import type { EmojiOption } from '../options/EmojiOption';
+import type { GuildOption } from '../options/GuildOption';
+import type { IntegerOption } from '../options/IntegerOption';
+import type { NumberOption } from '../options/NumberOption';
+import type { RoleOption } from '../options/RoleOption';
+import type { StringOption } from '../options/StringOption';
+import type { OptionUser } from '../options/UserOption';
 
 import { CommandPermissionDefaults } from './CommandDefinition';
 import type { SuppressorDefinition } from './Suppressor';
@@ -88,88 +96,18 @@ export interface CommandOptionSubCommand extends CommandOption<OptionType.SUB_CO
 }
 
 // PRIMITIVES
-export type CommandOptionPrimitive = CommandOptionBoolean | CommandOptionInteger | CommandOptionNumber | CommandOptionString;
-
-// BOOLEAN
-export type CommandOptionBoolean = CommandOptionValue<OptionType.BOOLEAN, boolean>;
-
-// INTEGER
-export type CommandOptionInteger = CommandOptionIntegerWithChoices | CommandOptionIntegerWithMinMax | CommandOptionIntegerWithAutocomplete;
-
-export interface CommandOptionIntegerWithChoices extends CommandOptionValue<OptionType.INTEGER, number> {
-	/** Array of Integer choices */
-	choices?: CommandOptionChoiceCallable<number>;
-}
-
-export interface CommandOptionIntegerWithMinMax extends CommandOptionValue<OptionType.INTEGER, number> {
-	min?: number;
-	max?: number;
-}
-
-export interface CommandOptionIntegerWithAutocomplete extends CommandOptionValue<OptionType.INTEGER, number> {
-	autocomplete?: true;
-}
-
-// NUMBER
-export type CommandOptionNumber = CommandOptionNumberWithChoices | CommandOptionNumberWithMinMax | CommandOptionNumberWithAutocomplete;
-
-export interface CommandOptionNumberWithChoices extends CommandOptionValue<OptionType.NUMBER, number> {
-	/** Array of Number choices */
-	choices?: CommandOptionChoiceCallable<number>;
-}
-
-export interface CommandOptionNumberWithMinMax extends CommandOptionValue<OptionType.NUMBER, number> {
-	min?: number;
-	max?: number;
-}
-
-export interface CommandOptionNumberWithAutocomplete extends CommandOptionValue<OptionType.NUMBER, number> {
-	autocomplete?: true;
-}
-
-// STRING
-export type CommandOptionString = CommandOptionStringWithChoices | CommandOptionStringWithAutocomplete;
-
-export interface CommandOptionStringWithChoices extends CommandOptionValue<OptionType.STRING, string> {
-	// ** array of string choices */
-	choices?: CommandOptionChoiceCallable<string>;
-}
-
-export interface CommandOptionStringWithAutocomplete extends CommandOptionValue<OptionType.STRING, string> {
-	/** Autocomplete */
-	autocomplete?: true;
-}
+export type CommandOptionPrimitive =
+	BooleanOption |
+	IntegerOption |
+	StringOption |
+	NumberOption |
+	BigIntegerOption;
 
 // DISCORD
-export type CommandOptionDiscord = CommandOptionUser | CommandOptionGuild | CommandOptionChannel | CommandOptionRole | CommandOptionEmoji;
+export type CommandOptionDiscord =
+	OptionUser |
+	ChannelOption |
+	RoleOption |
+	EmojiOption |
+	GuildOption;
 
-// USER
-export type CommandOptionUser = CommandOptionValue<OptionType.USER, User | Member>;
-
-// CHANNEL
-export type CommandOptionChannel = CommandOptionValue<OptionType.CHANNEL, AnyGuildChannel> & { channelTypes?: Array<ChannelTypes> };
-// Common channel types helper
-export const AllTextChannelTypes = [
-	Constants.ChannelTypes.GUILD_TEXT,
-	Constants.ChannelTypes.DM,
-	Constants.ChannelTypes.GROUP_DM,
-	Constants.ChannelTypes.GUILD_NEWS,
-	Constants.ChannelTypes.GUILD_STORE,
-	Constants.ChannelTypes.GUILD_NEWS_THREAD,
-	Constants.ChannelTypes.GUILD_PUBLIC_THREAD,
-	Constants.ChannelTypes.GUILD_PRIVATE_THREAD,
-];
-
-export const AllVoiceChannelTypes = [
-	Constants.ChannelTypes.GUILD_VOICE,
-	Constants.ChannelTypes.GUILD_STAGE_VOICE,
-];
-
-// ROLE
-export type CommandOptionRole = CommandOptionValue<OptionType.ROLE, Role>;
-
-// GUILD
-export type CommandOptionGuild = CommandOptionValue<OptionType.GUILD, Guild>;
-
-// EMOJI
-export type CommandOptionEmoji = CommandOptionValue<OptionType.EMOJI, Emoji>;
