@@ -10,8 +10,8 @@ export class NumberCommand implements CommandEntity {
 		name: ['num', 'ber'],
 		description: 'add two numbers',
 		options: [
-			{ type: OptionType.NUMBER, name: 'first', description: 'first number' },
-			{ type: OptionType.NUMBER, name: 'second', description: 'second number' },
+			{ type: OptionType.INTEGER, name: 'first', description: 'first number' },
+			{ type: OptionType.INTEGER, name: 'second', description: 'second number' },
 		],
 		allowDM: false,
 	} as CommandDefinition;

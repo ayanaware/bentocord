@@ -12,7 +12,7 @@ export class ArrayCommand implements CommandEntity {
 		description: 'Test away all day',
 		options: [
 			{ type: OptionType.BOOLEAN, array: true, name: 'booleans', description: 'booleans', required: true },
-			{ type: OptionType.NUMBER, array: true, name: 'numbers', description: 'numbers', required: true },
+			{ type: OptionType.INTEGER, array: true, name: 'numbers', description: 'numbers', required: true },
 		],
 	};
 

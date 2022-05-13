@@ -22,7 +22,7 @@ export interface IntegerOptionWithAutocomplete extends CommandOptionValue<Option
 }
 
 export class IntegerOptionResolver implements Resolver<number> {
-	public option = OptionType.NUMBER;
+	public option = OptionType.INTEGER;
 	public convert = Constants.ApplicationCommandOptionTypes.INTEGER;
 
 	public async resolve(ctx: CommandContext, option: IntegerOption, text: string): Promise<number> {

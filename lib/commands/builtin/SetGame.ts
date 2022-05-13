@@ -44,7 +44,7 @@ export class SetGameCommand implements CommandEntity {
 
 			// support for custom status
 			{ type: OptionType.SUB_COMMAND, name: ['custom'], description: { key: 'BENTOCORD_COMMAND_SETGAME_CUSTOM_DESCRIPTION', backup: 'Set the bot status to a custom type' }, options: [
-				{ type: OptionType.NUMBER, name: ['type'], description: { key: 'BENTOCORD_OPTION_TYPE_DESCRIPTION', backup: 'The type of custom status' } },
+				{ type: OptionType.INTEGER, name: ['type'], description: { key: 'BENTOCORD_OPTION_TYPE_DESCRIPTION', backup: 'The type of custom status' } },
 				{ type: OptionType.STRING, name: ['activity'], description: { key: 'BENTOCORD_OPTION_ACTIVITY_DESCRIPTION', backup: 'The activity to set' }, rest: true },
 			] },
 		],

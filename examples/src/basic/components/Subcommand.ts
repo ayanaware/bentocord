@@ -19,7 +19,7 @@ export class SubCommandTest implements CommandEntity {
 			] },
 			{ type: OptionType.SUB_COMMAND_GROUP, name: 'foo', description: 'group foo', options: [
 				{ type: OptionType.SUB_COMMAND, name: 'bar', description: 'subcommand bar', options: [
-					{ type: OptionType.NUMBER, array: true, name: 'test', description: 'value test' }
+					{ type: OptionType.INTEGER, array: true, name: 'test', description: 'value test' }
 				] },
 				{ type: OptionType.SUB_COMMAND, name: 'baz', description: 'subcommand baz', options: [
 					{ type: OptionType.BOOLEAN, array: true, name: 'test', description: 'value test' }
