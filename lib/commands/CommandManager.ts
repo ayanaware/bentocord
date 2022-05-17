@@ -249,7 +249,7 @@ export class CommandManager implements Component {
 	/**
 	 * Get all translations for a possibly translatable
 	 * @param item Array<string | Translatable>
-	 * @returns Tuple <string, Array<{ lang: string }>>
+	 * @returns Array of Tuple [string, Array<{ lang: string }>]
 	 */
 	public async getItemTranslations(items: string | Translateable | Array<string | Translateable>, normalize = false): Promise<Array<[string, Record<string, string>]>> {
 		if (!Array.isArray(items)) items = [items];
@@ -435,6 +435,20 @@ export class CommandManager implements Component {
 		const definition = command.definition;
 		const primary = this.getPrimaryName(definition.name);
 
+		// handle ignoreMode
+		if (this.ignoreMode === 'true' && !(await ctx.isBotOwner())) {
+			log.warn(`Skipped Command "${primary}" execution by "${ctx.author.id}", because the bot is in ignoreMode.`);
+			await ctx.acknowledge();
+			return false;
+		}
+
+		// handle checkCommand
+		const check = await this.interface.checkCommand(command, ctx);
+		if (!check) {
+			await ctx.acknowledge();
+			return false;
+		}
+
 		// handle allowDM
 		if (ctx.channel.type === Constants.ChannelTypes.DM && !(definition.allowDM ?? true)) {
 			await ctx.createTranslatedResponse('BENTOCORD_COMMAND_DM_DISABLED', {}, 'This command cannot be used in direct messages');
@@ -444,14 +458,8 @@ export class CommandManager implements Component {
 		// process suppressors
 		const suppressed = await this.executeSuppressors(ctx, definition);
 		if (suppressed) {
-			await ctx.createTranslatedResponse('BENTOCORD_SUPPRESSOR_HALT', { suppressor: suppressed.name, message: suppressed.message }, 'Execution was halted by `{suppressed}`: {message}');
+			await ctx.createTranslatedResponse('BENTOCORD_SUPPRESSOR_HALT', { suppressor: suppressed.name, message: suppressed.message }, 'Execution was halted by `{suppressor}`: {message}');
 			return false;
-		}
-
-		// handle ignoreMode
-		if (this.ignoreMode === 'true' && !(await ctx.isBotOwner())) {
-			log.warn(`Skipped Command "${primary}" execution by "${ctx.author.id}", because the bot is in ignoreMode.`);
-			return;
 		}
 
 		// check permission
@@ -884,7 +892,7 @@ export class CommandManager implements Component {
 		if (!option.array && Array.isArray(out)) out = out[0];
 
 		// default value
-		if ((out == null || (Array.isArray(out) && out.length === 0)) && option.default !== undefined) out = option.default as unknown as T;
+		if ((out == null || (Array.isArray(out) && out.length === 0)) && option.default !== undefined) out = option.default  as T;
 
 		// handle choices
 		if ('choices' in option) {

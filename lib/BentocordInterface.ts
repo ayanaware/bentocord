@@ -1,10 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Plugin, PluginAPI, Variable } from '@ayanaware/bento';
 
-import { ActivityPartial, BotActivityType, Message, Shard } from 'eris';
+import { ActivityPartial, BotActivityType, Message } from 'eris';
 
 import { BentocordVariable } from './BentocordVariable';
 import type { LocalizedEmbedBuilder } from './builders/LocalizedEmbedBuilder';
+import type { CommandContext } from './commands/CommandContext';
+import { Command } from './commands/interfaces/Command';
 import { MessageContext } from './interfaces/MessageContext';
 import { PermissionScope, PermissionScopeType } from './interfaces/PermissionScope';
 
@@ -59,6 +61,22 @@ export class BentocordInterface implements Plugin {
 		return embed;
 	}
 
+	// COMMAND
+
+	/**
+	 * Allow's for domain-specific disabling of commands based on context.
+	 * Useful for many things, but not limited to:
+	 * - Disable free instance when paid instance is in the server
+	 * - Simple blacklist functionality
+	 * - Literally anything else you might want to check before running a command
+	 * @param command Command
+	 * @param ctx CommandContext
+	 * @returns boolean Whether or not to continue execution of command
+	 */
+	public async checkCommand(command: Command, ctx: CommandContext): Promise<boolean> {
+		return true;
+	}
+
 	// PREFIXES
 
 	/**
@@ -101,6 +119,15 @@ export class BentocordInterface implements Plugin {
 	}
 
 	public async formatDate(date: Date, ctx?: Record<string, string>): Promise<string> {
+		return null;
+	}
+
+	/**
+	 * Get locale code for a given context.
+	 * @param ctx Translation Context (Snowflakes)
+	 * @returns Locale Code
+	 */
+	public async getLocale(ctx: Record<string, string>): Promise<string> {
 		return null;
 	}
 
