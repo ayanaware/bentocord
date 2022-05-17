@@ -56,6 +56,9 @@ export interface CommandDefinition {
 	/** Hide this command from general users */
 	hidden?: boolean;
 
+	/** Domain-specific options */
+	extra?: Record<string, unknown>;
+
 	/** Function name or implementation to execute */
 	execute?: string | ((ctx?: CommandContext) => Promise<any>);
 }

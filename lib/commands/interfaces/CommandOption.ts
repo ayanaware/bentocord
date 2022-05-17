@@ -27,6 +27,9 @@ export interface CommandOption<T extends OptionType | string> {
 
 	/** The description of the option */
 	description?: string | Translateable;
+
+	/** Domain-specific options */
+	extra?: Record<string, unknown>;
 }
 
 export interface CommandOptionValue<T extends OptionType, U = unknown> extends CommandOption<T> {
