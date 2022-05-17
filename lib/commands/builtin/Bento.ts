@@ -2,7 +2,7 @@ import { ComponentAPI } from '@ayanaware/bento';
 
 import type { Bentocord } from '../../Bentocord';
 import { CodeblockBuilder } from '../../builders/CodeblockBuilder';
-import { CommandContext } from '../CommandContext';
+import { AnyCommandContext } from '../CommandContext';
 import { CommandManager } from '../CommandManager';
 import { CommandDefinition } from '../interfaces/CommandDefinition';
 import { CommandEntity } from '../interfaces/entity/CommandEntity';
@@ -21,7 +21,7 @@ export class BentoCommand implements CommandEntity {
 		registerSlash: false,
 	};
 
-	public async execute(ctx: CommandContext): Promise<any> {
+	public async execute(ctx: AnyCommandContext): Promise<any> {
 		const cb = new CodeblockBuilder();
 		cb.addLine('Bento Version', this.api.getBentoVersion());
 		const bentocord = this.api.getEntity<Bentocord>('@ayanaware/bentocord');

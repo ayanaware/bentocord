@@ -1,5 +1,5 @@
 import { ComponentAPI } from '@ayanaware/bento';
-import { CommandContext, CommandDefinition, CommandEntity, CommandManager } from '@ayanaware/bentocord';
+import { AnyCommandContext, CommandDefinition, CommandEntity, CommandManager } from '@ayanaware/bentocord';
 
 export class HelloWorld implements CommandEntity {
 	public name = 'HelloWorld';
@@ -11,7 +11,7 @@ export class HelloWorld implements CommandEntity {
 		description: 'Hello world',
 	};
 
-	public async execute(ctx: CommandContext) {
+	public async execute(ctx: AnyCommandContext) {
 		return ctx.createResponse('Hello World!');
 	}
 }

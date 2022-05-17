@@ -1,13 +1,13 @@
 import { Message } from 'eris';
 
-import { CommandContext } from '../../commands/CommandContext';
+import { AnyCommandContext } from '../../commands/CommandContext';
 import { Translateable } from '../../interfaces/Translateable';
 import { PROMPT_CLOSE } from '../Prompt';
 
 import { PaginationOptions, PaginationPrompt } from './PaginationPrompt';
 
 export class ConfirmPrompt extends PaginationPrompt<boolean> {
-	public constructor(ctx: CommandContext, items?: Array<string | Translateable>, options: PaginationOptions = {}) {
+	public constructor(ctx: AnyCommandContext, items?: Array<string | Translateable>, options: PaginationOptions = {}) {
 		options = Object.assign({
 			resolveOnClose: false,
 		} as PaginationOptions, options);

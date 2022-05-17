@@ -1,6 +1,6 @@
 import { ComponentAPI } from '@ayanaware/bento';
 
-import { CommandContext } from '../CommandContext';
+import { AnyCommandContext } from '../CommandContext';
 import { CommandManager } from '../CommandManager';
 import { CommandDefinition } from '../interfaces/CommandDefinition';
 import { CommandEntity } from '../interfaces/entity/CommandEntity';
@@ -16,7 +16,7 @@ export class PingCommand implements CommandEntity {
 		description: { key: 'BENTOCORD_COMMAND_PING_DESCRIPTION', backup: 'Check if the bot is online' },
 	};
 
-	public async execute(ctx: CommandContext): Promise<unknown> {
+	public async execute(ctx: AnyCommandContext): Promise<unknown> {
 		const start = process.hrtime();
 		await ctx.createTranslatedResponse('BENTOCORD_PING', {}, 'Pong!');
 		const end = process.hrtime(start);

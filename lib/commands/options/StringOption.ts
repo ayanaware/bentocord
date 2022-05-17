@@ -1,6 +1,6 @@
 import { Constants } from 'eris';
 
-import { CommandContext } from '../CommandContext';
+import { AnyCommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
 import type { CommandOptionChoiceCallable, CommandOptionValue } from '../interfaces/CommandOption';
 import { Resolver } from '../interfaces/Resolver';
@@ -21,7 +21,7 @@ export class StringOptionResolver implements Resolver<string> {
 	public option = OptionType.STRING;
 	public convert = Constants.ApplicationCommandOptionTypes.STRING;
 
-	public async resolve(ctx: CommandContext, option: StringOption, input: string): Promise<string> {
+	public async resolve(ctx: AnyCommandContext, option: StringOption, input: string): Promise<string> {
 		return input;
 	}
 }

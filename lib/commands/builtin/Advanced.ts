@@ -1,6 +1,6 @@
 import { ComponentAPI, Inject } from '@ayanaware/bento';
 
-import { CommandContext } from '../CommandContext';
+import { AnyCommandContext } from '../CommandContext';
 import { CommandManager } from '../CommandManager';
 import { OptionType } from '../constants/OptionType';
 import { CommandDefinition } from '../interfaces/CommandDefinition';
@@ -26,7 +26,7 @@ export class AdvancedCommand implements CommandEntity {
 		disablePrefix: true,
 	};
 
-	public async execute(ctx: CommandContext, options: { alias: string, options: string }): Promise<unknown> {
+	public async execute(ctx: AnyCommandContext, options: { alias: string, options: string }): Promise<unknown> {
 		const aliases = await this.cm.getItemTranslations(this.definition.name, true);
 		if (aliases.some(a => a[0] === options.alias.toLocaleLowerCase())) return ctx.createTranslatedResponse('BENTOCORD_ADV_NO_RECURSIVE', {}, 'Recursive execution is not allowed.');
 

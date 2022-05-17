@@ -1,4 +1,4 @@
-import type { CommandContext } from '../CommandContext';
+import type { AnyCommandContext } from '../CommandContext';
 
 import type { CommandDefinition } from './CommandDefinition';
 
@@ -7,5 +7,5 @@ export interface Command {
 	definition: CommandDefinition;
 
 	/** Command Execute */
-	execute(ctx: CommandContext, options?: Record<string, unknown>): Promise<any>;
+	execute(ctx: AnyCommandContext, options?: Record<string, unknown>): Promise<any>;
 }

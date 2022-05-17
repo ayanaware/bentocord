@@ -1,6 +1,6 @@
 import { Constants } from 'eris';
 
-import { CommandContext } from '../CommandContext';
+import { AnyCommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
 import type { CommandOptionChoiceCallable, CommandOptionValue } from '../interfaces/CommandOption';
 import { Resolver } from '../interfaces/Resolver';
@@ -25,7 +25,7 @@ export class IntegerOptionResolver implements Resolver<number> {
 	public option = OptionType.INTEGER;
 	public convert = Constants.ApplicationCommandOptionTypes.INTEGER;
 
-	public async resolve(ctx: CommandContext, option: IntegerOption, text: string): Promise<number> {
+	public async resolve(ctx: AnyCommandContext, option: IntegerOption, text: string): Promise<number> {
 		const value = parseInt(text, 10);
 		if (Number.isNaN(value)) return null;
 		if (!Number.isSafeInteger(value)) return null;

@@ -1,5 +1,5 @@
 import { ComponentAPI } from '@ayanaware/bento';
-import { CommandContext, CommandDefinition, CommandEntity, CommandManager } from '@ayanaware/bentocord';
+import { AnyCommandContext, CommandDefinition, CommandEntity, CommandManager } from '@ayanaware/bentocord';
 import { OptionType } from '@ayanaware/bentocord/commands/constants/OptionType';
 
 export class ArrayCommand implements CommandEntity {
@@ -16,7 +16,7 @@ export class ArrayCommand implements CommandEntity {
 		],
 	};
 
-	public async execute(ctx: CommandContext, options: { booleans: Array<boolean>, numbers: Array<number> }) {
+	public async execute(ctx: AnyCommandContext, options: { booleans: Array<boolean>, numbers: Array<number> }) {
 		return ctx.createResponse({ content: `booleans = ${options.booleans.join(', ')}. numbers = ${options.numbers.join(', ')}` });
 	}
 }

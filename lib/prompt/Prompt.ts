@@ -2,7 +2,7 @@ import { Logger } from '@ayanaware/logger-api';
 
 import { Emoji, Message } from 'eris';
 
-import type { CommandContext } from '../commands/CommandContext';
+import type { AnyCommandContext } from '../commands/CommandContext';
 import { NON_ERROR_HALT } from '../commands/constants/CommandManager';
 import { DiscordPermission } from '../discord/constants/DiscordPermission';
 import { Translateable } from '../interfaces/Translateable';
@@ -13,7 +13,7 @@ export const PROMPT_CLOSE = ['exit', 'x', 'close', 'c', ':q'];
 
 const log = Logger.get();
 export class Prompt<T = string> {
-	public readonly ctx: CommandContext;
+	public readonly ctx: AnyCommandContext;
 	public readonly channelId: string;
 	public readonly userId: string;
 
@@ -29,7 +29,7 @@ export class Prompt<T = string> {
 	protected validate: PromptValidate<T>;
 	protected attempt = 0;
 
-	public constructor(ctx: CommandContext, validate?: PromptValidate<T>) {
+	public constructor(ctx: AnyCommandContext, validate?: PromptValidate<T>) {
 		this.ctx = ctx;
 
 		this.channelId = ctx.channelId;

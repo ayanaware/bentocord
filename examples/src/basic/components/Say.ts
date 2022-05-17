@@ -1,5 +1,5 @@
 import { ComponentAPI } from '@ayanaware/bento';
-import { CommandContext, CommandDefinition, CommandEntity, CommandManager } from '@ayanaware/bentocord';
+import { AnyCommandContext, CommandDefinition, CommandEntity, CommandManager } from '@ayanaware/bentocord';
 import { OptionType } from '@ayanaware/bentocord/commands/constants/OptionType';
 
 export class SayCommand implements CommandEntity {
@@ -16,7 +16,7 @@ export class SayCommand implements CommandEntity {
 		],
 	};
 
-	public async execute(ctx: CommandContext, options: { text: string }) {
+	public async execute(ctx: AnyCommandContext, options: { text: string }) {
 		console.log(options);
 		if (!await ctx.confirm(`Say \`${options.text}\`[y/n]?`)) return;
 

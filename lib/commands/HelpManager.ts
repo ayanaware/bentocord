@@ -5,7 +5,7 @@ import { LocalizedEmbedBuilder } from '../builders/LocalizedEmbedBuilder';
 import { Translateable } from '../interfaces/Translateable';
 import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
 
-import { CommandContext } from './CommandContext';
+import { AnyCommandContext } from './CommandContext';
 import { CommandDetails, CommandManager } from './CommandManager';
 import { OptionType } from './constants/OptionType';
 import { CommandDefinition } from './interfaces/CommandDefinition';
@@ -28,7 +28,7 @@ export class HelpManager implements CommandEntity {
 		],
 	};
 
-	public async execute(ctx: CommandContext, { input }: { input?: string }): Promise<unknown> {
+	public async execute(ctx: AnyCommandContext, { input }: { input?: string }): Promise<unknown> {
 		if (!input) return this.showPrimaryHelp(ctx);
 
 		const args = input.split(' ');
@@ -51,7 +51,7 @@ export class HelpManager implements CommandEntity {
 		return ctx.createTranslatedResponse('BENTOCORD_HELP_NOT_FOUND', {}, 'Failed to find relevant help for input');
 	}
 
-	private async showPrimaryHelp(ctx: CommandContext): Promise<unknown> {
+	private async showPrimaryHelp(ctx: AnyCommandContext): Promise<unknown> {
 		// grab embed
 		let embed = new LocalizedEmbedBuilder(ctx);
 		embed = await this.interface.getHelpEmbed(embed);
@@ -77,7 +77,7 @@ export class HelpManager implements CommandEntity {
 		return ctx.createResponse({ embeds: [embed.toJSON()] });
 	}
 
-	private async showCategoryHelp(ctx: CommandContext, category: string, commands: Map<string, CommandDetails>): Promise<unknown> {
+	private async showCategoryHelp(ctx: AnyCommandContext, category: string, commands: Map<string, CommandDetails>): Promise<unknown> {
 		const choices: Array<PromptChoice<CommandDefinition>> = [];
 		for (const [command, details] of Array.from(commands.entries()).sort()) {
 			// skip hidden
@@ -96,7 +96,7 @@ export class HelpManager implements CommandEntity {
 		if (choice) return this.showCommandHelp(ctx, choice, []);
 	}
 
-	public async showCommandHelp(ctx: CommandContext, definition: CommandDefinition, path: Array<string>): Promise<unknown> {
+	public async showCommandHelp(ctx: AnyCommandContext, definition: CommandDefinition, path: Array<string>): Promise<unknown> {
 		let selected: CommandDefinition | AnyCommandOption = definition;
 		let selectedPath: Array<string> = [];
 		const list: Map<string, string | Translateable> = new Map();
@@ -188,7 +188,7 @@ export class HelpManager implements CommandEntity {
 		return this.displayCommand(ctx, definition, selected, selectedPath);
 	}
 
-	private async displayCommand(ctx: CommandContext, definition: CommandDefinition, command: CommandDefinition | AnySubCommandOption, crumb: Array<string> = []) {
+	private async displayCommand(ctx: AnyCommandContext, definition: CommandDefinition, command: CommandDefinition | AnySubCommandOption, crumb: Array<string> = []) {
 		const primary = this.cm.getPrimaryName(command.name);
 		const fullPath = [...crumb, primary];
 
@@ -230,7 +230,7 @@ export class HelpManager implements CommandEntity {
 		return ctx.createResponse(response);
 	}
 
-	private async displayOption(ctx: CommandContext, option: AnyValueCommandOption, crumb: Array<string>) {
+	private async displayOption(ctx: AnyCommandContext, option: AnyValueCommandOption, crumb: Array<string>) {
 		const primary = this.cm.getPrimaryName(option.name);
 		let description = option.description;
 		if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl, description.backup);

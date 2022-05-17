@@ -1,4 +1,4 @@
-import type { CommandContext } from '../CommandContext';
+import type { AnyCommandContext } from '../CommandContext';
 import type { SuppressorType } from '../constants/SuppressorType';
 
 import type { CommandDefinition } from './CommandDefinition';
@@ -9,7 +9,7 @@ export interface Suppressor {
 	suppressor: SuppressorType | string;
 
 	/** Supressor Function. Return of string or true will prevent execution */
-	suppress(ctx: CommandContext, option?: SuppressorOption, ...args: Array<any>): Promise<string | false>;
+	suppress(ctx: AnyCommandContext, option?: SuppressorOption, ...args: Array<any>): Promise<string | false>;
 }
 
 export type SuppressorOption = CommandDefinition | AnySubCommandOption;

@@ -1,5 +1,5 @@
 import { ComponentAPI } from '@ayanaware/bento';
-import { CommandContext, CommandDefinition, CommandEntity, CommandManager, OptionType, SuppressorType } from '@ayanaware/bentocord';
+import { AnyCommandContext, CommandDefinition, CommandEntity, CommandManager, OptionType, SuppressorType } from '@ayanaware/bentocord';
 
 export class NumberCommand implements CommandEntity {
 	public name = 'numberCommnad';
@@ -16,7 +16,7 @@ export class NumberCommand implements CommandEntity {
 		allowDM: false,
 	} as CommandDefinition;
 
-	public async execute(ctx: CommandContext, { first, second }: { first: number, second: number }) {
+	public async execute(ctx: AnyCommandContext, { first, second }: { first: number, second: number }) {
 		return ctx.createResponse(`${first} + ${second} = ${first + second}`);
 	}
 }

@@ -1,6 +1,6 @@
 import { Message } from 'eris';
 
-import type { CommandContext } from '../../commands/CommandContext';
+import type { AnyCommandContext } from '../../commands/CommandContext';
 import { Translateable } from '../../interfaces/Translateable';
 import { PROMPT_CLOSE } from '../Prompt';
 
@@ -16,7 +16,7 @@ export interface PromptChoice<T> {
 export class ChoicePrompt<T> extends PaginationPrompt<T> {
 	private readonly choices: Array<PromptChoice<T>>;
 
-	public constructor(ctx: CommandContext, choices: Array<PromptChoice<T>>, options: PaginationOptions = {}) {
+	public constructor(ctx: AnyCommandContext, choices: Array<PromptChoice<T>>, options: PaginationOptions = {}) {
 		// build items & auto include idx in choice.match
 		const items: Array<string | Translateable> = [];
 		for (let i = 0; i < choices.length; i++) {

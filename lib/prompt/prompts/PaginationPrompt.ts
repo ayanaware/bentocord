@@ -1,7 +1,7 @@
 import { Emoji, Message } from 'eris';
 
 import { CodeblockBuilder } from '../../builders/CodeblockBuilder';
-import type { CommandContext } from '../../commands/CommandContext';
+import type { AnyCommandContext } from '../../commands/CommandContext';
 import { DiscordPermission } from '../../discord/constants/DiscordPermission';
 import { Translateable } from '../../interfaces/Translateable';
 import { Prompt, PROMPT_CLOSE } from '../Prompt';
@@ -44,7 +44,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	protected content: string;
 	private readonly items: Array<string | Translateable> = [];
 
-	public constructor(ctx: CommandContext, items?: Array<string | Translateable>, options: PaginationOptions = {}) {
+	public constructor(ctx: AnyCommandContext, items?: Array<string | Translateable>, options: PaginationOptions = {}) {
 		super(ctx);
 		this.items = items || [];
 		this.options = Object.assign({

@@ -5,7 +5,7 @@ import { ActivityPartial, BotActivityType, Shard } from 'eris';
 
 import { Discord } from '../../discord/Discord';
 import { DiscordEvent } from '../../discord/constants/DiscordEvent';
-import { CommandContext } from '../CommandContext';
+import { AnyCommandContext } from '../CommandContext';
 import { CommandManager } from '../CommandManager';
 import { OptionType } from '../constants/OptionType';
 import { CommandDefinition } from '../interfaces/CommandDefinition';
@@ -55,7 +55,7 @@ export class SetGameCommand implements CommandEntity {
 		permissionDefaults: { admin: false, user: false },
 	};
 
-	public async execute(ctx: CommandContext, options: {
+	public async execute(ctx: AnyCommandContext, options: {
 		playing?: { activity: string },
 		streaming?: { activity: string, url: string },
 		listening?: { activity: string },

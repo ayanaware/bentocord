@@ -1,5 +1,5 @@
 import { ComponentAPI } from '@ayanaware/bento';
-import { CommandContext, CommandDefinition, CommandEntity, CommandManager, OptionType, SuppressorType } from '@ayanaware/bentocord';
+import { AnyCommandContext, CommandDefinition, CommandEntity, CommandManager, OptionType, SuppressorType } from '@ayanaware/bentocord';
 import { Role } from 'eris';
 
 export class RoleTest implements CommandEntity {
@@ -26,7 +26,7 @@ export class RoleTest implements CommandEntity {
 		return [Array.from(this.roles.values()), false];
 	}
 
-	public async execute(ctx: CommandContext, options: { whitelist: { role: Role } }) {
+	public async execute(ctx: AnyCommandContext, options: { whitelist: { role: Role } }) {
 		if (options.whitelist) {
 			this.roles.add(options.whitelist.role.id)
 

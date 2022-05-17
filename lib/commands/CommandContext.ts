@@ -30,7 +30,7 @@ import type { Command } from './interfaces/Command';
 
 const { ChannelTypes } = Constants;
 
-export type AnyCommandContext = MessageCommandContext | InteractionCommandContext;
+export type AnyCommandContext = CommandContext | MessageCommandContext | InteractionCommandContext;
 
 export abstract class CommandContext {
 	private readonly api: EntityAPI;

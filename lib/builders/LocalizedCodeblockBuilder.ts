@@ -1,4 +1,4 @@
-import { CommandContext } from '../commands/CommandContext';
+import { AnyCommandContext } from '../commands/CommandContext';
 import { Translateable } from '../interfaces/Translateable';
 
 import { CodeblockLineItem, CodeblockBuilder } from './CodeblockBuilder';
@@ -6,9 +6,9 @@ import { CodeblockLineItem, CodeblockBuilder } from './CodeblockBuilder';
 export type LocalizedLineItem = string | Translateable;
 
 export class LocalizedCodeblockBuilder extends CodeblockBuilder {
-	private readonly ctx: CommandContext;
+	private readonly ctx: AnyCommandContext;
 
-	public constructor(ctx: CommandContext, language?: string) {
+	public constructor(ctx: AnyCommandContext, language?: string) {
 		super(language);
 
 		this.ctx = ctx;

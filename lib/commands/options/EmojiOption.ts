@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { Constants, Emoji } from 'eris';
 
-import { CommandContext } from '../CommandContext';
+import { AnyCommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
 import type { CommandOptionValue } from '../interfaces/CommandOption';
 import { Resolver } from '../interfaces/Resolver';
@@ -12,11 +12,11 @@ export class EmojiOptionResolver implements Resolver<Emoji> {
 	public option = OptionType.EMOJI;
 	public convert = Constants.ApplicationCommandOptionTypes.STRING;
 
-	async reduce(ctx: CommandContext, option: EmojiOption, emoji: Emoji): Promise<{ display: string, extra?: string }> {
+	async reduce(ctx: AnyCommandContext, option: EmojiOption, emoji: Emoji): Promise<{ display: string, extra?: string }> {
 		return { display: emoji.name };
 	}
 
-	async resolve(ctx: CommandContext, option: EmojiOption, input: string): Promise<Emoji | Array<Emoji>> {
+	async resolve(ctx: AnyCommandContext, option: EmojiOption, input: string): Promise<Emoji | Array<Emoji>> {
 		const guild = ctx.guild;
 		if (!guild) return null;
 

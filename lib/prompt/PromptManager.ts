@@ -2,7 +2,7 @@ import { Component, ComponentAPI, Subscribe } from '@ayanaware/bento';
 
 import { Emoji, Member, Message } from 'eris';
 
-import type { CommandContext } from '../commands/CommandContext';
+import type { AnyCommandContext } from '../commands/CommandContext';
 import { Discord } from '../discord/Discord';
 import { DiscordEvent } from '../discord/constants/DiscordEvent';
 import { Translateable } from '../interfaces/Translateable';
@@ -28,11 +28,11 @@ export class PromptManager implements Component {
 		}
 	}
 
-	private getKey(ctx: CommandContext) {
+	private getKey(ctx: AnyCommandContext) {
 		return `${ctx.channelId}.${ctx.authorId}`;
 	}
 
-	private async closePrompt(ctx: CommandContext) {
+	private async closePrompt(ctx: AnyCommandContext) {
 		const key = this.getKey(ctx);
 
 		const prompt = this.prompts.get(key);
@@ -48,7 +48,7 @@ export class PromptManager implements Component {
 		this.prompts.delete(key);
 	}
 
-	public async createPrompt<T>(ctx: CommandContext, content: string | Translateable, validate?: PromptValidate<T>): Promise<T> {
+	public async createPrompt<T>(ctx: AnyCommandContext, content: string | Translateable, validate?: PromptValidate<T>): Promise<T> {
 		await this.closePrompt(ctx);
 
 		const key = this.getKey(ctx);
@@ -61,7 +61,7 @@ export class PromptManager implements Component {
 		return result;
 	}
 
-	public async createPagination(ctx: CommandContext, items: Array<string | Translateable>, content?: string | Translateable, options?: PaginationOptions): Promise<void> {
+	public async createPagination(ctx: AnyCommandContext, items: Array<string | Translateable>, content?: string | Translateable, options?: PaginationOptions): Promise<void> {
 		await this.closePrompt(ctx);
 
 		const key = this.getKey(ctx);
@@ -74,7 +74,7 @@ export class PromptManager implements Component {
 		return result;
 	}
 
-	public async createChoicePrompt<T>(ctx: CommandContext, choices: Array<PromptChoice<T>>, content?: string | Translateable, options?: PaginationOptions): Promise<T> {
+	public async createChoicePrompt<T>(ctx: AnyCommandContext, choices: Array<PromptChoice<T>>, content?: string | Translateable, options?: PaginationOptions): Promise<T> {
 		await this.closePrompt(ctx);
 
 		const key = this.getKey(ctx);
@@ -87,7 +87,7 @@ export class PromptManager implements Component {
 		return result;
 	}
 
-	public async createConfirmPrompt(ctx: CommandContext, content?: string | Translateable, items?: Array<string | Translateable>, options?: PaginationOptions): Promise<boolean> {
+	public async createConfirmPrompt(ctx: AnyCommandContext, content?: string | Translateable, items?: Array<string | Translateable>, options?: PaginationOptions): Promise<boolean> {
 		await this.closePrompt(ctx);
 
 		const key = this.getKey(ctx);

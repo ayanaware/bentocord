@@ -1,6 +1,6 @@
 import { ComponentAPI, Inject } from '@ayanaware/bento';
 
-import { CommandContext } from '../CommandContext';
+import { AnyCommandContext } from '../CommandContext';
 import { CommandManager } from '../CommandManager';
 import { SlashManager, SyncOptions } from '../SlashManager';
 import { OptionType } from '../constants/OptionType';
@@ -34,7 +34,7 @@ export class SlashCommand implements CommandEntity {
 		hidden: true,
 	};
 
-	public async execute(ctx: CommandContext, options: {
+	public async execute(ctx: AnyCommandContext, options: {
 		resync?: { guild?: string, prefix?: string },
 		purge?: { guild?: string, prefix?: string },
 	}): Promise<any> {

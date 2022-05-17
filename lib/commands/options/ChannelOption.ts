@@ -1,6 +1,6 @@
 import { AnyGuildChannel, Constants } from 'eris';
 
-import { CommandContext } from '../CommandContext';
+import { AnyCommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
 import { CommandOptionValue } from '../interfaces/CommandOption';
 import { Resolver } from '../interfaces/Resolver';
@@ -30,11 +30,11 @@ export class ChannelOptionResolver implements Resolver<AnyGuildChannel> {
 	public option = OptionType.CHANNEL;
 	public convert = Constants.ApplicationCommandOptionTypes.CHANNEL;
 
-	public async reduce(ctx: CommandContext, option: ChannelOption, channel: AnyGuildChannel): Promise<{ display: string, extra?: string }> {
+	public async reduce(ctx: AnyCommandContext, option: ChannelOption, channel: AnyGuildChannel): Promise<{ display: string, extra?: string }> {
 		return { display: `#${channel.name}`, extra: channel.id };
 	}
 
-	public async resolve(ctx: CommandContext, option: ChannelOption, input: string): Promise<AnyGuildChannel | Array<AnyGuildChannel>> {
+	public async resolve(ctx: AnyCommandContext, option: ChannelOption, input: string): Promise<AnyGuildChannel | Array<AnyGuildChannel>> {
 		const guild = ctx.guild;
 		if (!guild) return null;
 

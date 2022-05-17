@@ -1,6 +1,6 @@
 import { Constants, Role } from 'eris';
 
-import { CommandContext } from '../CommandContext';
+import { AnyCommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
 import type { CommandOptionValue } from '../interfaces/CommandOption';
 import { Resolver } from '../interfaces/Resolver';
@@ -11,11 +11,11 @@ export class RoleOptionResolver implements Resolver<Role> {
 	public option = OptionType.ROLE;
 	public convert = Constants.ApplicationCommandOptionTypes.ROLE;
 
-	public async reduce(ctx: CommandContext, option: RoleOption, role: Role): Promise<{ display: string, extra?: string }> {
+	public async reduce(ctx: AnyCommandContext, option: RoleOption, role: Role): Promise<{ display: string, extra?: string }> {
 		return { display: `@${role.name}`, extra: role.id };
 	}
 
-	public async resolve(ctx: CommandContext, option: RoleOption, input: string): Promise<Array<Role>> {
+	public async resolve(ctx: AnyCommandContext, option: RoleOption, input: string): Promise<Array<Role>> {
 		const guild = ctx.guild;
 		if (!guild) return null;
 

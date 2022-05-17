@@ -24,7 +24,7 @@ import { Translateable } from '../interfaces/Translateable';
 import { PromptManager } from '../prompt/PromptManager';
 import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
 
-import { CommandContext, InteractionCommandContext, MessageCommandContext } from './CommandContext';
+import { AnyCommandContext, InteractionCommandContext, MessageCommandContext } from './CommandContext';
 import { CommandManagerEvent, NON_ERROR_HALT } from './constants/CommandManager';
 import { OptionType } from './constants/OptionType';
 import { SuppressorType } from './constants/SuppressorType';
@@ -160,7 +160,7 @@ export class CommandManager implements Component {
 		return this.resolvers.get(type);
 	}
 
-	private async executeResolver<T = unknown>(ctx: CommandContext, option: AnyValueCommandOption, input: string) {
+	private async executeResolver<T = unknown>(ctx: AnyCommandContext, option: AnyValueCommandOption, input: string) {
 		const resolver = this.findResolver(option.type) as Resolver<T>;
 		if (!resolver) return null;
 
@@ -183,7 +183,7 @@ export class CommandManager implements Component {
 		this.suppressors.delete(type);
 	}
 
-	private async executeSuppressors(ctx: CommandContext, option: SuppressorOption): Promise<{ name: string, message: string } | false> {
+	private async executeSuppressors(ctx: AnyCommandContext, option: SuppressorOption): Promise<{ name: string, message: string } | false> {
 		if (!Array.isArray(option.suppressors) || option.suppressors.length < 1) return false;
 
 		for (let definition of option.suppressors) {
@@ -431,7 +431,7 @@ export class CommandManager implements Component {
 	 * @param ctx CommandContext
 	 * @returns boolean, if false you should not execute the command
 	 */
-	public async prepareCommand(command: Command, ctx: CommandContext): Promise<boolean> {
+	public async prepareCommand(command: Command, ctx: AnyCommandContext): Promise<boolean> {
 		const definition = command.definition;
 		const primary = this.getPrimaryName(definition.name);
 
@@ -485,7 +485,7 @@ export class CommandManager implements Component {
 		return true;
 	}
 
-	public async executeCommand(command: Command, ctx: CommandContext, options: Record<string, unknown>): Promise<unknown> {
+	public async executeCommand(command: Command, ctx: AnyCommandContext, options: Record<string, unknown>): Promise<unknown> {
 		const definition = command.definition;
 		const primary = this.getPrimaryName(definition.name);
 
@@ -588,7 +588,7 @@ export class CommandManager implements Component {
 		return collector;
 	}
 
-	private async checkPermission(ctx: CommandContext, path: string | Array<string>, def?: CommandPermissionDefaults | boolean): Promise<[boolean, 'explicit' | 'implicit']> {
+	private async checkPermission(ctx: AnyCommandContext, path: string | Array<string>, def?: CommandPermissionDefaults | boolean): Promise<[boolean, 'explicit' | 'implicit']> {
 		const permCtx: MessageContext = { userId: ctx.authorId, channelId: ctx.channelId };
 		if (ctx.guild) {
 			permCtx.guildId = ctx.guildId;
@@ -650,13 +650,13 @@ export class CommandManager implements Component {
 		return typeBuild;
 	}
 
-	public async fufillInteractionOptions(ctx: CommandContext, definition: CommandDefinition, data: CommandInteraction['data']): Promise<Record<string, unknown>> {
+	public async fufillInteractionOptions(ctx: AnyCommandContext, definition: CommandDefinition, data: CommandInteraction['data']): Promise<Record<string, unknown>> {
 		const primary = this.getPrimaryName(definition.name);
 
 		return this.processInteractionOptions(ctx, definition.options, data.options, [primary]);
 	}
 
-	private async processInteractionOptions(ctx: CommandContext, options: Array<AnyCommandOption>, optionData: Array<InteractionDataOptions>, path: Array<string> = []) {
+	private async processInteractionOptions(ctx: AnyCommandContext, options: Array<AnyCommandOption>, optionData: Array<InteractionDataOptions>, path: Array<string> = []) {
 		let collector: Record<string, unknown> = {};
 
 		if (!options) options = [];
@@ -705,7 +705,7 @@ export class CommandManager implements Component {
 	 * @param options Array of CommandOption
 	 * @param input User input
 	 */
-	public async fufillTextOptions(ctx: CommandContext, definition: CommandDefinition, input: string): Promise<Record<string, unknown>> {
+	public async fufillTextOptions(ctx: AnyCommandContext, definition: CommandDefinition, input: string): Promise<Record<string, unknown>> {
 		const tokens = new Tokenizer(input).tokenize();
 
 		// TODO: Build allowedOptions
@@ -716,7 +716,7 @@ export class CommandManager implements Component {
 		return this.processTextOptions(ctx, definition.options, output, 0, [primary]);
 	}
 
-	private async processTextOptions(ctx: CommandContext, options: Array<AnyCommandOption>, output: ParserOutput, index = 0, path: Array<string> = []): Promise<Record<string, unknown>> {
+	private async processTextOptions(ctx: AnyCommandContext, options: Array<AnyCommandOption>, output: ParserOutput, index = 0, path: Array<string> = []): Promise<Record<string, unknown>> {
 		let collector: Record<string, unknown> = {};
 
 		if (!options) options = [];
@@ -827,7 +827,7 @@ export class CommandManager implements Component {
 		return collector;
 	}
 
-	private async resolveOption<T = unknown>(ctx: CommandContext, option: AnyValueCommandOption, raw: string): Promise<T | Array<T>> {
+	private async resolveOption<T = unknown>(ctx: AnyCommandContext, option: AnyValueCommandOption, raw: string): Promise<T | Array<T>> {
 		if (raw === undefined) raw = '';
 
 		// array support

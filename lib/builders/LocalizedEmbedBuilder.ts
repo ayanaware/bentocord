@@ -1,12 +1,12 @@
-import { CommandContext } from '../commands/CommandContext';
+import { AnyCommandContext } from '../commands/CommandContext';
 import { Translateable } from '../interfaces/Translateable';
 
 import { EmbedBuilder } from './EmbedBuilder';
 
 export class LocalizedEmbedBuilder extends EmbedBuilder {
-	private readonly ctx: CommandContext;
+	private readonly ctx: AnyCommandContext;
 
-	public constructor(ctx: CommandContext) {
+	public constructor(ctx: AnyCommandContext) {
 		super();
 
 		this.ctx = ctx;

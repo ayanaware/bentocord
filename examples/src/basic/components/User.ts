@@ -1,5 +1,5 @@
 import { ComponentAPI } from '@ayanaware/bento';
-import { CommandContext, CommandDefinition, CommandEntity, CommandManager } from '@ayanaware/bentocord';
+import { AnyCommandContext, CommandDefinition, CommandEntity, CommandManager } from '@ayanaware/bentocord';
 import { OptionType } from '@ayanaware/bentocord/commands/constants/OptionType';
 import { User } from 'eris';
 
@@ -17,7 +17,7 @@ export class UserTest implements CommandEntity {
 		],
 	};
 
-	public async execute(ctx: CommandContext, { users, user }: { users: Array<User>, user: User }) {
+	public async execute(ctx: AnyCommandContext, { users, user }: { users: Array<User>, user: User }) {
 		if (!users) users = [];
 		if (user) users.push(user)
 
