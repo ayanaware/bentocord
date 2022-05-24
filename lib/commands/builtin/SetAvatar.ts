@@ -28,6 +28,7 @@ export class SetAvatarCommand implements CommandEntity {
 		hidden: true,
 		registerSlash: false,
 
+		permissionDefaults: { user: false, admin: false },
 		suppressors: [SuppressorType.BOT_OWNER],
 	};
 
