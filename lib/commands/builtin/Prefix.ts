@@ -12,6 +12,8 @@ export class PrefixCommand implements CommandEntity {
 	public parent = CommandManager;
 	public replaceable = true;
 
+	@Inject() protected readonly cm: CommandManager;
+
 	public definition: CommandDefinition = {
 		name: ['prefix', { key: 'BENTOCORD_COMMAND_PREFIX' }],
 		description: { key: 'BENTOCORD_COMMAND_PREFIX_DESCRIPTION', backup: 'Manage command prefix' },
@@ -25,8 +27,6 @@ export class PrefixCommand implements CommandEntity {
 		allowDM: false,
 		registerSlash: false,
 	};
-
-	@Inject() private readonly cm: CommandManager;
 
 	public async execute(ctx: AnyCommandContext, options: { view?: Record<string, never>, set?: { prefix: string } }): Promise<unknown> {
 		if (options.set) return this.set(ctx, options.set.prefix);

@@ -16,7 +16,7 @@ export class SetAvatarCommand implements CommandEntity {
 	public parent = CommandManager;
 	public replaceable = true;
 
-	@Inject() private readonly discord: Discord;
+	@Inject() protected readonly discord: Discord;
 
 	public definition: CommandDefinition = {
 		name: ['setavatar', { key: 'BENTOCORD_COMMAND_SETAVATAR' }],

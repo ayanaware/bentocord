@@ -20,11 +20,12 @@ export class SetGameCommand implements CommandEntity {
 	public parent = CommandManager;
 	public replaceable = true;
 
-	@Inject() private readonly discord: Discord;
-	private activity: ActivityPartial<BotActivityType>;
+	@Inject() protected readonly discord: Discord;
 
 	@Variable({ name: BentocordVariable.BENTOCORD_ACTIVITY_NAME, default: 'with Bentocord' })
-	private readonly default: string;
+	protected readonly default: string;
+
+	protected activity: ActivityPartial<BotActivityType>;
 
 	public definition: CommandDefinition = {
 		name: ['setgame', { key: 'BENTOCORD_COMMAND_SETGAME' }],
