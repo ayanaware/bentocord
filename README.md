@@ -39,6 +39,7 @@ BENTOCORD_TOKEN | string | [Discord Authentication Token](https://discord.com/de
 BENTOCORD_BOT_OWNERS | list* | Discord user id list | null
 BENTOCORD_IGNORE_MODE | boolean | This will disable much of the bot for users not in `BENTOCORD_BOT_OWNERS` | false
 BENTOCORD_COMMAND_PREFIX | string | The default prefix to use for Bentocord's Command Handler | bentocord
+BENTOCORD_ACTIVITY_NAME | string | The default activity name to set per shard | with Bentocord
 BENTOCORD_BUILTIN_COMMANDS | boolean | Should Bentocord load it's built-in Commands (ex: ping, bento) | true
 
 >\* = comma seperated list of items

@@ -11,6 +11,7 @@ import { AdvancedCommand } from './commands/builtin/Advanced';
 import { BentoCommand } from './commands/builtin/Bento';
 import { PingCommand } from './commands/builtin/Ping';
 import { PrefixCommand } from './commands/builtin/Prefix';
+import { SetAvatarCommand } from './commands/builtin/SetAvatar';
 import { SetGameCommand } from './commands/builtin/SetGame';
 import { SlashCommand } from './commands/builtin/Slash';
 import { Discord } from './discord/Discord';
@@ -58,6 +59,7 @@ export class Bentocord implements Plugin {
 			BentoCommand,
 			PingCommand,
 			PrefixCommand,
+			SetAvatarCommand,
 			SetGameCommand,
 			SlashCommand,
 		]);

@@ -43,6 +43,7 @@ export * from './commands/builtin/Advanced';
 export * from './commands/builtin/Bento';
 export * from './commands/builtin/Ping';
 export * from './commands/builtin/Prefix';
+export * from './commands/builtin/SetAvatar';
 export * from './commands/builtin/SetGame';
 export * from './commands/builtin/Slash';
 

@@ -6,7 +6,7 @@ import { ActivityPartial, BotActivityType, Message } from 'eris';
 import { BentocordVariable } from './BentocordVariable';
 import type { LocalizedEmbedBuilder } from './builders/LocalizedEmbedBuilder';
 import type { AnyCommandContext } from './commands/CommandContext';
-import { Command } from './commands/interfaces/Command';
+import type { Command } from './commands/interfaces/Command';
 import { MessageContext } from './interfaces/MessageContext';
 import { PermissionScope, PermissionScopeType } from './interfaces/PermissionScope';
 

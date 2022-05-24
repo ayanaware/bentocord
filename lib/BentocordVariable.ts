@@ -25,6 +25,11 @@ export enum BentocordVariable {
 	BENTOCORD_COMMAND_PREFIX = 'BENTOCORD_COMMAND_PREFIX',
 
 	/**
+	 * The default activity for the bot.
+	 */
+	BENTOCORD_ACTIVITY_NAME = 'BENTOCORD_ACTIVITY_NAME',
+
+	/**
 	 * Should the optional built-in commands be registered?
 	 */
 	BENTOCORD_BUILTIN_COMMANDS = 'BENTOCORD_BUILTIN_COMMANDS',

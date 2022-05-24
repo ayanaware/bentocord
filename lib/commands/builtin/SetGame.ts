@@ -1,13 +1,15 @@
-import { ComponentAPI, Inject, Subscribe } from '@ayanaware/bento';
+import { ComponentAPI, Inject, Subscribe, Variable } from '@ayanaware/bento';
 import { Logger } from '@ayanaware/logger-api';
 
 import { ActivityPartial, BotActivityType, Shard } from 'eris';
 
+import { BentocordVariable } from '../../BentocordVariable';
 import { Discord } from '../../discord/Discord';
 import { DiscordEvent } from '../../discord/constants/DiscordEvent';
 import { AnyCommandContext } from '../CommandContext';
 import { CommandManager } from '../CommandManager';
 import { OptionType } from '../constants/OptionType';
+import { SuppressorType } from '../constants/SuppressorType';
 import { CommandDefinition } from '../interfaces/CommandDefinition';
 import { CommandEntity } from '../interfaces/entity/CommandEntity';
 
@@ -20,6 +22,9 @@ export class SetGameCommand implements CommandEntity {
 
 	@Inject() private readonly discord: Discord;
 	private activity: ActivityPartial<BotActivityType>;
+
+	@Variable({ name: BentocordVariable.BENTOCORD_ACTIVITY_NAME, default: 'with Bentocord' })
+	private readonly default: string;
 
 	public definition: CommandDefinition = {
 		name: ['setgame', { key: 'BENTOCORD_COMMAND_SETGAME' }],
@@ -52,7 +57,7 @@ export class SetGameCommand implements CommandEntity {
 		hidden: true,
 		registerSlash: false,
 
-		permissionDefaults: { admin: false, user: false },
+		suppressors: [SuppressorType.BOT_OWNER],
 	};
 
 	public async execute(ctx: AnyCommandContext, options: {
@@ -106,6 +111,8 @@ export class SetGameCommand implements CommandEntity {
 	 * @returns The activity for the bot.
 	 */
 	protected async getActivity(): Promise<ActivityPartial<BotActivityType>> {
+		if (!this.activity) return { name: this.default };
+
 		return this.activity;
 	}
 
