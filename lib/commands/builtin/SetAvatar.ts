@@ -32,6 +32,9 @@ export class SetAvatarCommand implements CommandEntity {
 	};
 
 	public async execute(ctx: AnyCommandContext, { url }: { url: string }): Promise<void> {
+		// TODO: Check if the url is a valid image url
+		await ctx.createTranslatedResponse('BENTOCORD_AVATAR_UPDATING', {}, 'Updating avatar...');
+
 		return new Promise((resolve, reject) => {
 			https.get(url, res => {
 				let data = '';
