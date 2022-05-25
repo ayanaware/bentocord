@@ -414,8 +414,6 @@ export class MessageCommandContext extends CommandContext {
 
 	public async acknowledge(): Promise<void> {
 		if (this.responseId) return;
-
-		await this.createResponse('...');
 	}
 
 	public async createResponse(response: MessageContent, files?: Array<FileContent>): Promise<unknown> {
