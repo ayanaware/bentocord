@@ -1007,6 +1007,7 @@ export class CommandManager implements Component {
 
 		// message is not a command
 		if (!matches) return;
+		const prefix = matches.groups.prefix;
 		let name = matches.groups.name;
 		let args = matches.groups.args;
 
@@ -1038,6 +1039,7 @@ export class CommandManager implements Component {
 
 		// CommandContext
 		const ctx = new MessageCommandContext(this, this.promptManager, command, message);
+		ctx.prefix = prefix;
 		ctx.alias = name;
 
 		try {
