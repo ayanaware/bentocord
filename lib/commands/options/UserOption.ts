@@ -51,7 +51,7 @@ export class UserOptionResolver implements Resolver<User|Member> {
 
 		// handle nickname
 		if ('nick' in user) {
-			if (user.nick.toLocaleLowerCase().includes(input.toLocaleLowerCase())) return true;
+			if (user.nick && user.nick.toLocaleLowerCase().includes(input.toLocaleLowerCase())) return true;
 		}
 
 		return false;
