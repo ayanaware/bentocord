@@ -21,14 +21,14 @@ export class UserOptionResolver implements Resolver<User|Member> {
 	public async resolve(ctx: AnyCommandContext, option: OptionUser, input: string): Promise<Array<User|Member>> {
 		const client = ctx.discord.client;
 
-		// TODO: Possibly limit this to just self & user who is executing command
-		let users: Collection<User|Member> = client.users;
-		if (ctx.guild) users = ctx.guild.members;
+		// Limit to author and self if no guild
+		let users: Array<User|Member> = [ctx.author, ctx.self];
+		if (ctx.guild) users = Array.from(ctx.guild.members.values());
 
-		const filter = Array.from(users.filter(u => this.matchUser(input, u)).values());
+		const filter = users.filter(u => this.matchUser(input, u));
 		if (filter.length > 0) return filter;
 
-		return Array.from(users.values());
+		return users;
 	}
 
 	private matchUser(input: string, user: User | Member) {
@@ -48,5 +48,12 @@ export class UserOptionResolver implements Resolver<User|Member> {
 			if (discrim) return user.discriminator === discrim;
 			return true;
 		}
+
+		// handle nickname
+		if ('nick' in user) {
+			if (user.nick.toLocaleLowerCase().includes(input.toLocaleLowerCase())) return true;
+		}
+
+		return false;
 	}
 }

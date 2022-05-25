@@ -74,7 +74,7 @@ export class HelpManager implements CommandEntity {
 		await embed.addTranslatedField('\u200b', { key: 'BENTOCORD_HELP_USAGE',
 			backup: '`help commandName` - Command Details\n`help commandName subCommandName` - Sub Command Details\n`help commandName optionName` - Option Details\n`help categoryName` - Category Details' });
 
-		return ctx.createResponse({ embeds: [embed.toJSON()] });
+		return ctx.createResponse({ content: '', embeds: [embed.toJSON()] });
 	}
 
 	private async showCategoryHelp(ctx: AnyCommandContext, category: string, commands: Map<string, CommandDetails>): Promise<unknown> {
