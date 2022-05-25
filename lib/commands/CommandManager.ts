@@ -445,7 +445,7 @@ export class CommandManager implements Component {
 		// handle checkCommand
 		const check = await this.interface.checkCommand(command, ctx);
 		if (!check) {
-			await ctx.acknowledge();
+			if (ctx.type === 'interaction') await ctx.deleteExecutionMessage();
 			return false;
 		}
 
