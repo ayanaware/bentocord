@@ -218,6 +218,7 @@ export class SlashManager implements Component {
 			// Convert to Discord ApplicationCommandOptionType
 			const resolver = this.cm.findResolver(option.type);
 
+			// @ts-ignore
 			const appOption: ApplicationCommandOption<any> = {
 				type: resolver ? resolver.convert : ApplicationCommandOptionTypes.STRING,
 				name: primary,

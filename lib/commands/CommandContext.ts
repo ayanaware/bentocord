@@ -26,6 +26,7 @@ import type { PromptChoice } from '../prompt/prompts/ChoicePrompt';
 import { PaginationOptions } from '../prompt/prompts/PaginationPrompt';
 
 import type { CommandManager } from './CommandManager';
+import { AllTextChannelTypes } from './constants/ChannelTypes';
 import type { Command } from './interfaces/Command';
 
 const { ChannelTypes } = Constants;
@@ -85,13 +86,7 @@ export abstract class CommandContext {
 		const cast = channel as AnyChannel;
 		if (!cast || typeof cast.type !== 'number') return false;
 
-		const textableIds: Array<number> = [
-			ChannelTypes.DM,
-			ChannelTypes.GUILD_TEXT, ChannelTypes.GUILD_NEWS,
-			ChannelTypes.GUILD_NEWS_THREAD, ChannelTypes.GUILD_PUBLIC_THREAD, ChannelTypes.GUILD_PRIVATE_THREAD,
-		];
-
-		return textableIds.includes(cast.type);
+		return (AllTextChannelTypes as Array<number>).includes(cast.type);
 	}
 
 	/**

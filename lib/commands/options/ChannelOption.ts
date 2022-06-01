@@ -8,24 +8,6 @@ import { Resolver } from '../interfaces/Resolver';
 export interface ChannelOption extends CommandOptionValue<OptionType.CHANNEL> {
 	channelTypes?: Array<Constants['ChannelTypes'][keyof Constants['ChannelTypes']]>;
 }
-
-// Common channel types helper
-export const AllTextChannelTypes = [
-	Constants.ChannelTypes.GUILD_TEXT,
-	Constants.ChannelTypes.DM,
-	Constants.ChannelTypes.GROUP_DM,
-	Constants.ChannelTypes.GUILD_NEWS,
-	Constants.ChannelTypes.GUILD_STORE,
-	Constants.ChannelTypes.GUILD_NEWS_THREAD,
-	Constants.ChannelTypes.GUILD_PUBLIC_THREAD,
-	Constants.ChannelTypes.GUILD_PRIVATE_THREAD,
-];
-
-export const AllVoiceChannelTypes = [
-	Constants.ChannelTypes.GUILD_VOICE,
-	Constants.ChannelTypes.GUILD_STAGE_VOICE,
-];
-
 export class ChannelOptionResolver implements Resolver<AnyGuildChannel> {
 	public option = OptionType.CHANNEL;
 	public convert = Constants.ApplicationCommandOptionTypes.CHANNEL;

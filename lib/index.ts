@@ -14,6 +14,7 @@ export * from './commands/CommandContext';
 export * from './commands/HelpManager';
 export * from './commands/SlashManager';
 
+export * from './commands/constants/ChannelTypes';
 export * from './commands/constants/CommandManager';
 export * from './commands/constants/DiscordLocales';
 export * from './commands/constants/OptionType';
