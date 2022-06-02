@@ -32,7 +32,7 @@ export class PromptManager implements Component {
 		return `${ctx.channelId}.${ctx.authorId}`;
 	}
 
-	private async closePrompt(ctx: AnyCommandContext) {
+	public async closePrompt(ctx: AnyCommandContext): Promise<void> {
 		const key = this.getKey(ctx);
 
 		const prompt = this.prompts.get(key);
