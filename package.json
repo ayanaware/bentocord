@@ -18,7 +18,7 @@
 	},
 	"peerDependencies": {
 		"@ayanaware/bento": "^1.0.0-rc.26",
-		"eris": "^0.16.1"
+		"eris": "^0.17.0"
 	},
 	"devDependencies": {
 		"@ayanaware/bento": "^1.0.0-rc.26",
