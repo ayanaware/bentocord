@@ -29,7 +29,7 @@
 		"@ayanaware/bento": "^1.0.0-rc.29",
 		"@ayanaware/eslint-plugin": "^1.0.7",
 		"@ayanaware/logger": "^2.3.1",
-		"@types/node": "^17.0.39",
+		"@types/node": "^17.0.40",
 		"@types/ws": "^8.5.3",
 		"eris": "^0.17.0",
 		"eslint": "^8.17.0",
