@@ -98,8 +98,6 @@ export class CommandManager implements Component {
 	private readonly resolvers: Map<OptionType | string, Resolver<unknown>> = new Map();
 	private readonly suppressors: Map<SuppressorType | string, Suppressor> = new Map();
 
-	private selfId: string = null;
-
 	public async onLoad(): Promise<void> {
 		// Load built-in resolvers
 		Resolvers.forEach(resolver => this.addResolver(resolver));
@@ -498,8 +496,8 @@ export class CommandManager implements Component {
 			defaultSelfPermissions.forEach(p => selfPermissions.includes(p) ? null : selfPermissions.push(p));
 
 			if (selfPermissions.length > 0) {
-				const channelPermissions = (ctx.channel as GuildChannel).permissionsOf(this.selfId);
-				const guildPermissions = ctx.guild.permissionsOf(this.selfId);
+				const channelPermissions = (ctx.channel as GuildChannel).permissionsOf(ctx.selfId);
+				const guildPermissions = ctx.guild.permissionsOf(ctx.selfId);
 
 				const unfufilled = [];
 				for (const permission of selfPermissions) {
@@ -933,13 +931,6 @@ export class CommandManager implements Component {
 		return out;
 	}
 
-	@Subscribe(Discord, DiscordEvent.SHARD_READY)
-	@Subscribe(Discord, DiscordEvent.SHARD_RESUME)
-	private async handleShardStateChange() {
-		const self = await this.discord.client.getSelf();
-		if (self.id) this.selfId = self.id;
-	}
-
 	@Subscribe(Discord, DiscordEvent.INTERACTION_CREATE)
 	private async handleInteractionCreate(interaction: AnyInteraction) {
 		// Only handle APPLICATION_COMMAND interactions
@@ -1006,7 +997,7 @@ export class CommandManager implements Component {
 		// first capture group prefix
 		let build = `^(?<prefix>${prefixes.join('|')}`;
 		// if we have selfId allow mentions
-		if (this.selfId) build = `${build}|<(?:@|@!)${this.selfId}>`;
+		if (this.discord.client?.user?.id) build = `${build}|<(?:@|@!)${this.discord.client.user.id}>`;
 		// find command and arguments
 		build = `${build})\\s?(?<name>[\\w]+)\\s?(?<args>.+)?$`;
 
