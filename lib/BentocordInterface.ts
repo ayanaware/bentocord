@@ -71,7 +71,7 @@ export class BentocordInterface implements Plugin {
 	 * @returns Array<DiscordPermission>
 	 */
 	public async selfPermissions(command: Command, ctx: AnyCommandContext): Promise<Array<DiscordPermission>> {
-		return [DiscordPermission.SEND_MESSAGES];
+		return [DiscordPermission.SEND_MESSAGES, DiscordPermission.READ_MESSAGES];
 	}
 
 	/**
