@@ -7,6 +7,7 @@ import { BentocordVariable } from './BentocordVariable';
 import type { LocalizedEmbedBuilder } from './builders/LocalizedEmbedBuilder';
 import type { AnyCommandContext } from './commands/CommandContext';
 import type { Command } from './commands/interfaces/Command';
+import { DiscordPermission } from './discord/constants/DiscordPermission';
 import { MessageContext } from './interfaces/MessageContext';
 import { PermissionScope, PermissionScopeType } from './interfaces/PermissionScope';
 
@@ -62,6 +63,16 @@ export class BentocordInterface implements Plugin {
 	}
 
 	// COMMAND
+
+	/**
+	 * Default & Required selfPermissions for command
+	 * @param command Command
+	 * @param ctx AnyCommandContext
+	 * @returns Array<DiscordPermission>
+	 */
+	public async selfPermissions(command: Command, ctx: AnyCommandContext): Promise<Array<DiscordPermission>> {
+		return [DiscordPermission.SEND_MESSAGES, DiscordPermission.READ_MESSAGE_HISTORY];
+	}
 
 	/**
 	 * Allow's for domain-specific disabling of commands based on context.

@@ -490,19 +490,27 @@ export class CommandManager implements Component {
 		const primary = this.getPrimaryName(definition.name);
 
 		// selfPermissions
-		if (ctx.guild && Array.isArray(definition.selfPermissions) && definition.selfPermissions.length > 0) {
-			const channelPermissions = (ctx.channel as GuildChannel).permissionsOf(this.selfId);
-			const guildPermissions = ctx.guild.permissionsOf(this.selfId);
+		if (ctx.guild) {
+			const selfPermissions = definition.selfPermissions ?? [];
 
-			const unfufilled = [];
-			for (const permission of definition.selfPermissions) {
-				if (!guildPermissions.has(permission) && !channelPermissions.has(permission)) unfufilled.push(permission);
-			}
+			// add default selfPermissions
+			const defaultSelfPermissions = await this.interface.selfPermissions(command, ctx);
+			defaultSelfPermissions.forEach(p => selfPermissions.includes(p) ? null : selfPermissions.push(p));
 
-			if (unfufilled.length > 0) {
-				return ctx.createTranslatedResponse(
-					'BENTOCORD_COMMANDMANAGER_MISSING_PERMS', { permissions: unfufilled.join(', ') },
-					'Command cannot be executed. The following permissions must be granted:\n```{permissions}```');
+			if (selfPermissions.length > 0) {
+				const channelPermissions = (ctx.channel as GuildChannel).permissionsOf(this.selfId);
+				const guildPermissions = ctx.guild.permissionsOf(this.selfId);
+
+				const unfufilled = [];
+				for (const permission of definition.selfPermissions) {
+					if (!guildPermissions.has(permission) && !channelPermissions.has(permission)) unfufilled.push(permission);
+				}
+
+				if (unfufilled.length > 0) {
+					return ctx.createTranslatedResponse(
+						'BENTOCORD_COMMANDMANAGER_MISSING_PERMS', { permissions: unfufilled.join(', ') },
+						'Command cannot be executed. The following Discord permissions must be granted:\n```{permissions}```');
+				}
 			}
 		}
 
