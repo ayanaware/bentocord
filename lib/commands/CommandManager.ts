@@ -502,7 +502,7 @@ export class CommandManager implements Component {
 				const guildPermissions = ctx.guild.permissionsOf(this.selfId);
 
 				const unfufilled = [];
-				for (const permission of definition.selfPermissions) {
+				for (const permission of selfPermissions) {
 					if (!guildPermissions.has(permission) && !channelPermissions.has(permission)) unfufilled.push(permission);
 				}
 
