@@ -501,7 +501,9 @@ export class CommandManager implements Component {
 
 				const unfufilled = [];
 				for (const permission of selfPermissions) {
-					if (!guildPermissions.has(permission) && !channelPermissions.has(permission)) unfufilled.push(permission);
+					// check overrides, then server wide
+					if (!channelPermissions.has(permission)) unfufilled.push(permission);
+					else if (!guildPermissions.has(permission)) unfufilled.push(permission);
 				}
 
 				if (unfufilled.length > 0) {
