@@ -311,17 +311,17 @@ export class BentocordInterface implements Plugin {
 		if (ctx.member?.roles) permCtx.roleIds = ctx.member.roles;
 
 		// explicit check
-		const permissions = [perm];
+		const checks = [perm];
 
 		// "all.category" check, if needed
 		const category = ctx.command.definition.category;
-		if (category) permissions.push(`all.${category}`);
+		if (category) checks.push(`all.${category}`);
 
 		// "all" check
-		permissions.push('all');
+		checks.push('all');
 
 		// loop checks, break on explicit state
-		for (const permission of permissions) {
+		for (const permission of checks) {
 			const [state, where] = await this.findPermission(permission, permCtx);
 
 			// override found
