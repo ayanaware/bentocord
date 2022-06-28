@@ -323,26 +323,25 @@ export class BentocordInterface implements Plugin {
 		// loop checks, break on explicit state
 		for (const permission of checks) {
 			const [state, where] = await this.findPermission(permission, permCtx);
-
+			if (typeof state !== 'boolean') continue;
 			// override found
-			if (typeof state === 'boolean') {
-				// explicit allow
-				if (state) return true;
 
-				// explicit deny
-				if (where === 'global') {
-					await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_GLOBAL_DENIED', { permission },
-						'Permission `{permission}` is denied globally. As this can only be done by a bot owner, it was likely intentional.');
-				} else if (where === 'user') {
-					await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_USER_DENIED', { permission },
-						'Permission `{permission}` is globally denied for you. As this can only be done by a bot owner, it was likely intentional.');
-				} else {
-					await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_DENIED', { permission, where },
-						'Permission `{permission}` has been denied on the `{where}` level.');
-				}
+			// explicit allow
+			if (state) return true;
 
-				return false;
+			// explicit deny
+			if (where === 'global') {
+				await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_GLOBAL_DENIED', { permission },
+					'Permission `{permission}` is denied globally. As this can only be done by a bot owner, it was likely intentional.');
+			} else if (where === 'user') {
+				await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_USER_DENIED', { permission },
+					'Permission `{permission}` is globally denied for you. As this can only be done by a bot owner, it was likely intentional.');
+			} else {
+				await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_DENIED', { permission, where },
+					'Permission `{permission}` has been denied on the `{where}` level.');
 			}
+
+			return false;
 		}
 
 		// no override found, check if default allowed
