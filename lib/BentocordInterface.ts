@@ -299,7 +299,7 @@ export class BentocordInterface implements Plugin {
 		if (await this.isOwner(ctx.author.id)) return true;
 
 		// get defaults
-		let defaults = def;
+		let defaults = def ?? { user: true, admin: true };
 		if (typeof defaults === 'boolean') defaults = { user: defaults, admin: true };
 
 		// guild-admin bypass (guild administrators have all admin permissions)
