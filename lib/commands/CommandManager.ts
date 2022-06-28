@@ -463,28 +463,22 @@ export class CommandManager implements Component {
 		// check permission
 		const permissionName = definition.permissionName ?? primary;
 
-		// check perm for explicit state
+		// check perm for explicit deny
 		const [state, type] = await this.checkPermission(ctx, [permissionName], definition.permissionDefaults);
 		if (type === 'explicit') return state;
 
-		// check category for explicit state
+		// check category for explicit deny
 		if (definition.category) {
 			const [group, groupType] = await this.checkPermission(ctx, ['all', definition.category], { user: true, admin: true });
 			if (groupType === 'explicit') return group;
 		}
 
-		// check all for explicit state
+		// check all for explicit deny
 		const [all, allType] = await this.checkPermission(ctx, ['all'], { user: true, admin: true });
 		if (allType === 'explicit') return all;
 
 		// handle implicit deny
-		if (!state) {
-			// user is not allowed to execute this command
-			await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_DENIED_DEFAULT', { permission: permissionName },
-				'Permission `{permission}` is denined by default. Please contact a server administrator to grant you this permission.');
-
-			return false;
-		}
+		if (!state) return false;
 
 		return true;
 	}
@@ -642,8 +636,11 @@ export class CommandManager implements Component {
 			return [false, 'explicit'];
 		}
 
-		// all users have permission (implicit allow)
+		// all users have permission
 		if (defaults.user) return [true, 'implicit'];
+
+		// user is not allowed to execute this command
+		await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_DENIED_DEFAULT', { permission }, 'Permission `{permission}` is denined by default. Please contact a server administrator to grant you this permission.');
 
 		return [false, 'implicit'];
 	}
