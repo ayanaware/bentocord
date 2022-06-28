@@ -5,10 +5,11 @@ import { ActivityPartial, BotActivityType, Message } from 'eris';
 
 import { BentocordVariable } from './BentocordVariable';
 import type { LocalizedEmbedBuilder } from './builders/LocalizedEmbedBuilder';
-import type { AnyCommandContext } from './commands/CommandContext';
+import type { AnyCommandContext, CommandContext } from './commands/CommandContext';
 import type { Command } from './commands/interfaces/Command';
+import type { CommandPermissionDefaults } from './commands/interfaces/CommandDefinition';
 import { DiscordPermission } from './discord/constants/DiscordPermission';
-import { MessageContext } from './interfaces/MessageContext';
+import type { MessageContext } from './interfaces/MessageContext';
 import { PermissionScope, PermissionScopeType } from './interfaces/PermissionScope';
 
 export interface ShardData {
@@ -216,12 +217,12 @@ export class BentocordInterface implements Plugin {
 	}
 
 	/**
-	 * Checks permission for a given context (guild, channel, user)
+	 * Find permission override for a given context (guild, channel, user)
 	 * @param permission Permission to check
 	 * @param snowflakes Snowflakes of the context
 	 * @returns Tuple with [state, where] boolean if explicitly set, otherwise null
 	 */
-	public async checkPermission(permission: string, snowflakes?: MessageContext): Promise<[boolean, string]> {
+	public async findPermission(permission: string, snowflakes?: MessageContext): Promise<[boolean, string]> {
 		if (snowflakes.userId && await this.isOwner(snowflakes.userId)) return [true, 'owner'];
 
 		// Global Check
@@ -281,5 +282,76 @@ export class BentocordInterface implements Plugin {
 		}
 
 		return [null, null];
+	}
+
+	/**
+	 * Check if ctx has a given permission.
+	 * @param ctx CommandContext
+	 * @param perm Permission
+	 * @param def Permission defaults
+	 * @returns Whether context has the provided permission.
+	 */
+	public async checkPermission(ctx: CommandContext, perm: string | Array<string>, def?: CommandPermissionDefaults | boolean): Promise<boolean> {
+		// convert permission to "." separated string
+		if (Array.isArray(perm)) perm = perm.join('.');
+
+		// bot-owner bypass (bot owner has all permissions)
+		if (await this.isOwner(ctx.author.id)) return true;
+
+		// get defaults
+		let defaults = def;
+		if (typeof defaults === 'boolean') defaults = { user: defaults, admin: true };
+
+		// guild-admin bypass (guild administrators have all admin permissions)
+		if (defaults.admin && ctx.member && ctx.member.permissions.has('administrator')) return true;
+
+		// create messagecontext
+		const permCtx: MessageContext = { userId: ctx.authorId, channelId: ctx.channelId };
+		if (ctx.guildId) permCtx.guildId = ctx.guildId;
+		if (ctx.member?.roles) permCtx.roleIds = ctx.member.roles;
+
+		// explicit check
+		const permissions = [perm];
+
+		// "all.category" check, if needed
+		const category = ctx.command.definition.category;
+		if (category) permissions.push(`all.${category}`);
+
+		// "all" check
+		permissions.push('all');
+
+		// loop checks, break on explicit state
+		for (const permission of permissions) {
+			const [state, where] = await this.findPermission(permission, permCtx);
+
+			// override found
+			if (typeof state === 'boolean') {
+				// explicit allow
+				if (state) return true;
+
+				// explicit deny
+				if (where === 'global') {
+					await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_GLOBAL_DENIED', { permission },
+						'Permission `{permission}` is denied globally. As this can only be done by a bot owner, it was likely intentional.');
+				} else if (where === 'user') {
+					await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_USER_DENIED', { permission },
+						'Permission `{permission}` is globally denied for you. As this can only be done by a bot owner, it was likely intentional.');
+				} else {
+					await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_DENIED', { permission, where },
+						'Permission `{permission}` has been denied on the `{where}` level.');
+				}
+
+				return false;
+			}
+		}
+
+		// no override found, check if default allowed
+		if (defaults.user) return true;
+
+		// default denied
+		await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_DENIED_DEFAULT', { permission: perm },
+			'Permission `{permission}` is denined by default. Please contact a server administrator to grant you this permission.');
+
+		return false;
 	}
 }

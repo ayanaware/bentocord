@@ -19,7 +19,6 @@ import { BentocordInterface } from '../BentocordInterface';
 import { BentocordVariable } from '../BentocordVariable';
 import { Discord } from '../discord/Discord';
 import { DiscordEvent } from '../discord/constants/DiscordEvent';
-import { MessageContext } from '../interfaces/MessageContext';
 import { Translateable } from '../interfaces/Translateable';
 import { PromptManager } from '../prompt/PromptManager';
 import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
@@ -462,25 +461,7 @@ export class CommandManager implements Component {
 
 		// check permission
 		const permissionName = definition.permissionName ?? primary;
-
-		// check perm for explicit deny
-		const [state, type] = await this.checkPermission(ctx, [permissionName], definition.permissionDefaults);
-		if (type === 'explicit') return state;
-
-		// check category for explicit deny
-		if (definition.category) {
-			const [group, groupType] = await this.checkPermission(ctx, ['all', definition.category], { user: true, admin: true });
-			if (groupType === 'explicit') return group;
-		}
-
-		// check all for explicit deny
-		const [all, allType] = await this.checkPermission(ctx, ['all'], { user: true, admin: true });
-		if (allType === 'explicit') return all;
-
-		// handle implicit deny
-		if (!state) return false;
-
-		return true;
+		return this.interface.checkPermission(ctx, permissionName, definition.permissionDefaults);
 	}
 
 	public async executeCommand(command: Command, ctx: AnyCommandContext, options: Record<string, unknown>): Promise<unknown> {
@@ -596,55 +577,6 @@ export class CommandManager implements Component {
 		return collector;
 	}
 
-	private async checkPermission(ctx: AnyCommandContext, path: string | Array<string>, def?: CommandPermissionDefaults | boolean): Promise<[boolean, 'explicit' | 'implicit']> {
-		const permCtx: MessageContext = { userId: ctx.authorId, channelId: ctx.channelId };
-		if (ctx.guild) {
-			permCtx.guildId = ctx.guildId;
-			permCtx.roleIds = ctx.member.roles;
-		}
-
-		let permission = path;
-		if (Array.isArray(permission)) permission = permission.join('.');
-
-		// handle default
-		let defaults = def ?? { user: true, admin: true };
-		if (typeof defaults === 'boolean') defaults = { user: defaults, admin: true };
-
-		// if admin default true & member has administrator, bypass checks
-		// prevents lockout of administrators
-		if (defaults.admin && ctx.member && ctx.member.permissions.has('administrator')) return [true, 'implicit'];
-
-		const [check, where] = await this.interface.checkPermission(permission, permCtx);
-
-		// handle explicit allow/deny
-		if (typeof check === 'boolean') {
-			// explicit allow
-			if (check) return [true, 'explicit'];
-
-			// explicit deny
-			if (where === 'global') {
-				await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_GLOBAL_DENIED', { permission },
-					'Permission `{permission}` is denied globally. As this can only be done by a bot owner, it was likely intentional.');
-			} else if (where === 'user') {
-				await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_USER_DENIED', { permission },
-					'Permission `{permission}` is globally denied for you. As this can only be done by a bot owner, it was likely intentional.');
-			} else {
-				await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_DENIED', { permission, where },
-					'Permission `{permission}` has been denied on the `{where}` level.');
-			}
-
-			return [false, 'explicit'];
-		}
-
-		// all users have permission
-		if (defaults.user) return [true, 'implicit'];
-
-		// user is not allowed to execute this command
-		await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_DENIED_DEFAULT', { permission }, 'Permission `{permission}` is denined by default. Please contact a server administrator to grant you this permission.');
-
-		return [false, 'implicit'];
-	}
-
 	public getTypePreview(option: AnyValueCommandOption): string {
 		// Prepend type information to description
 		let typeBuild = '[';
@@ -678,18 +610,10 @@ export class CommandManager implements Component {
 				const subOptionData = optionData.find(d => primary === d.name.toLocaleLowerCase()) as InteractionDataOptionsSubCommand | InteractionDataOptionsSubCommandGroup;
 				if (!subOptionData) continue;
 
-				// check category permission
-				const category = ctx.command.definition.category;
-				if (category) {
-					const [group, type] = await this.checkPermission(ctx, ['all', category], { user: true, admin: true });
-					if (!group && type === 'explicit') throw NON_ERROR_HALT;
-				}
-
 				// check permission
 				const permissionName = option.permissionName ?? primary;
 				const subPath = [...path, permissionName];
-
-				if (!(await this.checkPermission(ctx, subPath, option.permissionDefaults))[0]) throw NON_ERROR_HALT;
+				if (!(await this.interface.checkPermission(ctx, subPath, option.permissionDefaults))) throw NON_ERROR_HALT;
 
 				// process suppressors
 				const suppressed = await this.executeSuppressors(ctx, option);
@@ -745,18 +669,10 @@ export class CommandManager implements Component {
 
 				index++;
 
-				// check category permission
-				const category = ctx.command.definition.category;
-				if (category) {
-					const [group, type] = await this.checkPermission(ctx, ['all', category], { user: true, admin: true });
-					if (!group && type === 'explicit') throw NON_ERROR_HALT;
-				}
-
 				// check permission
 				const permissionName = option.permissionName ?? primary;
 				const subPath = [...path, permissionName];
-
-				if (!(await this.checkPermission(ctx, subPath, option.permissionDefaults))[0]) throw NON_ERROR_HALT;
+				if (!(await this.interface.checkPermission(ctx, subPath, option.permissionDefaults))) throw NON_ERROR_HALT;
 
 				// process suppressors
 				const suppressed = await this.executeSuppressors(ctx, option);
@@ -815,18 +731,10 @@ export class CommandManager implements Component {
 				if (primary !== useSub.toLocaleLowerCase()) continue;
 				if (!this.isAnySubCommand(option)) continue;
 
-				// check category permission
-				const category = ctx.command.definition.category;
-				if (category) {
-					const [group, type] = await this.checkPermission(ctx, ['all', category], { user: true, admin: true });
-					if (!group && type === 'explicit') throw NON_ERROR_HALT;
-				}
-
 				// check permission
 				const permissionName = option.permissionName ?? primary;
 				const subPath = [...path, permissionName];
-
-				if (!(await this.checkPermission(ctx, subPath, option.permissionDefaults))[0]) throw NON_ERROR_HALT;
+				if (!(await this.interface.checkPermission(ctx, subPath, option.permissionDefaults))) throw NON_ERROR_HALT;
 
 				if (option) collector = { ...collector, [useSub]: await this.processTextOptions(ctx, option.options, output, index, subPath) };
 			}
