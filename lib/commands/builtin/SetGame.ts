@@ -53,6 +53,9 @@ export class SetGameCommand implements CommandEntity {
 				{ type: OptionType.INTEGER, name: ['type'], description: { key: 'BENTOCORD_OPTION_TYPE_DESCRIPTION', backup: 'The type of custom status' } },
 				{ type: OptionType.STRING, name: ['activity'], description: { key: 'BENTOCORD_OPTION_ACTIVITY_DESCRIPTION', backup: 'The activity to set' }, rest: true },
 			] },
+
+			// reset
+			{ type: OptionType.SUB_COMMAND, name: ['reset'], description: { key: 'BENTOCORD_COMMAND_SETGAME_RESET_DESCRIPTION', backup: 'Reset the bot\'s game status' } },
 		],
 
 		hidden: true,
@@ -69,9 +72,14 @@ export class SetGameCommand implements CommandEntity {
 		watching?: { activity: string },
 		competing?: { activity: string },
 		custom?: { type: number, activity: string },
+		reset?: Record<string, never>,
 	}): Promise<unknown> {
-		const activity: ActivityPartial<BotActivityType> = { name: null };
+		if (options.reset) {
+			await this.resetActivity();
+			return ctx.createTranslatedResponse('BENTOCORD_PRESENCE_RESET', {}, 'Presence Reset!');
+		}
 
+		const activity: ActivityPartial<BotActivityType> = { name: null };
 		if (options.playing) {
 			activity.type = 0;
 			activity.name = options.playing.activity;
@@ -116,6 +124,11 @@ export class SetGameCommand implements CommandEntity {
 		if (!this.activity) return { name: this.default };
 
 		return this.activity;
+	}
+
+	protected async resetActivity(): Promise<void> {
+		this.activity = null;
+		for (const [, shard] of this.discord.client.shards) await this.restoreActivity(shard.id);
 	}
 
 	/**

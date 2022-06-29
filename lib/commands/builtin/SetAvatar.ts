@@ -38,15 +38,20 @@ export class SetAvatarCommand implements CommandEntity {
 
 		return new Promise((resolve, reject) => {
 			https.get(url, res => {
-				let data = '';
+				if (res.statusCode !== 200) return reject(new Error(`Invalid status code: ${res.statusCode}`));
 
+				// expected to be binary image data
+				res.setEncoding('binary');
+
+				const data: Array<Buffer> = [];
 				res.on('data', chunk => {
-					data += chunk;
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+					data.push(Buffer.from(chunk, 'binary'));
 				});
 
 				res.on('end', () => {
 					const type = res.headers['content-type'] ?? 'image/png';
-					const buffer = Buffer.from(data, 'base64');
+					const buffer = Buffer.concat(data);
 					const avatar = `data:${type};base64,${buffer.toString('base64')}`;
 
 					this.discord.client.editSelf({ avatar }).then(() => {
