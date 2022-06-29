@@ -171,14 +171,13 @@ export class HelpManager implements CommandEntity {
 			// build list of data
 			const data: Map<string, string> = new Map();
 			data.set(await ctx.formatTranslation('BENTOCORD_WORD_COMMAND', {}, 'Command'), `\`${fullPath.join(' ')}\``);
+			data.set(await ctx.formatTranslation('BENTOCORD_WORD_DESCRIPTION', {}, 'Description'), description);
 
 			// show eng aliases, if any
 			// TODO: Localize
 			const names = await this.cm.getItemTranslations(selected.name);
 			const aliases = names.map(n => n[0]).filter(n => n !== primary);
 			if (aliases.length > 0) data.set(await ctx.formatTranslation('BENTOCORD_WORD_ALIASES', {}, 'Aliases'), `\`${aliases.join('`, `')}\``);
-
-			data.set(await ctx.formatTranslation('BENTOCORD_WORD_DESCRIPTION', {}, 'Description'), description);
 
 			const response = Array.from(data.entries()).map(([k, v]) => `**${k}**${v ? `: ${v}` : ''}`).join('\n');
 
@@ -210,14 +209,13 @@ export class HelpManager implements CommandEntity {
 		// build list of data
 		const data: Map<string, string> = new Map();
 		data.set(await ctx.formatTranslation('BENTOCORD_WORD_COMMAND', {}, 'Command'), `\`${fullPath.join(' ')}\``);
+		data.set(await ctx.formatTranslation('BENTOCORD_WORD_DESCRIPTION', {}, 'Description'), description);
 
 		// show eng aliases, if any
 		// TODO: Localize
 		const names = await this.cm.getItemTranslations(command.name);
 		const aliases = names.map(n => n[0]).filter(n => n !== primary);
 		if (aliases.length > 0) data.set(await ctx.formatTranslation('BENTOCORD_WORD_ALIASES', {}, 'Aliases'), `\`${aliases.join('`, `')}\``);
-
-		data.set(await ctx.formatTranslation('BENTOCORD_WORD_DESCRIPTION', {}, 'Description'), description);
 
 		const response = Array.from(data.entries()).map(([k, v]) => `**${k}**${v ? `: ${v}` : ''}`).join('\n');
 
