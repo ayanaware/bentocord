@@ -71,8 +71,12 @@ export class HelpManager implements CommandEntity {
 		unsorted.sort().forEach(([display, names]) => embed.addField(display, `\`${names.join('`, `')}\``, false));
 
 		// add help usage details
-		await embed.addTranslatedField('\u200b', { key: 'BENTOCORD_HELP_USAGE',
-			backup: '`help commandName` - Command Details\n`help commandName subCommandName` - Sub Command Details\n`help commandName optionName` - Option Details\n`help categoryName` - Category Details' });
+		await embed.addTranslatedField('\u200b', { key: 'BENTOCORD_HELP_USAGE', backup: [
+			'`help commandName` - Command Details',
+			'`help commandName subCommandName` - Sub Command Details',
+			'`help commandName optionName` - Option Details',
+			'`help categoryName` - Category Details',
+		].join('\n') });
 
 		return ctx.createResponse({ content: '', embeds: [embed.toJSON()] });
 	}
@@ -96,6 +100,7 @@ export class HelpManager implements CommandEntity {
 		if (choice) return this.showCommandHelp(ctx, choice, []);
 	}
 
+	// TODO: refactor this mess to be more maintainable
 	public async showCommandHelp(ctx: AnyCommandContext, definition: CommandDefinition, path: Array<string>): Promise<unknown> {
 		let selected: CommandDefinition | AnyCommandOption = definition;
 		let selectedPath: Array<string> = [];
@@ -166,6 +171,13 @@ export class HelpManager implements CommandEntity {
 			// build list of data
 			const data: Map<string, string> = new Map();
 			data.set(await ctx.formatTranslation('BENTOCORD_WORD_COMMAND', {}, 'Command'), `\`${fullPath.join(' ')}\``);
+
+			// show eng aliases, if any
+			// TODO: Localize
+			const names = await this.cm.getItemTranslations(selected.name);
+			const aliases = names.map(n => n[0]).filter(n => n !== primary);
+			if (aliases.length > 0) data.set(await ctx.formatTranslation('BENTOCORD_WORD_ALIASES', {}, 'Aliases'), `\`${aliases.join('`, `')}\``);
+
 			data.set(await ctx.formatTranslation('BENTOCORD_WORD_DESCRIPTION', {}, 'Description'), description);
 
 			const response = Array.from(data.entries()).map(([k, v]) => `**${k}**${v ? `: ${v}` : ''}`).join('\n');
@@ -198,6 +210,13 @@ export class HelpManager implements CommandEntity {
 		// build list of data
 		const data: Map<string, string> = new Map();
 		data.set(await ctx.formatTranslation('BENTOCORD_WORD_COMMAND', {}, 'Command'), `\`${fullPath.join(' ')}\``);
+
+		// show eng aliases, if any
+		// TODO: Localize
+		const names = await this.cm.getItemTranslations(command.name);
+		const aliases = names.map(n => n[0]).filter(n => n !== primary);
+		if (aliases.length > 0) data.set(await ctx.formatTranslation('BENTOCORD_WORD_ALIASES', {}, 'Aliases'), `\`${aliases.join('`, `')}\``);
+
 		data.set(await ctx.formatTranslation('BENTOCORD_WORD_DESCRIPTION', {}, 'Description'), description);
 
 		const response = Array.from(data.entries()).map(([k, v]) => `**${k}**${v ? `: ${v}` : ''}`).join('\n');
