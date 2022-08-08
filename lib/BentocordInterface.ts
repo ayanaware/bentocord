@@ -317,6 +317,9 @@ export class BentocordInterface implements Plugin {
 		// "all" check
 		checks.push('all');
 
+		// cache guild-admin check
+		const isGuildAdmin = ctx.member && ctx.member.permissions.has('administrator');
+
 		// loop checks, break on explicit state
 		for (const permission of checks) {
 			const [state, where] = await this.findPermission(permission, permCtx);
@@ -334,6 +337,9 @@ export class BentocordInterface implements Plugin {
 				await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_USER_DENIED', { permission },
 					'Permission `{permission}` is globally denied for you. As this can only be done by a bot owner, it was likely intentional.');
 			} else {
+				// guild-admin bypass: unless revoked globally, guild-admin has all admin permissions, prevents self permission lockout
+				if (defaults.admin && isGuildAdmin) return true;
+
 				await ctx.createTranslatedResponse('BENTOCORD_PERMISSION_DENIED', { permission, where },
 					'Permission `{permission}` has been denied on the `{where}` level.');
 			}
@@ -342,9 +348,6 @@ export class BentocordInterface implements Plugin {
 		}
 
 		// no override found
-		// guild-admin bypass (guild administrators have all admin permissions)
-		if (defaults.admin && ctx.member && ctx.member.permissions.has('administrator')) return true;
-
 		// check if default allowed
 		if (defaults.user) return true;
 
