@@ -858,12 +858,12 @@ export class CommandManager implements Component {
 		const ctx = new InteractionCommandContext(this, this.promptManager, command, interaction);
 		ctx.alias = data.name;
 
-		// Deny interactions from bots; Safety precaution
-		if (ctx.author.bot) return;
-
 		try {
 			// prepare context
 			await ctx.prepare();
+
+			// Deny interactions from bots; Safety precaution
+			if (ctx.author.bot) return;
 
 			// pre-flight checks, perms, suppressors, etc
 			if (!(await this.prepareCommand(command, ctx))) return;
