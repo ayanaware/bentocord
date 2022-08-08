@@ -302,9 +302,6 @@ export class BentocordInterface implements Plugin {
 		let defaults = def ?? { user: true, admin: true };
 		if (typeof defaults === 'boolean') defaults = { user: defaults, admin: true };
 
-		// guild-admin bypass (guild administrators have all admin permissions)
-		if (defaults.admin && ctx.member && ctx.member.permissions.has('administrator')) return true;
-
 		// create messagecontext
 		const permCtx: MessageContext = { userId: ctx.authorId, channelId: ctx.channelId };
 		if (ctx.guildId) permCtx.guildId = ctx.guildId;
@@ -344,7 +341,11 @@ export class BentocordInterface implements Plugin {
 			return false;
 		}
 
-		// no override found, check if default allowed
+		// no override found
+		// guild-admin bypass (guild administrators have all admin permissions)
+		if (defaults.admin && ctx.member && ctx.member.permissions.has('administrator')) return true;
+
+		// check if default allowed
 		if (defaults.user) return true;
 
 		// default denied

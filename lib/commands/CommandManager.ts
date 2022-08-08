@@ -858,6 +858,9 @@ export class CommandManager implements Component {
 		const ctx = new InteractionCommandContext(this, this.promptManager, command, interaction);
 		ctx.alias = data.name;
 
+		// Deny interactions from bots; Safety precaution
+		if (ctx.author.bot) return;
+
 		try {
 			// prepare context
 			await ctx.prepare();
@@ -885,6 +888,9 @@ export class CommandManager implements Component {
 	public async handleMessageCreate(message: Message): Promise<any> {
 		// Deny messages without content, channel, or author
 		if (!message.content || !message.channel || !message.author) return;
+
+		// Deny messages from bots
+		if (message.author.bot) return;
 
 		// raw message
 		const raw = message.content;
