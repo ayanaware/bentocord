@@ -2,8 +2,8 @@ import { Logger } from '@ayanaware/logger-api';
 
 import { Emoji, Message } from 'eris';
 
-import type { AnyCommandContext } from '../commands/CommandContext';
 import { NON_ERROR_HALT } from '../commands/constants/CommandManager';
+import type { BaseContext } from '../contexts/BaseContext';
 import { DiscordPermission } from '../discord/constants/DiscordPermission';
 import { Translateable } from '../interfaces/Translateable';
 
@@ -13,7 +13,7 @@ export const PROMPT_CLOSE = ['exit', 'x', 'close', 'c', ':q'];
 
 const log = Logger.get();
 export class Prompt<T = string> {
-	public readonly ctx: AnyCommandContext;
+	public readonly ctx: BaseContext;
 	public readonly channelId: string;
 	public readonly userId: string;
 
@@ -29,11 +29,11 @@ export class Prompt<T = string> {
 	protected validate: PromptValidate<T>;
 	protected attempt = 0;
 
-	public constructor(ctx: AnyCommandContext, validate?: PromptValidate<T>) {
+	public constructor(ctx: BaseContext, validate?: PromptValidate<T>) {
 		this.ctx = ctx;
 
 		this.channelId = ctx.channelId;
-		this.userId = ctx.authorId;
+		this.userId = ctx.userId;
 
 		this.validate = validate;
 	}
@@ -67,7 +67,7 @@ export class Prompt<T = string> {
 		if (!this.ctx.selfHasPermission(DiscordPermission.MANAGE_MESSAGES)) return;
 
 		try {
-			await this.ctx.channel.removeMessageReaction(await this.ctx.getResponseId(), emoji.name, this.userId);
+			await this.ctx.channel.removeMessageReaction(this.ctx.responseId, emoji.name, this.userId);
 		} catch { /* Failed */ }
 	}
 

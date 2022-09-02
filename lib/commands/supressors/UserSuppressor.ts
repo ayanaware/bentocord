@@ -9,6 +9,6 @@ export class UserSuppressor implements Suppressor {
 		if (!Array.isArray(userIds)) return false;
 
 		const message = await ctx.formatTranslation('BENTOCORD_SUPPRESSOR_USER_DENIED', {}, 'You are not allowed to execute this command.');
-		return userIds.includes(ctx.authorId) ? false : message;
+		return userIds.includes(ctx.userId) ? false : message;
 	}
 }

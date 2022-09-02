@@ -2,7 +2,7 @@ import { Component, ComponentAPI, Subscribe } from '@ayanaware/bento';
 
 import { Emoji, Member, Message } from 'eris';
 
-import type { AnyCommandContext } from '../commands/CommandContext';
+import type { BaseContext } from '../contexts/BaseContext';
 import { Discord } from '../discord/Discord';
 import { DiscordEvent } from '../discord/constants/DiscordEvent';
 import { Translateable } from '../interfaces/Translateable';
@@ -28,11 +28,11 @@ export class PromptManager implements Component {
 		}
 	}
 
-	private getKey(ctx: AnyCommandContext) {
-		return `${ctx.channelId}.${ctx.authorId}`;
+	private getKey(ctx: BaseContext) {
+		return `${ctx.channelId}.${ctx.userId}`;
 	}
 
-	public async closePrompt(ctx: AnyCommandContext): Promise<void> {
+	public async closePrompt(ctx: BaseContext): Promise<void> {
 		const key = this.getKey(ctx);
 
 		const prompt = this.prompts.get(key);
@@ -48,7 +48,7 @@ export class PromptManager implements Component {
 		this.prompts.delete(key);
 	}
 
-	public async createPrompt<T>(ctx: AnyCommandContext, content: string | Translateable, validate?: PromptValidate<T>): Promise<T> {
+	public async createPrompt<T>(ctx: BaseContext, content: string | Translateable, validate?: PromptValidate<T>): Promise<T> {
 		await this.closePrompt(ctx);
 
 		const key = this.getKey(ctx);
@@ -61,7 +61,7 @@ export class PromptManager implements Component {
 		return result;
 	}
 
-	public async createPagination(ctx: AnyCommandContext, items: Array<string | Translateable>, content?: string | Translateable, options?: PaginationOptions): Promise<void> {
+	public async createPagination(ctx: BaseContext, items: Array<string | Translateable>, content?: string | Translateable, options?: PaginationOptions): Promise<void> {
 		await this.closePrompt(ctx);
 
 		const key = this.getKey(ctx);
@@ -74,7 +74,7 @@ export class PromptManager implements Component {
 		return result;
 	}
 
-	public async createChoicePrompt<T>(ctx: AnyCommandContext, choices: Array<PromptChoice<T>>, content?: string | Translateable, options?: PaginationOptions): Promise<T> {
+	public async createChoicePrompt<T>(ctx: BaseContext, choices: Array<PromptChoice<T>>, content?: string | Translateable, options?: PaginationOptions): Promise<T> {
 		await this.closePrompt(ctx);
 
 		const key = this.getKey(ctx);
@@ -87,7 +87,7 @@ export class PromptManager implements Component {
 		return result;
 	}
 
-	public async createConfirmPrompt(ctx: AnyCommandContext, content?: string | Translateable, items?: Array<string | Translateable>, options?: PaginationOptions): Promise<boolean> {
+	public async createConfirmPrompt(ctx: BaseContext, content?: string | Translateable, items?: Array<string | Translateable>, options?: PaginationOptions): Promise<boolean> {
 		await this.closePrompt(ctx);
 
 		const key = this.getKey(ctx);
@@ -125,8 +125,7 @@ export class PromptManager implements Component {
 		const prompt = this.prompts.get(key);
 		if (!prompt) return;
 
-		const responseId = await prompt.ctx.getResponseId();
-		if (message.id !== responseId) return;
+		if (message.id !== prompt.ctx.responseId) return;
 
 		return prompt.handleReaction(message, emoji);
 	}

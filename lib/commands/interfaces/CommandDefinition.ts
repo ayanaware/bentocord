@@ -1,6 +1,6 @@
 import type { DiscordPermission } from '../../discord/constants/DiscordPermission';
 import { Translateable } from '../../interfaces/Translateable';
-import type { CommandContext } from '../CommandContext';
+import type { AnyCommandContext } from '../CommandContext';
 
 import type { AnyCommandOption } from './CommandOption';
 import type { SuppressorDefinition } from './Suppressor';
@@ -60,5 +60,5 @@ export interface CommandDefinition {
 	extra?: Record<string, unknown>;
 
 	/** Function name or implementation to execute */
-	execute?: string | ((ctx?: CommandContext) => Promise<any>);
+	execute?: string | ((ctx?: AnyCommandContext) => Promise<any>);
 }

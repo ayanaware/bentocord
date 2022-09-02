@@ -17,6 +17,7 @@ import {
 
 import { BentocordInterface } from '../BentocordInterface';
 import { BentocordVariable } from '../BentocordVariable';
+import { InteractionContext } from '../contexts/InteractionContext';
 import { Discord } from '../discord/Discord';
 import { DiscordEvent } from '../discord/constants/DiscordEvent';
 import { Translateable } from '../interfaces/Translateable';
@@ -46,6 +47,8 @@ import { ParsedItem, Parser, ParserOutput } from './internal/Parser';
 import { Tokenizer } from './internal/Tokenizer';
 import { Resolvers } from './options';
 import { Suppressors } from './supressors';
+
+const { MessageFlags } = Constants;
 
 export interface CommandDetails {
 	/** The command */
@@ -434,15 +437,16 @@ export class CommandManager implements Component {
 
 		// handle ignoreMode
 		if (this.ignoreMode === 'true' && !(await ctx.isBotOwner())) {
-			log.warn(`Skipped Command "${primary}" execution by "${ctx.author.id}", because the bot is in ignoreMode.`);
-			await ctx.acknowledge();
+			log.warn(`Skipped Command "${primary}" execution by "${ctx.userId}", because the bot is in ignoreMode.`);
+			if (ctx instanceof InteractionCommandContext) await ctx.createResponse({ content: 'Execution disabled, bot is in ignoreMode', flags: MessageFlags.EPHEMERAL });
+
 			return false;
 		}
 
 		// handle checkCommand
 		const check = await this.interface.checkCommand(command, ctx);
 		if (!check) {
-			if (ctx.type === 'interaction') await ctx.deleteExecutionMessage();
+			if (ctx instanceof InteractionCommandContext) await ctx.deleteExecutionMessage();
 			return false;
 		}
 
@@ -507,7 +511,7 @@ export class CommandManager implements Component {
 			const mili = nano / 1e6;
 
 			this.api.emit(CommandManagerEvent.COMMAND_SUCCESS, command, ctx, options, mili);
-			log.debug(`Command "${primary}" executed by "${ctx.author.id}", took ${mili}ms`);
+			log.debug(`Command "${primary}" executed by "${ctx.userId}", took ${mili}ms`);
 		} catch (e) {
 			// halt requested (this is lazy, I'll fix it later, probably)
 			if (e === NON_ERROR_HALT) {
@@ -517,7 +521,7 @@ export class CommandManager implements Component {
 				const mili = nano / 1e6;
 
 				this.api.emit(CommandManagerEvent.COMMAND_SUCCESS, command, ctx, options, mili);
-				log.debug(`Command "${primary}" executed by "${ctx.author.id}", took ${mili}ms`);
+				log.debug(`Command "${primary}" executed by "${ctx.userId}", took ${mili}ms`);
 
 				return;
 			}
@@ -855,12 +859,12 @@ export class CommandManager implements Component {
 		const definition = command.definition;
 		if (typeof definition.registerSlash === 'boolean' && !definition.registerSlash) return; // slash disabled
 
-		const ctx = new InteractionCommandContext(this, this.promptManager, command, interaction);
+		const ctx = new InteractionCommandContext(this.api, interaction, command);
 		ctx.alias = data.name;
 
 		try {
-			// prepare context
-			await ctx.prepare();
+			// Deny interactions from bots; Safety precaution
+			if (ctx.user.bot) return;
 
 			// pre-flight checks, perms, suppressors, etc
 			if (!(await this.prepareCommand(command, ctx))) return;
@@ -947,14 +951,11 @@ export class CommandManager implements Component {
 		if (definition.disablePrefix) return;
 
 		// CommandContext
-		const ctx = new MessageCommandContext(this, this.promptManager, command, message);
+		const ctx = new MessageCommandContext(this.api, message, command);
 		ctx.prefix = prefix;
 		ctx.alias = name;
 
 		try {
-			// prepare context
-			await ctx.prepare();
-
 			// pre-flight checks, perms, suppressors, etc
 			if (!(await this.prepareCommand(command, ctx))) return;
 

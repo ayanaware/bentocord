@@ -1,7 +1,7 @@
 import { Emoji, Message } from 'eris';
 
 import { CodeblockBuilder } from '../../builders/CodeblockBuilder';
-import type { AnyCommandContext } from '../../commands/CommandContext';
+import type { BaseContext } from '../../contexts/BaseContext';
 import { DiscordPermission } from '../../discord/constants/DiscordPermission';
 import { Translateable } from '../../interfaces/Translateable';
 import { Prompt, PROMPT_CLOSE } from '../Prompt';
@@ -44,7 +44,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	protected content: string;
 	private readonly items: Array<string | Translateable> = [];
 
-	public constructor(ctx: AnyCommandContext, items?: Array<string | Translateable>, options: PaginationOptions = {}) {
+	public constructor(ctx: BaseContext, items?: Array<string | Translateable>, options: PaginationOptions = {}) {
 		super(ctx);
 		this.items = items || [];
 		this.options = Object.assign({
@@ -164,7 +164,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	}
 
 	protected async addReactions(): Promise<void> {
-		const messageId = await this.ctx.getResponseId();
+		const messageId = this.ctx.responseId;
 		if (!messageId || !this.ctx.channel) return;
 		const channel = this.ctx.channel;
 
@@ -183,7 +183,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	}
 
 	protected async removeReactions(): Promise<void> {
-		const messageId = await this.ctx.getResponseId();
+		const messageId = this.ctx.responseId;
 		const channel = this.ctx.channel;
 		const selfId = this.ctx.self.id;
 		if (!messageId || !channel || !selfId) return;
@@ -256,7 +256,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 	public async handleReaction(message: Message, emoji: Emoji): Promise<void> {
 		if (this.isSinglePage) return;
-		if (message.id !== await this.ctx.getResponseId()) return;
+		if (message.id !== this.ctx.responseId) return;
 
 		switch (emoji.name) {
 			case PaginationControls.EMOJI_FIRST: {
