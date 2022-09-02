@@ -14,6 +14,10 @@ export * from './commands/CommandContext';
 export * from './commands/HelpManager';
 export * from './commands/SlashManager';
 
+export * from './contexts/BaseContext';
+export * from './contexts/InteractionContext';
+export * from './contexts/MessageContext';
+
 export * from './commands/constants/ChannelTypes';
 export * from './commands/constants/CommandManager';
 export * from './commands/constants/DiscordLocales';
@@ -55,7 +59,7 @@ export * from './discord/constants/DiscordPermission';
 
 // Interfaces
 export * from './interfaces/Translateable';
-export * from './interfaces/MessageContext';
+export * from './interfaces/MessageLocation';
 export * from './interfaces/PermissionScope';
 
 // Prompts

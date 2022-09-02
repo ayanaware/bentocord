@@ -9,7 +9,7 @@ import type { AnyCommandContext } from './commands/CommandContext';
 import type { Command } from './commands/interfaces/Command';
 import type { CommandPermissionDefaults } from './commands/interfaces/CommandDefinition';
 import { DiscordPermission } from './discord/constants/DiscordPermission';
-import type { MessageContext } from './interfaces/MessageContext';
+import type { MessageLocation } from './interfaces/MessageLocation';
 import { PermissionScope, PermissionScopeType } from './interfaces/PermissionScope';
 
 export interface ShardData {
@@ -222,7 +222,7 @@ export class BentocordInterface implements Plugin {
 	 * @param snowflakes Snowflakes of the context
 	 * @returns Tuple with [state, where] boolean if explicitly set, otherwise null
 	 */
-	public async findPermission(permission: string, snowflakes?: MessageContext): Promise<[boolean, string]> {
+	public async findPermission(permission: string, snowflakes?: MessageLocation): Promise<[boolean, string]> {
 		if (snowflakes.userId && await this.isOwner(snowflakes.userId)) return [true, 'owner'];
 
 		// Global Check
@@ -306,7 +306,7 @@ export class BentocordInterface implements Plugin {
 		if (defaults.admin && ctx.member && ctx.member.permissions.has('administrator')) return true;
 
 		// create messagecontext
-		const permCtx: MessageContext = { userId: ctx.userId, channelId: ctx.channelId };
+		const permCtx: MessageLocation = { userId: ctx.userId, channelId: ctx.channelId };
 		if (ctx.guildId) permCtx.guildId = ctx.guildId;
 		if (ctx.member?.roles) permCtx.roleIds = ctx.member.roles;
 

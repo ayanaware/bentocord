@@ -1,4 +1,4 @@
-export interface MessageContext {
+export interface MessageLocation {
 	// Always available
 	userId: string;
 	channelId: string;
