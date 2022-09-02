@@ -27,7 +27,9 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	private readonly api: EntityAPI;
 
 	public channel: TextableChannel;
-	public channelId: string;
+	public get channelId(): string {
+		return this.channel.id;
+	}
 
 	public user: User;
 	public get userId(): string {
