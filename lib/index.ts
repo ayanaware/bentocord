@@ -14,10 +14,12 @@ export * from './commands/CommandContext';
 export * from './commands/HelpManager';
 export * from './commands/SlashManager';
 
+// Contexts
 export * from './contexts/BaseContext';
 export * from './contexts/InteractionContext';
 export * from './contexts/MessageContext';
 
+// Commands
 export * from './commands/constants/ChannelTypes';
 export * from './commands/constants/CommandManager';
 export * from './commands/constants/DiscordLocales';
@@ -68,3 +70,7 @@ export * from './prompt/PromptManager';
 export * from './prompt/prompts/ChoicePrompt';
 export * from './prompt/prompts/ConfirmPrompt';
 export * from './prompt/prompts/PaginationPrompt';
+
+// Utils
+export * from './util/IsTextableChannel';
+

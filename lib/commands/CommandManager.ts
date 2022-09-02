@@ -863,6 +863,8 @@ export class CommandManager implements Component {
 		ctx.alias = data.name;
 
 		try {
+			await ctx.prepare();
+
 			// Deny interactions from bots; Safety precaution
 			if (ctx.user.bot) return;
 
@@ -956,6 +958,8 @@ export class CommandManager implements Component {
 		ctx.alias = name;
 
 		try {
+			await ctx.prepare();
+
 			// pre-flight checks, perms, suppressors, etc
 			if (!(await this.prepareCommand(command, ctx))) return;
 

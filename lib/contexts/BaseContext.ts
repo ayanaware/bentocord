@@ -21,6 +21,7 @@ import { PromptValidate } from '../prompt/Prompt';
 import { PromptManager } from '../prompt/PromptManager';
 import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
 import { PaginationOptions } from '../prompt/prompts/PaginationPrompt';
+import { IsTextableChannel } from '../util/IsTextableChannel';
 
 export class BaseContext<C extends MessageContent = MessageContent> {
 	private readonly api: EntityAPI;
@@ -57,6 +58,7 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 
 	public responseId?: string;
 
+	/** .prepare() must be called before this object is ready to be used */
 	public constructor(api: EntityAPI, channel: TextableChannel, user: User) {
 		this.api = api;
 
@@ -65,15 +67,27 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 
 		this.promptManager = this.api.getEntity(PromptManager);
 
+		// set the properties we can
 		this.channel = channel;
 		this.user = user;
 
+		this.self = this.discord.client.user;
+	}
+
+	/**
+	 * Finishes preparing the context, handling async operations.
+	 */
+	public async prepare(): Promise<void> {
 		const client = this.discord.client;
-		this.self = client.user;
+
+		// get channel
+		let channel = client.getChannel(this.channelId);
+		if (!channel) channel = await client.getRESTChannel(this.channelId);
+		if (!IsTextableChannel(channel)) throw new Error('BaseContext: Channel is not textable');
+		this.channel = channel;
 
 		if ('guild' in this.channel) {
 			const guild = this.channel.guild;
-
 			this.guild = guild;
 
 			this.member = guild.members.get(this.userId);

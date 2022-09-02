@@ -1,6 +1,7 @@
 import { EntityAPI } from '@ayanaware/bento';
 
 import { CommandInteraction, ComponentInteraction, FileContent, InteractionContent, Message } from 'eris';
+import { IsTextableChannel } from '../util/IsTextableChannel';
 
 import { BaseContext } from './BaseContext';
 
@@ -11,6 +12,31 @@ export class InteractionContext<C = InteractionContent> extends BaseContext<C> {
 		super(api, interaction.channel, interaction.user ?? interaction.member.user);
 
 		this.interaction = interaction;
+	}
+
+	public async prepare(): Promise<void> {
+		const client = this.discord.client;
+
+		let channel = client.getChannel(this.channelId);
+		if (!channel) channel = await client.getRESTChannel(this.channelId);
+		if (!IsTextableChannel(channel)) throw new Error('InteractionContext: Channel is not textable.');
+		this.channel = channel;
+
+		if (this.interaction.member) {
+			this.member = this.interaction.member;
+			this.user = this.interaction.member.user;
+		} else if (this.interaction.user) {
+			this.user = this.interaction.user;
+		}
+
+		if (this.interaction.guildID) {
+			// attempt to get guild object
+			const guild = client.guilds.get(this.interaction.guildID);
+			this.guild = guild;
+
+			// attempt to get selfMember
+			this.selfMember = guild.members.get(this.selfId);
+		}
 	}
 
 	public async defer(flags?: number): Promise<void> {
