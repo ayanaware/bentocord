@@ -17,11 +17,11 @@ import { BentocordInterface } from '../BentocordInterface';
 import { Discord } from '../discord/Discord';
 import { DiscordPermission } from '../discord/constants/DiscordPermission';
 import { Translateable } from '../interfaces/Translateable';
-import { PromptValidate } from '../prompt/Prompt';
-import { PromptManager } from '../prompt/PromptManager';
+import { Prompt, PromptValidator } from '../prompt/Prompt';
 import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
-import { PaginationOptions } from '../prompt/prompts/PaginationPrompt';
+import { PaginationOptions } from '../prompt/prompts/PaginationPromptOld';
 import { IsTextableChannel } from '../util/IsTextableChannel';
+import { ConfirmPrompt } from '../prompt/prompts/ConfirmPrompt';
 
 export class BaseContext<C extends MessageContent = MessageContent> {
 	public readonly api: EntityAPI;
@@ -38,6 +38,16 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 
 	/** Member object if available */
 	public member?: Member;
+
+	/** @deprecated Use .user instead */
+	public get author(): User {
+		return this.user;
+	}
+
+	/** @deprecated Use .userId instead */
+	public get authorId(): string {
+		return this.userId;
+	}
 
 	public guild?: Guild;
 	public get guildId(): string {
@@ -56,8 +66,6 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	public readonly interface: BentocordInterface;
 	public readonly discord: Discord;
 
-	public readonly promptManager: PromptManager;
-
 	public responseId?: string;
 
 	/** .prepare() must be called before this object is ready to be used */
@@ -66,8 +74,6 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 
 		this.interface = this.api.getEntity(BentocordInterface);
 		this.discord = this.api.getEntity(Discord);
-
-		this.promptManager = this.api.getEntity(PromptManager);
 
 		// set the properties we can
 		this.channel = channel;
@@ -174,8 +180,12 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param validate Validate their input
 	 * @returns Validated input
 	 */
-	public async prompt<T = string>(content: string | Translateable, validate?: PromptValidate<T>): Promise<T> {
-		return this.promptManager.createPrompt<T>(this, content, validate);
+	public async prompt<T = string>(content: string | Translateable, validator?: PromptValidator<T>): Promise<T> {
+		const prompt = new Prompt<T>(this, validator);
+		if (typeof content === 'object') await prompt.contentTranslated(content.key, content.repl, content.backup);
+		else prompt.content(content);
+
+		return prompt.start();
 	}
 
 	/**
@@ -184,8 +194,12 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @returns boolean
 	 */
 	public async confirm(content?: string | Translateable, items?: Array<string | Translateable>): Promise<boolean> {
-		if (!content) content = await this.formatTranslation('BENTOCORD_PROMPT_CONFIRM', {}, 'Please confirm you wish to continue [y/n]:');
-		return this.promptManager.createConfirmPrompt(this, content, items);
+		const confirm = new ConfirmPrompt(this);
+		if (typeof content === 'object') await confirm.contentTranslated(content.key, content.repl, content.backup);
+		else if (content) confirm.content(content);
+		else confirm.content(await this.formatTranslation('BENTOCORD_PROMPT_CONFIRM', {}, 'Please confirm you wish to continue [y/n]:'));
+
+		return confirm.start();
 	}
 
 	/**
@@ -196,7 +210,7 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @returns
 	 */
 	public async pagination(items: Array<string | Translateable>, content?: string | Translateable, options?: PaginationOptions): Promise<void> {
-		return this.promptManager.createPagination(this, items, content, options);
+		// return this.promptManager.createPagination(this, items, content, options);
 	}
 
 	/**
@@ -207,7 +221,8 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @returns Selected PromptChoice value
 	 */
 	public async choice<T = string>(choices: Array<PromptChoice<T>>, content?: string | Translateable, options?: PaginationOptions): Promise<T> {
-		return this.promptManager.createChoicePrompt<T>(this, choices, content, options);
+		return;
+		// return this.promptManager.createChoicePrompt<T>(this, choices, content, options);
 	}
 
 	public async getResponse(): Promise<Message> {
@@ -242,7 +257,7 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 		return this.channel.deleteMessage(this.responseId);
 	}
 
-	public async createMessage(content: C, files?: Array<FileContent>): Promise<unknown> {
+	public async createMessage(content: C, files?: Array<FileContent>): Promise<Message> {
 		return this.channel.createMessage(content, files);
 	}
 

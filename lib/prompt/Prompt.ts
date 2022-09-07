@@ -1,170 +1,151 @@
-import { Logger } from '@ayanaware/logger-api';
-
-import { Emoji, Message } from 'eris';
+import { Constants, Message } from 'eris';
 
 import { NON_ERROR_HALT } from '../commands/constants/CommandManager';
-import type { BaseContext } from '../contexts/BaseContext';
+import { ComponentOperation } from '../components/ComponentOperation';
+import { AnyComponentContext } from '../components/contexts/AnyComponentContext';
+import type { AnyContext } from '../contexts/AnyContext';
 import { DiscordPermission } from '../discord/constants/DiscordPermission';
-import { Translateable } from '../interfaces/Translateable';
+import type { Translateable } from '../interfaces/Translateable';
 
-export type PromptValidate<T> = (input: string) => Promise<T>;
+import type { PromptManager } from './PromptManager';
 
+const { MessageFlags } = Constants;
+
+export type PromptValidator<T = unknown> = (response: string) => Promise<T>;
 export const PROMPT_CLOSE = ['exit', 'x', 'close', 'c', ':q'];
 
-const log = Logger.get();
-export class Prompt<T = string> {
-	public readonly ctx: BaseContext;
-	public readonly channelId: string;
-	public readonly userId: string;
+export class Prompt<T = unknown> extends ComponentOperation<T> {
+	protected readonly pm: PromptManager;
+	protected validator: PromptValidator<T>;
+	protected hasHandler = false;
 
-	public pending = false;
-	public sent: string;
+	protected selfMessages: Array<Message> = [];
+	protected attempts = 0;
 
-	public closing = false;
+	// disable super.close() from calling super.resolve
+	protected resolveOnClose = false;
 
-	protected resolve: (value?: T | PromiseLike<T>) => Promise<void>;
-	protected reject: (reason?: any) => Promise<void>;
-	protected timer: NodeJS.Timeout;
+	public constructor(ctx: AnyContext, validator?: PromptValidator<T>) {
+		super(ctx);
+		this.pm = ctx.api.getEntity('@ayanaware/bentocord:PromptManager');
 
-	protected validate: PromptValidate<T>;
-	protected attempt = 0;
-
-	public constructor(ctx: BaseContext, validate?: PromptValidate<T>) {
-		this.ctx = ctx;
-
-		this.channelId = ctx.channelId;
-		this.userId = ctx.userId;
-
-		this.validate = validate;
+		if (validator) this.validator = validator;
 	}
 
-	protected refresh(): void {
-		if (this.timer) clearTimeout(this.timer);
+	public async render(): Promise<void> {
+		// add handler if need be
+		if (!this.hasHandler) {
+			await this.pm.addPrompt(this.ctx.channelId, this.ctx.userId, this.handleResponse.bind(this), this.close.bind(this));
+			this.hasHandler = true;
+		}
 
-		this.timer = setTimeout(() => {
-			this.timeout().catch((e: unknown) => {
-				log.warn(`timeout() Failure: ${e.toString()}`);
+		return super.render();
+	}
+
+	protected async handleInteraction(ctx: AnyComponentContext): Promise<void> {
+		// constrain interaction to prompt owner
+		if (ctx.userId !== this.ctx.userId) {
+			await ctx.createResponse({
+				content: 'This component does not belong to you',
+				flags: MessageFlags.EPHEMERAL,
 			});
-		}, 30 * 1000);
-	}
-
-	protected async timeout(): Promise<void> {
-		const reason = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_TIMEOUT', {}, 'You took too much time to respond.');
-		return this.close(reason);
-	}
-
-	protected async deleteMessage(message?: Message): Promise<void> {
-		// verify we have permission first
-		if (!this.ctx.selfHasPermission(DiscordPermission.MANAGE_MESSAGES)) return;
-
-		try {
-			if (message) await message.delete();
-		} catch { /* Failed */ }
-	}
-
-	protected async deleteReaction(emoji: Emoji): Promise<void> {
-		// verify we have permission first
-		if (!this.ctx.selfHasPermission(DiscordPermission.MANAGE_MESSAGES)) return;
-
-		try {
-			await this.ctx.channel.removeMessageReaction(this.ctx.responseId, emoji.name, this.userId);
-		} catch { /* Failed */ }
-	}
-
-	protected async start(): Promise<T> {
-		return new Promise((resolve, reject) => {
-			this.resolve = async value => {
-				if (this.timer) clearTimeout(this.timer);
-				this.pending = false;
-
-				resolve(value);
-			};
-
-			this.reject = async (reason?: any) => {
-				if (this.timer) clearTimeout(this.timer);
-				this.pending = false;
-
-				reject(reason);
-			};
-
-			this.pending = true;
-			this.refresh();
-		});
-	}
-
-	public async open(content: string | Translateable): Promise<T> {
-		if (this.pending) await this.close(await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_NEW', {}, 'New prompt was opened.'));
-
-		if (typeof content === 'object') content = await this.ctx.formatTranslation(content.key, content.repl, content.backup);
-
-		const usage = await this.ctx.formatTranslation('BENTOCORD_PROMPT_USAGE', {}, '*You may respond via message or the `r` command.*');
-		content += `\n${usage}`;
-
-		await this.ctx.createResponse({ content });
-		this.sent = content;
-
-		return this.start();
-	}
-
-	public async close(reason?: string | Translateable): Promise<void> {
-		let content;
-		if (reason) {
-			if (typeof reason === 'object') reason = await this.ctx.formatTranslation(reason.key, reason.repl, reason.backup);
-
-			content = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_REASON', { reason }, 'Prompt has been closed: {reason}');
-		} else {
-			content = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED', {}, 'Prompt has been closed.');
+			return;
 		}
 
-		try {
-			await this.ctx.createResponse({ content });
-		} catch (e) {
-			log.error(`Failed to show prompt close message: ${e}.`);
-		}
-
-		// A prompt closing is not an error
-		if (this.reject) return this.reject(NON_ERROR_HALT);
+		return super.handleInteraction(ctx);
 	}
 
-	public async handleResponse(input: string, message?: Message): Promise<void> {
-		if (this.pending) this.deleteMessage(message).catch(() => { /* no-op */ });
-
-		const close = PROMPT_CLOSE.some(c => c.toLocaleLowerCase() === input.toLocaleLowerCase());
-		if (close) return this.close();
-
-		let result: T;
-		if (typeof this.validate === 'function') {
+	public async handleResponse(response: string, message?: Message): Promise<void> {
+		// delete message if we have one and can
+		const hasManage = this.ctx.selfHasPermission(DiscordPermission.MANAGE_MESSAGES);
+		if (message && hasManage) {
 			try {
-				result = await this.validate(input);
-			} catch (e) {
-				return this.close(e.toString());
-			}
-		} else {
-			// no validate function. lets resolve
+				await message.delete();
+			} catch { /* NO-OP */}
+		}
+
+		const close = PROMPT_CLOSE.some(c => c.toLocaleLowerCase() === response.toLocaleLowerCase());
+		if (close) {
+			// User requested close
+			await this.close();
+			this.reject(NON_ERROR_HALT);
+
+			return;
+		}
+
+		// no validator, just resolve
+		if (typeof this.validator !== 'function') {
+			await this.close();
 			return this.resolve();
 		}
 
-		// new attempt, extend timeout
-		this.refresh();
+		try {
+			const result = await this.validator(response);
+			if (result != null) {
+				await this.close();
+				return this.resolve(result);
+			}
 
-		// successful result
-		if (typeof result != null) {
-			return this.resolve(result);
+			// failed validator
+			this.refreshTimeout();
+
+			if (++this.attempts >= 3) {
+				await this.close({ key: 'BENTOCORD_PROMPT_CANCELED_MAX_ATTEMPTS', backup: 'Max invalid attempts reached.' });
+				this.reject(NON_ERROR_HALT);
+
+				return;
+			}
+
+			const content = await this.ctx.formatTranslation('BENTOCORD_PROMPT_VALIDATE_ERROR', {}, 'Failed to validate input. Please try again');
+			const errorMessage = await this.ctx.createMessage({ content });
+			this.selfMessages.push(errorMessage);
+		} catch (e: unknown) {
+			await this.close(e.toString());
+			this.reject(e);
 		}
-
-		if (this.attempt++ >= 3) {
-			const canceled = await this.ctx.formatTranslation('BENTOCORD_PROMPT_CANCELED_MAX_ATTEMPTS', {}, 'Max invalid attempts reached.');
-			return this.close(canceled);
-		}
-
-		const error = await this.ctx.formatTranslation('BENTOCORD_PROMPT_VALIDATE_ERROR', {}, '**Failed to validate input. Please try again**');
-		const content = `${this.sent}\n\n${error}`;
-
-		await this.ctx.createResponse({ content });
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	public async handleReaction(message: Message, emoji: Emoji): Promise<void> {
-		return;
+	protected async handleTimeout(): Promise<void> {
+		await this.close({ key: 'BENTOCORD_PROMPT_CANCELED_TIMEOUT', backup: 'You took too much time to respond.' });
+		this.reject(new Error('Timeout'));
+	}
+
+	public async start(): Promise<T> {
+		return super.start();
+	}
+
+	public async close(reason?: string | Translateable): Promise<void> {
+		// detach handler
+		if (this.hasHandler) await this.pm.removePrompt(this.ctx.channelId, this.ctx.userId);
+
+		// Replace content with close message
+		if (reason) {
+			if (typeof reason === 'object') reason = await this.ctx.formatTranslation(reason.key, reason.repl, reason.backup);
+			this.content(reason);
+		}
+
+		// Remove components
+		this.rows([]);
+
+		// cleanup components, final render, timeouts, etc
+		await super.close();
+
+		// clean up selfMessages
+		if (this.selfMessages.length > 0) {
+			const client = this.ctx.discord.client;
+			if (this.ctx.selfHasPermission(DiscordPermission.MANAGE_MESSAGES)) {
+				const messageIds = this.selfMessages.map(m => m.id);
+				await client.deleteMessages(this.ctx.channelId, messageIds);
+			} else {
+				// No manage message, attempt to delete one by one
+				for (const message of this.selfMessages) {
+					try {
+						await message.delete();
+					} catch { /* NO-OP */}
+				}
+			}
+
+			this.selfMessages = [];
+		}
 	}
 }

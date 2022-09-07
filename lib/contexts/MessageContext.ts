@@ -1,6 +1,6 @@
 import { EntityAPI } from '@ayanaware/bento';
 
-import { Message } from 'eris';
+import type { Message } from 'eris';
 
 import { BaseContext } from './BaseContext';
 

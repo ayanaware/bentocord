@@ -21,7 +21,7 @@ export * from './components/contexts/ComponentContext';
 export * from './components/contexts/ButtonContext';
 export * from './components/contexts/SelectContext';
 
-export * from './components/helpers/ComponentOperation';
+export * from './components/ComponentOperation';
 export * from './components/helpers/Button';
 export * from './components/helpers/Select';
 export * from './components/interfaces/ComponentHandler';
@@ -78,11 +78,12 @@ export * from './interfaces/MessageLocation';
 export * from './interfaces/PermissionScope';
 
 // Prompts
-export * from './prompt/Prompt';
 export * from './prompt/PromptManager';
+export * from './prompt/Prompt';
+
 export * from './prompt/prompts/ChoicePrompt';
-export * from './prompt/prompts/ConfirmPrompt';
-export * from './prompt/prompts/PaginationPrompt';
+export * from './prompt/prompts/ConfirmPromptOld';
+export * from './prompt/prompts/PaginationPromptOld';
 
 // Utils
 export * from './util/IsTextableChannel';

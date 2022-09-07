@@ -1,4 +1,4 @@
-import { ComponentInteraction, ComponentInteractionButtonData, TextableChannel } from 'eris';
+import { ComponentInteraction, ComponentInteractionButtonData } from 'eris';
 
 import { ComponentContext } from './ComponentContext';
 

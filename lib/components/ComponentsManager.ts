@@ -8,10 +8,9 @@ import { DiscordEvent } from '../discord/constants/DiscordEvent';
 
 import { AnyComponentContext } from './contexts/AnyComponentContext';
 import { ButtonContext } from './contexts/ButtonContext';
-import { ComponentContext } from './contexts/ComponentContext';
 import { SelectContext } from './contexts/SelectContext';
-import { ComponentHandler } from './interfaces/ComponentHandler';
-import { ParsedCustomId } from './util/ParseCustomId';
+import type { ComponentHandler } from './interfaces/ComponentHandler';
+import type { ParsedCustomId } from './util/ParseCustomId';
 
 const { ComponentTypes } = Constants;
 
@@ -27,11 +26,11 @@ export class ComponentsManager implements Component {
 
 	public async onUnload(): Promise<void> {
 		// close open handlers
-		for (const [id, fns] of [...this.messageHandlers, ...this.prefixHandlers]) {
-			if (!fns[1]) continue;
+		for (const [id, [, close]] of [...this.messageHandlers, ...this.prefixHandlers]) {
+			if (!close) continue;
 
 			try {
-				await fns[1]();
+				await close();
 			} catch { /* NO-OP */ }
 
 			this.messageHandlers.delete(id);
@@ -39,7 +38,12 @@ export class ComponentsManager implements Component {
 		}
 	}
 
+	public hasPrefixHandler(prefix: string): boolean {
+		return this.prefixHandlers.has(prefix);
+	}
+
 	public addPrefixHandler(prefix: string, handler: ComponentHandler, close?: CloseHandler): void {
+		if (this.hasPrefixHandler) throw new Error(`Prefix handler already exists for "${prefix}"`);
 		if (!close) close = async () => { /* NO-OP */ };
 
 		this.prefixHandlers.set(prefix, [handler, close]);
@@ -49,8 +53,12 @@ export class ComponentsManager implements Component {
 		this.prefixHandlers.delete(prefix);
 	}
 
+	public hasMessageHandler(messageId: string): boolean {
+		return this.messageHandlers.has(messageId);
+	}
+
 	public addMessageHandler(messageId: string, handler: ComponentHandler, close?: CloseHandler): void {
-		if (this.messageHandlers.has(messageId)) throw new Error('MessageId has already been assigned a handler');
+		if (this.hasMessageHandler(messageId)) throw new Error('MessageId has already been assigned a handler');
 		if (!close) close = async () => { /* NO-OP */ };
 
 		this.messageHandlers.set(messageId, [handler, close]);
@@ -60,7 +68,7 @@ export class ComponentsManager implements Component {
 		this.messageHandlers.delete(messageId);
 	}
 
-	public async findHandler(ctx: ComponentContext, customId: ParsedCustomId): Promise<ComponentHandler> {
+	public async findHandler(ctx: AnyComponentContext, customId: ParsedCustomId): Promise<ComponentHandler> {
 		// check message handlers
 		const [messageHandler] = this.messageHandlers.get(ctx.messageId) ?? [];
 		if (messageHandler) return messageHandler;

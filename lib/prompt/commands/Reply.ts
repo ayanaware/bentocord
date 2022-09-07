@@ -1,6 +1,6 @@
 import { ComponentAPI, Inject } from '@ayanaware/bento';
 
-import { AnyCommandContext } from '../../commands/CommandContext';
+import { AnyCommandContext, InteractionCommandContext } from '../../commands/CommandContext';
 import { CommandManager } from '../../commands/CommandManager';
 import { OptionType } from '../../commands/constants/OptionType';
 import { CommandDefinition } from '../../commands/interfaces/CommandDefinition';
@@ -12,7 +12,7 @@ export class ReplyCommand implements CommandEntity {
 	public api!: ComponentAPI;
 	public parent = CommandManager;
 
-	@Inject() private readonly promptManager: PromptManager;
+	@Inject() private readonly pm: PromptManager;
 
 	public definition: CommandDefinition = {
 		name: ['r', 'reply'],
@@ -23,10 +23,12 @@ export class ReplyCommand implements CommandEntity {
 	};
 
 	public async execute(ctx: AnyCommandContext, { response }: { response: string }): Promise<unknown> {
-		try {
-			await ctx.deleteExecutionMessage();
-		} catch { /* Failed */}
+		if (ctx instanceof InteractionCommandContext) {
+			try {
+				await ctx.deleteExecutionMessage();
+			} catch { /* Failed */}
+		}
 
-		return this.promptManager.handleResponse(ctx.channelId, ctx.userId, response);
+		return this.pm.handleResponse(ctx.channelId, ctx.userId, response);
 	}
 }
