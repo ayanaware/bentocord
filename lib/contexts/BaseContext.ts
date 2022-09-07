@@ -24,7 +24,7 @@ import { PaginationOptions } from '../prompt/prompts/PaginationPrompt';
 import { IsTextableChannel } from '../util/IsTextableChannel';
 
 export class BaseContext<C extends MessageContent = MessageContent> {
-	private readonly api: EntityAPI;
+	public readonly api: EntityAPI;
 
 	public channel: TextableChannel;
 	public get channelId(): string {

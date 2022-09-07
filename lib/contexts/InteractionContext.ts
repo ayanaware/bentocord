@@ -1,11 +1,12 @@
 import { EntityAPI } from '@ayanaware/bento';
 
 import { CommandInteraction, ComponentInteraction, FileContent, InteractionContent, Message } from 'eris';
+
 import { IsTextableChannel } from '../util/IsTextableChannel';
 
 import { BaseContext } from './BaseContext';
 
-export class InteractionContext<C = InteractionContent> extends BaseContext<C> {
+export class InteractionContext<C = string | InteractionContent> extends BaseContext<C> {
 	public interaction: CommandInteraction | ComponentInteraction;
 
 	public constructor(api: EntityAPI, interaction: CommandInteraction | ComponentInteraction) {
@@ -47,11 +48,17 @@ export class InteractionContext<C = InteractionContent> extends BaseContext<C> {
 	}
 
 	public async getResponse(): Promise<Message> {
-		if (this.responseId === '@original') return this.interaction.getOriginalMessage();
+		if (this.responseId === '@original') {
+			const message = await this.interaction.getOriginalMessage();
+			this.responseId = message.id;
+
+			return message;
+		}
+
 		return this.discord.client.getMessage(this.channelId, this.responseId);
 	}
 
-	public async createResponse(response: C, files?: Array<FileContent>, flags?: number): Promise<void> {
+	public async createResponse(response: C, files?: Array<FileContent>): Promise<void> {
 		if (this.interaction.acknowledged) return this.editResponse(response, files);
 
 		this.responseId = '@original';

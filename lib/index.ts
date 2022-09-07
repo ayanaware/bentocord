@@ -14,6 +14,19 @@ export * from './commands/CommandContext';
 export * from './commands/HelpManager';
 export * from './commands/SlashManager';
 
+// Components
+export * from './components/ComponentsManager';
+export * from './components/contexts/AnyComponentContext';
+export * from './components/contexts/ComponentContext';
+export * from './components/contexts/ButtonContext';
+export * from './components/contexts/SelectContext';
+
+export * from './components/helpers/ComponentOperation';
+export * from './components/helpers/Button';
+export * from './components/helpers/Select';
+export * from './components/interfaces/ComponentHandler';
+export * from './components/util/ParseCustomId';
+
 // Contexts
 export * from './contexts/BaseContext';
 export * from './contexts/InteractionContext';
