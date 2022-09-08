@@ -5,14 +5,15 @@ import { ComponentOperation } from '../components/ComponentOperation';
 import { AnyComponentContext } from '../components/contexts/AnyComponentContext';
 import type { AnyContext } from '../contexts/AnyContext';
 import { DiscordPermission } from '../discord/constants/DiscordPermission';
-import type { Translateable } from '../interfaces/Translateable';
+import type { PossiblyTranslatable, Translatable } from '../interfaces/Translatable';
 
 import type { PromptManager } from './PromptManager';
 
 const { MessageFlags } = Constants;
 
 export type PromptValidator<T = unknown> = (response: string) => Promise<[boolean, T]>;
-export const PROMPT_CLOSE = ['exit', 'x', 'close', 'c', ':q'];
+
+export const TEXT_CLOSE = ['exit', 'x', 'close', 'c', ':q'];
 
 export class Prompt<T = unknown> extends ComponentOperation<T> {
 	protected readonly pm: PromptManager;
@@ -65,7 +66,7 @@ export class Prompt<T = unknown> extends ComponentOperation<T> {
 			} catch { /* NO-OP */}
 		}
 
-		const close = PROMPT_CLOSE.some(c => c.toLocaleLowerCase() === response.toLocaleLowerCase());
+		const close = TEXT_CLOSE.some(c => c.toLocaleLowerCase() === response.toLocaleLowerCase());
 		if (close) {
 			// User requested close
 			await this.close();
@@ -81,20 +82,23 @@ export class Prompt<T = unknown> extends ComponentOperation<T> {
 		}
 
 		try {
-			const [result, value] = await this.validator(response);
+			const [result, value] = await this.validator(response) ?? [];
+			// a non-boolean result means we just fully ignore the message, no refresh, no resolve, no error
+			if (typeof result !== 'boolean') return;
+
+			// passed validator, resolve
 			if (result) {
 				await this.close();
 				return this.resolve(value);
 			}
 
-			// failed validator
+			// failed validator, display error and refresh timeout
 			this.refreshTimeout();
 
+			// max attempts
 			if (++this.attempts >= 3) {
 				await this.close({ key: 'BENTOCORD_PROMPT_CANCELED_MAX_ATTEMPTS', backup: 'Max invalid attempts reached.' });
-				this.reject(NON_ERROR_HALT);
-
-				return;
+				return this.reject(NON_ERROR_HALT);
 			}
 
 			const content = await this.ctx.formatTranslation('BENTOCORD_PROMPT_VALIDATE_ERROR', {}, 'Failed to validate input. Please try again');
@@ -119,18 +123,18 @@ export class Prompt<T = unknown> extends ComponentOperation<T> {
 		return super.start();
 	}
 
-	public async close(reason?: string | Translateable): Promise<void> {
+	public async close(reason?: PossiblyTranslatable): Promise<void> {
 		// detach handler
 		if (this.hasHandler) await this.pm.removePrompt(this.ctx.channelId, this.ctx.userId);
 
 		// Replace content with close message
 		if (reason) {
-			if (typeof reason === 'object') reason = await this.ctx.formatTranslation(reason.key, reason.repl, reason.backup);
+			if (typeof reason === 'object') reason = await this.ctx.formatTranslation(reason);
 			this.content(reason);
 		}
 
 		// Remove components
-		this.rows([]);
+		this.clearRows();
 
 		// cleanup components, final render, timeouts, etc
 		await super.close();

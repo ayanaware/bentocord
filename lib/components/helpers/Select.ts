@@ -11,6 +11,8 @@ export class Select extends BaseComponent {
 	public definition: SelectMenu;
 	public handler?: ComponentHandler;
 
+	public readonly maxOptions = 25;
+
 	public constructor(ctx: AnyContext, customId: string, handler?: SelectHandler) {
 		super(ctx, customId, handler as ComponentHandler);
 
@@ -19,8 +21,19 @@ export class Select extends BaseComponent {
 	}
 
 	public options(...options: Array<SelectMenuOptions>): this {
+		if (options.length > this.maxOptions) throw new Error(`setOptions: Cannot have more then ${this.maxOptions} options`);
+
 		this.definition.options = options;
 		return this;
+	}
+
+	public clearOptions(): this {
+		this.definition.options = [];
+		return this;
+	}
+
+	public addOptions(...options: Array<SelectMenuOptions>): this {
+		return this.options(...[...this.definition.options, ...options]);
 	}
 
 	public placeholder(placeholder: string): this {

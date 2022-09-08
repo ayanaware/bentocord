@@ -2,7 +2,7 @@ import { ComponentAPI, Inject } from '@ayanaware/bento';
 
 import { BentocordInterface } from '../BentocordInterface';
 import { LocalizedEmbedBuilder } from '../builders/LocalizedEmbedBuilder';
-import { Translateable } from '../interfaces/Translateable';
+import { PossiblyTranslatable } from '../interfaces/Translatable';
 import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
 
 import { AnyCommandContext } from './CommandContext';
@@ -104,7 +104,7 @@ export class HelpManager implements CommandEntity {
 	public async showCommandHelp(ctx: AnyCommandContext, definition: CommandDefinition, path: Array<string>): Promise<unknown> {
 		let selected: CommandDefinition | AnyCommandOption = definition;
 		let selectedPath: Array<string> = [];
-		const list: Map<string, string | Translateable> = new Map();
+		const list: Map<string, PossiblyTranslatable> = new Map();
 
 		// Good god what is this mess. Someone please fix
 		// This function is responsible for fully recursing down a command object

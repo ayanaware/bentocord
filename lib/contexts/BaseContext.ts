@@ -16,12 +16,13 @@ import {
 import { BentocordInterface } from '../BentocordInterface';
 import { Discord } from '../discord/Discord';
 import { DiscordPermission } from '../discord/constants/DiscordPermission';
-import { Translateable } from '../interfaces/Translateable';
+import { PossiblyTranslatable, Translatable } from '../interfaces/Translatable';
 import { Prompt, PromptValidator } from '../prompt/Prompt';
+import { CodeblockPaginator } from '../prompt/pagination/CodeblockPaginator';
 import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
-import { PaginationOptions } from '../prompt/prompts/PaginationPromptOld';
-import { IsTextableChannel } from '../util/IsTextableChannel';
 import { ConfirmPrompt } from '../prompt/prompts/ConfirmPrompt';
+import { PaginationPrompt } from '../prompt/PaginationPrompt';
+import { IsTextableChannel } from '../util/IsTextableChannel';
 
 export class BaseContext<C extends MessageContent = MessageContent> {
 	public readonly api: EntityAPI;
@@ -67,7 +68,7 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	public readonly discord: Discord;
 
 	public responseId?: string;
-	public responseMessage?: Message;
+	protected responseMessage?: Message;
 
 	/** .prepare() must be called before this object is ready to be used */
 	public constructor(api: EntityAPI, channel: TextableChannel, user: User) {
@@ -144,7 +145,16 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param backup Translation Backup
 	 * @returns Formatted translation or null
 	 */
-	public async formatTranslation(key: string, repl?: Record<string, unknown>, backup?: string): Promise<string> {
+	public async formatTranslation(key: string, repl?: Record<string, unknown>, backup?: string): Promise<string>;
+	public async formatTranslation(translatable: Translatable): Promise<string>;
+	public async formatTranslation(key: string | Translatable, repl?: Record<string, unknown>, backup?: string): Promise<string> {
+		// unpack translatable
+		if (typeof key === 'object') {
+			repl = key.repl;
+			backup = key.backup;
+			key = key.key;
+		}
+
 		return this.interface.formatTranslation(key, repl, {
 			userId: this.userId || null,
 			channelId: this.channelId || null,
@@ -181,7 +191,7 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param validate Validate their input
 	 * @returns Validated input
 	 */
-	public async prompt<T = string>(content: string | Translateable, validator?: PromptValidator<T>): Promise<T> {
+	public async prompt<T = string>(content: PossiblyTranslatable, validator?: PromptValidator<T>): Promise<T> {
 		const prompt = new Prompt<T>(this, validator);
 		if (typeof content === 'object') await prompt.contentTranslated(content.key, content.repl, content.backup);
 		else prompt.content(content);
@@ -194,7 +204,7 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param content details about what they are confirming
 	 * @returns boolean
 	 */
-	public async confirm(content?: string | Translateable, items?: Array<string | Translateable>): Promise<boolean> {
+	public async confirm(content?: PossiblyTranslatable, items?: Array<PossiblyTranslatable>): Promise<boolean> {
 		const confirm = new ConfirmPrompt(this);
 		if (typeof content === 'object') await confirm.contentTranslated(content.key, content.repl, content.backup);
 		else if (content) confirm.content(content);
@@ -210,8 +220,9 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param options PaginationOptions
 	 * @returns
 	 */
-	public async pagination(items: Array<string | Translateable>, content?: string | Translateable, options?: PaginationOptions): Promise<void> {
-		// return this.promptManager.createPagination(this, items, content, options);
+	public async pagination(items: Array<PossiblyTranslatable>, content?: PossiblyTranslatable, options?: unknown): Promise<void> {
+		const pagination = new PaginationPrompt(this, new CodeblockPaginator(this, items, options));
+		await pagination.start();
 	}
 
 	/**
@@ -221,7 +232,7 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param options PagiantionOptions
 	 * @returns Selected PromptChoice value
 	 */
-	public async choice<T = string>(choices: Array<PromptChoice<T>>, content?: string | Translateable, options?: PaginationOptions): Promise<T> {
+	public async choice<T = string>(choices: Array<PromptChoice<T>>, content?: PossiblyTranslatable, options?: unknown): Promise<T> {
 		return;
 		// return this.promptManager.createChoicePrompt<T>(this, choices, content, options);
 	}
@@ -268,21 +279,6 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 		this.responseMessage = null;
 	}
 
-	public async createMessage(content: C, files?: Array<FileContent>): Promise<Message> {
-		return this.channel.createMessage(content, files);
-	}
-
-	public async editMessage(messageId: string, content: C, files?: Array<FileContent>): Promise<unknown> {
-		const edit: AdvancedMessageContentEdit = typeof content === 'string' ? { content } : content;
-		if (files) edit.file = files;
-
-		return this.channel.editMessage(messageId, edit);
-	}
-
-	public async deleteMessage(messageId: string): Promise<void> {
-		return this.channel.deleteMessage(messageId);
-	}
-
 	/**
 	 * Send translated response, getTranstion & createResponse
 	 * @param key Translation Key
@@ -305,5 +301,30 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	public async editTranslatedResponse(key: string, repl?: Record<string, unknown>, backup?: string): Promise<unknown> {
 		const content = await this.formatTranslation(key, repl, backup);
 		return this.editResponse({ content } as C);
+	}
+
+	public async createMessage(content: C, files?: Array<FileContent>): Promise<Message> {
+		return this.channel.createMessage(content, files);
+	}
+
+	public async editMessage(messageId: string, content: C, files?: Array<FileContent>): Promise<Message> {
+		const edit: AdvancedMessageContentEdit = typeof content === 'string' ? { content } : content;
+		if (files) edit.file = files;
+
+		return this.channel.editMessage(messageId, edit);
+	}
+
+	public async deleteMessage(messageId: string): Promise<void> {
+		return this.channel.deleteMessage(messageId);
+	}
+
+	public async createTranslatedMessage(key: string, repl?: Record<string, unknown>, backup?: string): Promise<Message> {
+		const content = await this.formatTranslation(key, repl, backup);
+		return this.createMessage({ content } as C);
+	}
+
+	public async editTranslatedMessage(messageId: string, key: string, repl?: Record<string, unknown>, backup?: string): Promise<Message> {
+		const content = await this.formatTranslation(key, repl, backup);
+		return this.editMessage(messageId, { content } as C);
 	}
 }

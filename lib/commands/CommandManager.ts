@@ -20,7 +20,7 @@ import { BentocordVariable } from '../BentocordVariable';
 import { InteractionContext } from '../contexts/InteractionContext';
 import { Discord } from '../discord/Discord';
 import { DiscordEvent } from '../discord/constants/DiscordEvent';
-import { Translateable } from '../interfaces/Translateable';
+import { PossiblyTranslatable, Translatable } from '../interfaces/Translatable';
 import { PromptManager } from '../prompt/PromptManager';
 import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
 
@@ -236,10 +236,10 @@ export class CommandManager implements Component {
 
 	/**
 	 * Get primary name of command alias or option name
-	 * @param name string or array of string and translateables. First element is always a string
+	 * @param name string or array of string and translatables. First element is always a string
 	 * @returns string
 	 */
-	public getPrimaryName(name: string | [string, ...Array<string | Translateable>]): string {
+	public getPrimaryName(name: string | [string, ...Array<PossiblyTranslatable>]): string {
 		let primary = name;
 		if (Array.isArray(primary)) primary = primary[0];
 
@@ -248,10 +248,10 @@ export class CommandManager implements Component {
 
 	/**
 	 * Get all translations for a possibly translatable
-	 * @param item Array<string | Translatable>
+	 * @param item Array<PossiblyTranslatable>
 	 * @returns Array of Tuple [string, Array<{ lang: string }>]
 	 */
-	public async getItemTranslations(items: string | Translateable | Array<string | Translateable>, normalize = false): Promise<Array<[string, Record<string, string>]>> {
+	public async getItemTranslations(items: PossiblyTranslatable | Array<PossiblyTranslatable>, normalize = false): Promise<Array<[string, Record<string, string>]>> {
 		if (!Array.isArray(items)) items = [items];
 
 		const collector: Array<[string, Record<string, string>]> = [];

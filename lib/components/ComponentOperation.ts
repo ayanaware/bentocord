@@ -19,6 +19,7 @@ export class ComponentOperation<T = unknown> {
 	protected _content: AdvancedMessageContent | InteractionContent;
 	protected _files: Array<FileContent> = [];
 	protected _rows: Array<Array<AnyComponent>> = [];
+	public readonly maxRowCount = 5;
 
 	public timeoutSeconds = 60;
 
@@ -54,10 +55,19 @@ export class ComponentOperation<T = unknown> {
 	}
 
 	public rows(...rows: Array<Array<AnyComponent>>): this {
-		if (rows.length > 3) throw new Error('Must be 3 rows or less');
+		if (rows.length > 5) throw new Error('setRows: Must be 5 rows or less');
 
 		this._rows = rows;
 		return this;
+	}
+
+	public clearRows(): this {
+		this._rows = [];
+		return this;
+	}
+
+	public addRows(...rows: Array<Array<AnyComponent>>): this {
+		return this.rows(...[...this._rows, ...rows]);
 	}
 
 	public async render(): Promise<void> {

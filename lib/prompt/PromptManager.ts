@@ -5,10 +5,10 @@ import { Message } from 'eris';
 
 import { Discord } from '../discord/Discord';
 import { DiscordEvent } from '../discord/constants/DiscordEvent';
-import { Translateable } from '../interfaces/Translateable';
+import { PossiblyTranslatable, Translatable } from '../interfaces/Translatable';
 
 export type PromptHandler = (response: string, message?: Message) => Promise<unknown>;
-type CloseHandler = (reason?: string | Translateable) => Promise<void>;
+type CloseHandler = (reason?: PossiblyTranslatable) => Promise<void>;
 
 const log = Logger.get();
 export class PromptManager implements Component {
@@ -47,7 +47,7 @@ export class PromptManager implements Component {
 		this.prompts.delete(key);
 	}
 
-	public async closePrompt(channelId: string, userId: string, reason?: string | Translateable): Promise<void> {
+	public async closePrompt(channelId: string, userId: string, reason?: PossiblyTranslatable): Promise<void> {
 		const key = `${channelId}.${userId}`;
 
 		const [, close] = this.prompts.get(key) ?? [];

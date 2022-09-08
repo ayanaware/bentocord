@@ -18,13 +18,23 @@ export class BaseComponent {
 		if (handler) this.handler = handler;
 	}
 
-	public disable(): this {
-		this.definition.disabled = true;
+	/**
+	 * Set component as disabled.
+	 * @param set Optional Helper, Explicity set disabled state
+	 */
+	public disable(set?: boolean): this {
+		if (typeof set === 'boolean') this.definition.disabled = set;
+		else this.definition.disabled = true;
+
 		return this;
 	}
 
-	public enable(): this {
-		this.definition.disabled = false;
-		return this;
+	/**
+	 * Set component as enabled, or rather, not disabled.
+	 * @param set Optional Helper, Explicity set enabled state
+	 */
+	public enable(set?: boolean): this {
+		if (typeof set !== 'boolean') set = true;
+		return this.disable(!set);
 	}
 }

@@ -73,17 +73,20 @@ export * from './discord/constants/DiscordEvent';
 export * from './discord/constants/DiscordPermission';
 
 // Interfaces
-export * from './interfaces/Translateable';
+export * from './interfaces/Translatable';
 export * from './interfaces/MessageLocation';
 export * from './interfaces/PermissionScope';
 
 // Prompts
 export * from './prompt/PromptManager';
 export * from './prompt/Prompt';
+export * from './prompt/PaginationPrompt';
 
 export * from './prompt/prompts/ChoicePrompt';
-export * from './prompt/prompts/ConfirmPromptOld';
-export * from './prompt/prompts/PaginationPromptOld';
+export * from './prompt/prompts/ConfirmPrompt';
+
+export * from './prompt/pagination/Paginator';
+export * from './prompt/pagination/CodeblockPaginator';
 
 // Utils
 export * from './util/IsTextableChannel';
