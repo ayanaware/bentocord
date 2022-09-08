@@ -32,6 +32,7 @@ export class ComponentOperation<T = unknown> {
 
 	public constructor(ctx: AnyContext) {
 		this.ctx = ctx;
+		// using entity name to prevent circular depends
 		this.cm = ctx.api.getEntity('@ayanaware/bentocord:ComponentsManager');
 	}
 

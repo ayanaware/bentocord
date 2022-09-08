@@ -760,7 +760,7 @@ export class CommandManager implements Component {
 		if (inputs.length < 1 && (typeof option.required !== 'boolean' || option.required) && !('choices' in option)) {
 			const type = this.getTypePreview(option);
 			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_OPTION', { option: primary, type },  'Please provide an input for option `{option}` of type `{type}`');
-			const input = await ctx.prompt<string>(content, async (s: string) => s);
+			const input = await ctx.prompt<string>(content, async (s: string) => [true, s]);
 
 			inputs = option.array ? input.split(/,\s?/gi) : [input];
 			inputs = inputs.filter(i => !!i);

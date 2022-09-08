@@ -11,7 +11,7 @@ import type { PromptManager } from './PromptManager';
 
 const { MessageFlags } = Constants;
 
-export type PromptValidator<T = unknown> = (response: string) => Promise<T>;
+export type PromptValidator<T = unknown> = (response: string) => Promise<[boolean, T]>;
 export const PROMPT_CLOSE = ['exit', 'x', 'close', 'c', ':q'];
 
 export class Prompt<T = unknown> extends ComponentOperation<T> {
@@ -27,6 +27,7 @@ export class Prompt<T = unknown> extends ComponentOperation<T> {
 
 	public constructor(ctx: AnyContext, validator?: PromptValidator<T>) {
 		super(ctx);
+		// using entity name to prevent circular depends
 		this.pm = ctx.api.getEntity('@ayanaware/bentocord:PromptManager');
 
 		if (validator) this.validator = validator;
@@ -80,10 +81,10 @@ export class Prompt<T = unknown> extends ComponentOperation<T> {
 		}
 
 		try {
-			const result = await this.validator(response);
-			if (result != null) {
+			const [result, value] = await this.validator(response);
+			if (result) {
 				await this.close();
-				return this.resolve(result);
+				return this.resolve(value);
 			}
 
 			// failed validator
@@ -98,7 +99,11 @@ export class Prompt<T = unknown> extends ComponentOperation<T> {
 
 			const content = await this.ctx.formatTranslation('BENTOCORD_PROMPT_VALIDATE_ERROR', {}, 'Failed to validate input. Please try again');
 			const errorMessage = await this.ctx.createMessage({ content });
-			this.selfMessages.push(errorMessage);
+
+			// auto-delete errorMessage
+			setTimeout(() => {
+				errorMessage.delete().catch(e => { /* NO-OP */ });
+			}, 3 * 1000);
 		} catch (e: unknown) {
 			await this.close(e.toString());
 			this.reject(e);

@@ -14,9 +14,5 @@ export class PromptTest implements CommandEntity {
 	public async execute(ctx: AnyCommandContext): Promise<any> {
 		const confirm = await ctx.confirm('Are you sure?!');
 		return ctx.createResponse(confirm.toString());
-
-
-		const input = await ctx.prompt('Please enter something:', async (response: string) => ['yes', 'no'].includes(response) ? response : null);
-		return ctx.createResponse(`You Said: ${input}`);
 	}
 }

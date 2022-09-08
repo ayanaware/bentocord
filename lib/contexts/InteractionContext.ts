@@ -49,13 +49,19 @@ export class InteractionContext<C = string | InteractionContent> extends BaseCon
 
 	public async getResponse(): Promise<Message> {
 		if (this.responseId === '@original') {
-			const message = await this.interaction.getOriginalMessage();
-			this.responseId = message.id;
+			const original = await this.interaction.getOriginalMessage();
+			this.responseId = original.id;
+			this.responseMessage = original;
 
-			return message;
+			return original;
 		}
 
-		return this.discord.client.getMessage(this.channelId, this.responseId);
+		if (this.responseMessage && this.responseMessage.id === this.responseId) return this.responseMessage;
+
+		const message = await this.discord.client.getMessage(this.channelId, this.responseId);
+		this.responseMessage = message;
+
+		return message;
 	}
 
 	public async createResponse(response: C, files?: Array<FileContent>): Promise<void> {
@@ -72,6 +78,7 @@ export class InteractionContext<C = string | InteractionContent> extends BaseCon
 		if (!this.responseId) {
 			const message = await this.interaction.createFollowup(response, files);
 			this.responseId = message.id;
+			this.responseMessage = message;
 			return;
 		}
 
@@ -81,12 +88,15 @@ export class InteractionContext<C = string | InteractionContent> extends BaseCon
 			// issue editing, create a brand new message
 			const message = await this.interaction.createFollowup(response, files);
 			this.responseId = message.id;
+			this.responseMessage = message;
 		}
 	}
 
 	public async deleteResponse(): Promise<void> {
 		await this.deleteMessage(this.responseId);
+
 		this.responseId = null;
+		this.responseMessage = null;
 	}
 
 	public async createMessage(content: C, files?: Array<FileContent>): Promise<Message> {

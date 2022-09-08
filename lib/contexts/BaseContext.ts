@@ -67,6 +67,7 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	public readonly discord: Discord;
 
 	public responseId?: string;
+	public responseMessage?: Message;
 
 	/** .prepare() must be called before this object is ready to be used */
 	public constructor(api: EntityAPI, channel: TextableChannel, user: User) {
@@ -226,7 +227,13 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	}
 
 	public async getResponse(): Promise<Message> {
-		return this.discord.client.getMessage(this.channelId, this.responseId);
+		// use cached instance if we have one
+		if (this.responseMessage && this.responseMessage.id === this.responseId) return this.responseMessage;
+
+		const message = await this.discord.client.getMessage(this.channelId, this.responseId);
+		this.responseMessage = message;
+
+		return message;
 	}
 
 	public async createResponse(response: C, files?: Array<FileContent>): Promise<void> {
@@ -234,6 +241,7 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 
 		const message = await this.channel.createMessage(response, files);
 		this.responseId = message.id;
+		this.responseMessage = message;
 	}
 
 	public async editResponse(response: C, files?: Array<FileContent>): Promise<void> {
@@ -248,13 +256,16 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 			// issue editing, create a new message
 			const message = await this.channel.createMessage(edit, files);
 			this.responseId = message.id;
+			this.responseMessage = message;
 		}
 	}
 
 	public async deleteResponse(): Promise<void> {
 		if (!this.responseId) return;
+		await this.channel.deleteMessage(this.responseId);
 
-		return this.channel.deleteMessage(this.responseId);
+		this.responseId = null;
+		this.responseMessage = null;
 	}
 
 	public async createMessage(content: C, files?: Array<FileContent>): Promise<Message> {
