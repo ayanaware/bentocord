@@ -5,9 +5,9 @@ import type { BaseContext } from '../../contexts/BaseContext';
 import type { AgnosticMessageContent } from '../../interfaces/AgnosticMessageContent';
 import { PossiblyTranslatable } from '../../interfaces/Translatable';
 
-import { Paginator, PaginatorItems } from './Paginator';
+import { Paginator, PaginatorItems, PaginatorOptions } from './Paginator';
 
-export interface CodeblockPaginatorOptions {
+export interface CodeblockPaginatorOptions extends PaginatorOptions {
 	language?: string;
 
 	focused?: number;
@@ -23,11 +23,10 @@ export class CodeblockPaginator<T = void> extends Paginator<T> {
 	public readonly options: CodeblockPaginatorOptions;
 
 	public constructor(ctx: BaseContext, items: Array<PaginatorItems<T>>, options: CodeblockPaginatorOptions = {}) {
-		super(ctx, items);
-		this.options = options;
+		super(ctx, items, options);
 
-		if (typeof options.focused === 'number') {
-			this.currentPage = Math.floor(options.focused / this.itemsPerPage) ?? 0;
+		if (typeof this.options.focused === 'number') {
+			this.currentPage = Math.floor(options.focused / this.options.itemsPerPage) ?? 0;
 		}
 	}
 

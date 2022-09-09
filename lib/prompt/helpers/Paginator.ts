@@ -26,12 +26,11 @@ export abstract class Paginator<T = void> {
 	protected readonly items: Array<PaginatorItem<T>> = [];
 
 	protected currentPage = 0;
-	public itemsPerPage = 10;
+	public readonly options: PaginatorOptions;
 
-	public constructor(ctx: BaseContext, items: Array<PaginatorItems<T>>, options: PaginatorOptions = {}) {
+	public constructor(ctx: BaseContext, items: Array<PaginatorItems<T>>, options?: PaginatorOptions) {
 		this.ctx = ctx;
-
-		if (typeof options.itemsPerPage === 'number') this.itemsPerPage = options.itemsPerPage;
+		this.options = { itemsPerPage: 10, ...options };
 
 		// inflate Array<T> to Array<PaginatorItem<T>>
 		this.items = items.map(i => {
@@ -57,7 +56,7 @@ export abstract class Paginator<T = void> {
 	}
 
 	public get pageCount(): number {
-		return Math.ceil(this.items.length / this.itemsPerPage) || 1;
+		return Math.ceil(this.items.length / this.options.itemsPerPage) || 1;
 	}
 
 	public get hasNext(): boolean {
@@ -73,8 +72,8 @@ export abstract class Paginator<T = void> {
 	}
 
 	public async getPageItems(): Promise<Array<PaginatorPageItem<T>>> {
-		const start = this.page * this.itemsPerPage;
-		const end = start + this.itemsPerPage;
+		const start = this.page * this.options.itemsPerPage;
+		const end = start + this.options.itemsPerPage;
 
 		const items: Array<PaginatorPageItem<T>> = [];
 		for (let index = start; index < end; index++) {
