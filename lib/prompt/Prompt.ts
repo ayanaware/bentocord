@@ -5,7 +5,7 @@ import { ComponentOperation } from '../components/ComponentOperation';
 import { AnyComponentContext } from '../components/contexts/AnyComponentContext';
 import type { AnyContext } from '../contexts/AnyContext';
 import { DiscordPermission } from '../discord/constants/DiscordPermission';
-import type { PossiblyTranslatable, Translatable } from '../interfaces/Translatable';
+import type { PossiblyTranslatable } from '../interfaces/Translatable';
 
 import type { PromptManager } from './PromptManager';
 
@@ -13,22 +13,30 @@ const { MessageFlags } = Constants;
 
 export type PromptValidator<T = unknown> = (response: string) => Promise<[boolean, T]>;
 
+export interface PromptOptions {
+	showCloseError?: boolean;
+	closeErrorFollowup?: boolean;
+}
+
 export const TEXT_CLOSE = ['exit', 'x', 'close', 'c', ':q'];
 
 export class Prompt<T = unknown> extends ComponentOperation<T> {
 	protected readonly pm: PromptManager;
 	protected validator: PromptValidator<T>;
+	protected options: PromptOptions;
+
 	protected hasHandler = false;
 
 	protected selfMessages: Array<Message> = [];
 	protected attempts = 0;
 
-	public constructor(ctx: AnyContext, validator?: PromptValidator<T>) {
+	public constructor(ctx: AnyContext, validator?: PromptValidator<T>, options: PromptOptions = {}) {
 		super(ctx);
 		// using entity name to prevent circular depends
 		this.pm = ctx.api.getEntity('@ayanaware/bentocord:PromptManager');
 
 		if (validator) this.validator = validator;
+		this.options = options;
 	}
 
 	public async render(): Promise<void> {
@@ -126,10 +134,13 @@ export class Prompt<T = unknown> extends ComponentOperation<T> {
 	}
 
 	public async close(reason?: PossiblyTranslatable): Promise<void> {
-		// Replace content with close message
+		// Handle close reason, respect PromptOptions
 		if (reason) {
 			if (typeof reason === 'object') reason = await this.ctx.formatTranslation(reason);
-			this.content(reason);
+			if (this.options.showCloseError) {
+				if (this.options.closeErrorFollowup) await this.ctx.createMessage(reason);
+				else this.content(reason);
+			}
 		}
 
 		await this.cleanup();

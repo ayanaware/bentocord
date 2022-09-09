@@ -18,10 +18,10 @@ import { Discord } from '../discord/Discord';
 import { DiscordPermission } from '../discord/constants/DiscordPermission';
 import { PossiblyTranslatable, Translatable } from '../interfaces/Translatable';
 import { PaginationPrompt } from '../prompt/PaginationPrompt';
-import { Prompt, PromptValidator } from '../prompt/Prompt';
+import { Prompt, PromptOptions, PromptValidator } from '../prompt/Prompt';
 import { CodeblockPaginator } from '../prompt/helpers/CodeblockPaginator';
 import { Paginator } from '../prompt/helpers/Paginator';
-import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
+import { ChoicePrompt, ChoicePromptChoice } from '../prompt/prompts/ChoicePrompt';
 import { ConfirmPrompt } from '../prompt/prompts/ConfirmPrompt';
 import { IsTextableChannel } from '../util/IsTextableChannel';
 
@@ -186,14 +186,14 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	}
 
 	/**
-	 * Prompt command author for additional input
-	 * @param options PromptOptions
+	 * Prompt command invoker for additional input
 	 * @param content Message to display
-	 * @param validate Validate their input
+	 * @param validator Validate their input
+	 * @param options PromptOptions
 	 * @returns Validated input
 	 */
-	public async prompt<T = string>(content: PossiblyTranslatable, validator?: PromptValidator<T>): Promise<T> {
-		const prompt = new Prompt<T>(this, validator);
+	public async prompt<T = string>(content: PossiblyTranslatable, validator?: PromptValidator<T>, options?: PromptOptions): Promise<T> {
+		const prompt = new Prompt<T>(this, validator, options);
 		if (typeof content === 'object') await prompt.contentTranslated(content.key, content.repl, content.backup);
 		else prompt.content(content);
 
@@ -205,7 +205,7 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param content details about what they are confirming
 	 * @returns boolean
 	 */
-	public async confirm(content?: PossiblyTranslatable, items?: Paginator<PossiblyTranslatable> | Array<PossiblyTranslatable>): Promise<boolean> {
+	public async confirm(content?: PossiblyTranslatable, items?: Paginator<void> | Array<PossiblyTranslatable>): Promise<boolean> {
 		if (Array.isArray(items)) items = new CodeblockPaginator(this, items);
 
 		const confirm = new ConfirmPrompt(this, items);
@@ -224,9 +224,14 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param options PaginationOptions
 	 * @returns
 	 */
-	public async pagination(items: Array<PossiblyTranslatable>, content?: PossiblyTranslatable, options?: unknown): Promise<void> {
-		const pagination = new PaginationPrompt(this, new CodeblockPaginator(this, items, options));
-		await pagination.start();
+	public async pagination(items: Paginator<void> | Array<PossiblyTranslatable>, content?: PossiblyTranslatable, options?: PromptOptions): Promise<void> {
+		if (Array.isArray(items)) items = new CodeblockPaginator(this, items);
+		const pagination = new PaginationPrompt(this, items, options);
+
+		if (typeof content === 'object') await pagination.contentTranslated(content.key, content.repl, content.backup);
+		else if (content) pagination.content(content);
+
+		return pagination.start();
 	}
 
 	/**
@@ -236,9 +241,13 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param options PagiantionOptions
 	 * @returns Selected PromptChoice value
 	 */
-	public async choice<T = string>(choices: Array<PromptChoice<T>>, content?: PossiblyTranslatable, options?: unknown): Promise<T> {
-		return;
-		// return this.promptManager.createChoicePrompt<T>(this, choices, content, options);
+	public async choice<T = string>(choices: Array<ChoicePromptChoice<T>>, content?: PossiblyTranslatable, options?: PromptOptions): Promise<T> {
+		const choice = new ChoicePrompt(this, choices, options);
+
+		if (typeof content === 'object') await choice.contentTranslated(content.key, content.repl, content.backup);
+		else if (content) choice.content(content);
+
+		return choice.start();
 	}
 
 	public async getResponse(): Promise<Message> {

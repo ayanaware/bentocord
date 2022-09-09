@@ -4,11 +4,11 @@ import type { AnyContext } from '../../contexts/AnyContext';
 import { PaginationPrompt } from '../PaginationPrompt';
 import { Paginator } from '../helpers/Paginator';
 
-export class ConfirmPrompt<T = string> extends PaginationPrompt<boolean> {
+export class ConfirmPrompt extends PaginationPrompt<boolean, void> {
 	protected btnYes: Button;
 	protected btnNo: Button;
 
-	public constructor(ctx: AnyContext, paginator?: Paginator<T>) {
+	public constructor(ctx: AnyContext, paginator?: Paginator<void>) {
 		super(ctx, paginator);
 
 		this.validator = this.handleText.bind(this);

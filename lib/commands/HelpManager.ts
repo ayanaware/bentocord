@@ -3,7 +3,7 @@ import { ComponentAPI, Inject } from '@ayanaware/bento';
 import { BentocordInterface } from '../BentocordInterface';
 import { LocalizedEmbedBuilder } from '../builders/LocalizedEmbedBuilder';
 import { PossiblyTranslatable } from '../interfaces/Translatable';
-import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
+import { ChoicePromptChoice } from '../prompt/prompts/ChoicePrompt';
 
 import { AnyCommandContext } from './CommandContext';
 import { CommandDetails, CommandManager } from './CommandManager';
@@ -63,7 +63,7 @@ export class HelpManager implements CommandEntity {
 				.filter(([, v]) => !v.definition.hidden) // remove hidden
 				.map(k => k[0]).sort();
 
-			const display = await ctx.formatTranslation(`BENTOCORD_HELP_CATEGORY_${category.toLocaleUpperCase()}`, {}, category.toLocaleUpperCase());
+			const display = await ctx.formatTranslation(`HELP_CATEGORY_${category.toLocaleUpperCase()}`, {}, category.toLocaleUpperCase());
 			unsorted.push([display, names]);
 		}
 
@@ -82,21 +82,19 @@ export class HelpManager implements CommandEntity {
 	}
 
 	private async showCategoryHelp(ctx: AnyCommandContext, category: string, commands: Map<string, CommandDetails>): Promise<unknown> {
-		const choices: Array<PromptChoice<CommandDefinition>> = [];
+		const choices: Array<ChoicePromptChoice<CommandDefinition>> = [];
 		for (const [command, details] of Array.from(commands.entries()).sort()) {
 			// skip hidden
 			if (details.definition.hidden ?? false) continue;
 
-			let description = details.definition.description;
-			if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl, description.backup);
+			const description = details.definition.description;
+			const label = command;
 
-			let final = command;
-			if (description) final = `${final} - ${description}`;
-
-			choices.push({ name: final, value: details.definition, match: [command] });
+			choices.push({ label, description, value: details.definition, match: [command] });
 		}
 
-		const choice = await ctx.choice(choices, { key: `BENTOCORD_HELP_CATEGORY_${category.toLocaleUpperCase()}_DESCRIPTION`, backup: category }, { resolveOnClose: true });
+		const backup = category.charAt(0).toUpperCase() + category.slice(1);
+		const choice = await ctx.choice(choices, { key: `BENTOCORD_HELP_CATEGORY_${category.toLocaleUpperCase()}_DESCRIPTION`, backup }, { showCloseError: false });
 		if (choice) return this.showCommandHelp(ctx, choice, []);
 	}
 
@@ -161,12 +159,11 @@ export class HelpManager implements CommandEntity {
 		// allows users to drill down futher if they want
 		if (list.size > 0) {
 			// translate descriptions
-			const choices: Array<PromptChoice<Array<string>>> = [];
-			for (let [key, desc] of list) {
-				if (typeof desc === 'object') desc = await ctx.formatTranslation(desc.key, desc.repl, desc.backup);
-
-				choices.push({ name: `${key}${desc ? ` - ${desc}` : ''}`, value: key.split(' '), match: [key] });
-			}
+			const choices: Array<ChoicePromptChoice<Array<string>>> = Array.from(list.entries()).map(([label, desc]) => ({
+				label, description: desc,
+				value: label.split(' '),
+				match: [label],
+			}));
 
 			// build list of data
 			const data: Map<string, string> = new Map();
@@ -183,7 +180,7 @@ export class HelpManager implements CommandEntity {
 
 			const subCommandHeader = await ctx.formatTranslation('BENTOCORD_WORD_SUBCOMMANDS', {}, 'Sub Commands');
 
-			const choice = await ctx.choice(choices, `${response}\n\n**${subCommandHeader}**:`, { resolveOnClose: true });
+			const choice = await ctx.choice(choices, `${response}\n\n**${subCommandHeader}**:`, { showCloseError: false });
 
 			// user picked something remove first element and invoke ourself again
 			if (choice) return this.showCommandHelp(ctx, definition, choice.slice(1));
@@ -220,24 +217,22 @@ export class HelpManager implements CommandEntity {
 		const response = Array.from(data.entries()).map(([k, v]) => `**${k}**${v ? `: ${v}` : ''}`).join('\n');
 
 		// Display Options
-		const choices: Array<PromptChoice<Array<string>>> = [];
+		const choices: Array<ChoicePromptChoice<Array<string>>> = [];
 		for (const option of command.options ?? []) {
 			// if this is somehow possible handle it
 			if (this.cm.isAnySubCommand(option)) continue;
 
 			const name = this.cm.getPrimaryName(option.name);
-			let desc = option.description;
-			if (typeof desc === 'object') desc = await ctx.formatTranslation(desc.key, desc.repl, desc.backup);
 			const type = this.cm.getTypePreview(option);
 
-			choices.push({ name: `${name}${type}${desc ? ` - ${desc}` : ''}`, value: [...fullPath, name ], match: [name] });
+			choices.push({ label: `${name}${type}`, description: option.description, value: [...fullPath, name ], match: [name] });
 		}
 
 		// TODO: Dynamically generate examples and/or pull from definition
 
 		if (choices.length > 0) {
 			const optionHeader = await ctx.formatTranslation('BENTOCORD_WORD_OPTIONS', {}, 'Options');
-			const choice = await ctx.choice(choices, `${response}\n\n**${optionHeader}**:`, { resolveOnClose: true });
+			const choice = await ctx.choice(choices, `${response}\n\n**${optionHeader}**:`, { showCloseError: false });
 
 			// user picked something remove first element and invoke showCommandHelp again
 			if (choice) return this.showCommandHelp(ctx, definition, choice.slice(1));

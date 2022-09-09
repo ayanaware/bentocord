@@ -14,7 +14,7 @@ const { ComponentTypes } = Constants;
 export type AnyComponent = Button | Select;
 
 export type ContentTransformer = (content?: AgnosticMessageContent) => Promise<AgnosticMessageContent>;
-export class ComponentOperation<T = unknown> {
+export class ComponentOperation<T = void> {
 	protected readonly ctx: AnyContext;
 	protected readonly cm: ComponentsManager;
 

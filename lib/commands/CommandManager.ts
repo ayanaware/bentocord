@@ -17,12 +17,11 @@ import {
 
 import { BentocordInterface } from '../BentocordInterface';
 import { BentocordVariable } from '../BentocordVariable';
-import { InteractionContext } from '../contexts/InteractionContext';
 import { Discord } from '../discord/Discord';
 import { DiscordEvent } from '../discord/constants/DiscordEvent';
-import { PossiblyTranslatable, Translatable } from '../interfaces/Translatable';
+import { PossiblyTranslatable } from '../interfaces/Translatable';
 import { PromptManager } from '../prompt/PromptManager';
-import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
+import { ChoicePromptChoice } from '../prompt/prompts/ChoicePrompt';
 
 import { AnyCommandContext, InteractionCommandContext, MessageCommandContext } from './CommandContext';
 import { CommandManagerEvent, NON_ERROR_HALT } from './constants/CommandManager';
@@ -709,15 +708,12 @@ export class CommandManager implements Component {
 		// Prompt for subcommand option
 		let useSub: string = null;
 		if (promptSubs.length > 1) {
-			const choices: Array<PromptChoice<string>> = [];
+			const choices: Array<ChoicePromptChoice<string>> = [];
 			for (const sub of promptSubs) {
 				if (sub.hidden ?? false) continue; // don't show hidden subcommands/groups
 				const primary = this.getPrimaryName(sub.name);
 
-				let description = sub.description;
-				if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl, description.backup);
-
-				choices.push({ value: primary, name: `${primary} - ${description}`, match: [primary] });
+				choices.push({ value: primary, label: primary, description: sub.description, match: [primary] });
 			}
 
 			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_SUBCOMMAND', {}, 'Please select a subcommand:');
@@ -782,19 +778,19 @@ export class CommandManager implements Component {
 
 				const resolver = this.resolvers.get(option.type) as Resolver<T>;
 
-				const choices: Array<PromptChoice<T>> = [];
+				const choices: Array<ChoicePromptChoice<T>> = [];
 				for (const item of result) {
 					const match = [];
-					let display = item.toString();
+					let label = item.toString();
 
 					if (resolver && typeof resolver.reduce === 'function') {
 						const reduce = await resolver.reduce(ctx, option, item);
-						display = reduce.display;
+						label = reduce.display;
 
 						if (reduce.extra) match.push(reduce.extra);
 					}
 
-					choices.push({ value: item, name: display, match });
+					choices.push({ value: item, label, match });
 				}
 
 				const choice = await ctx.choice<T>(choices);
@@ -825,14 +821,9 @@ export class CommandManager implements Component {
 			if (!findChoice) {
 				const content = await ctx.formatTranslation('BENTOCORD_PROMPT_CHOICE_OPTION', { option: primary }, 'Please select one of the following choices for option `{option}`');
 
-				const finalChoices: Array<PromptChoice<number | string>> = [];
-				for (const choice of choices) {
-					let display = choice.name;
-					if (typeof display === 'object') display = await ctx.formatTranslation(display.key, display.repl, display.backup);
-
-					const final = { name: display, value: choice.value, match: [choice.value.toString()] };
-					finalChoices.push(final);
-				}
+				const finalChoices: Array<ChoicePromptChoice<number | string>> = choices.map(c => ({
+					label: c.name, value: c.value, match: [c.value.toString()],
+				}));
 
 				out = await ctx.choice<number | string>(finalChoices, content) as unknown as T;
 			}

@@ -39,6 +39,10 @@ export class PromptManager implements Component {
 		const key = `${channelId}.${userId}`;
 		if (!close) close = async () => { /* NO-OP */ };
 
+		// close any other open prompts
+		await this.closePrompt(channelId, userId, {
+			key: 'BENTOCORD_PROMPT_CANCELED_NEW', backup: 'New prompt was opened.' });
+
 		this.prompts.set(key, [handler, close]);
 	}
 

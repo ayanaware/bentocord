@@ -7,7 +7,7 @@ import { Button } from '../components/helpers/Button';
 import { Select } from '../components/helpers/Select';
 import type { BaseContext } from '../contexts/BaseContext';
 
-import { Prompt } from './Prompt';
+import { Prompt, PromptOptions } from './Prompt';
 import type { Paginator } from './helpers/Paginator';
 
 export enum PaginationEmojis {
@@ -23,8 +23,8 @@ const TEXT_PREV = ['<', 'prev', 'previous'];
 const TEXT_NEXT = ['>', 'next'];
 const TEXT_LAST = ['>>', 'last', 'l'];
 
-export class PaginationPrompt<T = void> extends Prompt<T> {
-	public readonly paginator: Paginator<unknown>;
+export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
+	public readonly paginator: Paginator<U>;
 
 	// first, prev, next, last
 	protected btnFirst: Button;
@@ -34,9 +34,10 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	protected btnClose: Button;
 	protected sltPage: Select;
 
-	public constructor(ctx: BaseContext, paginator?: Paginator<unknown>) {
-		super(ctx);
+	public constructor(ctx: BaseContext, paginator?: Paginator<U>, options?: PromptOptions) {
+		super(ctx, null, options);
 		this.paginator = paginator;
+		this.validator = this.handleText.bind(this);
 
 		this.btnFirst = new Button(this.ctx, 'first', this.handleButton.bind(this))
 			.secondary().emoji({ name: PaginationEmojis.FIRST });
@@ -55,8 +56,6 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 		this.sltPage = new Select(this.ctx, 'page', this.handleSelect.bind(this))
 			.max(1);
-
-		this.validator = this.handleText.bind(this);
 	}
 
 	public async start(): Promise<T> {
@@ -79,9 +78,8 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		if (!paginator) return;
 
 		// render page
-		const result = await paginator.render();
 		// merged by ComponentOperation.render()
-		this._merge = result.content;
+		this._merge = await paginator.render();
 
 		// clear components
 		this.clearRows();

@@ -5,7 +5,7 @@ import type { BaseContext } from '../../contexts/BaseContext';
 import type { AgnosticMessageContent } from '../../interfaces/AgnosticMessageContent';
 import { PossiblyTranslatable } from '../../interfaces/Translatable';
 
-import { Paginator, PaginatorItem, PaginatorRender } from './Paginator';
+import { Paginator, PaginatorItems } from './Paginator';
 
 export interface CodeblockPaginatorOptions {
 	language?: string;
@@ -20,9 +20,9 @@ export interface CodeblockPaginatorOptions {
 }
 
 export class CodeblockPaginator<T = string> extends Paginator<T> {
-	protected options: CodeblockPaginatorOptions;
+	public readonly options: CodeblockPaginatorOptions;
 
-	public constructor(ctx: BaseContext, items: Array<T | PaginatorItem<T>>, options: CodeblockPaginatorOptions = {}) {
+	public constructor(ctx: BaseContext, items: Array<PaginatorItems<T>>, options: CodeblockPaginatorOptions = {}) {
 		super(ctx, items);
 		this.options = options;
 
@@ -31,7 +31,7 @@ export class CodeblockPaginator<T = string> extends Paginator<T> {
 		}
 	}
 
-	public async render(): Promise<PaginatorRender<T>> {
+	public async render(): Promise<AgnosticMessageContent> {
 		const cbb = new LocalizedCodeblockBuilder(this.ctx, this.options.language);
 
 		// show page header if more then 1 page
@@ -40,16 +40,9 @@ export class CodeblockPaginator<T = string> extends Paginator<T> {
 				{ page: this.page + 1, total: this.pageCount }, '[Page {page}/{total}]');
 		}
 
-		const start = this.page * this.itemsPerPage;
-		const end = start + this.itemsPerPage;
-
-		const items: Array<PaginatorItem<T>> = [];
-		for (let i = start; i < end; i++) {
-			const item = this.items[i];
-			if (!item) continue;
-
+		for (const item of await this.getPageItems()) {
 			const flare = this.options.flare ?? {};
-			const focused = i === this.options.focused;
+			const focused = item.index === this.options.focused;
 
 			// handle above flare
 			let above = flare.above;
@@ -71,8 +64,7 @@ export class CodeblockPaginator<T = string> extends Paginator<T> {
 			if (item.description) display = `${display} - ${item.description}`;
 
 			// add item
-			cbb.addLine((i + 1).toString(), item.label);
-			items.push(item);
+			cbb.addLine((item.index + 1).toString(), display);
 
 			// handle below flare
 			let below = flare.below;
@@ -84,10 +76,7 @@ export class CodeblockPaginator<T = string> extends Paginator<T> {
 			}
 		}
 
-		// create content
-		const content: AgnosticMessageContent = {};
-		content.content = cbb.render();
-
-		return { content, items };
+		// return agnostic message content
+		return { content: cbb.render() };
 	}
 }

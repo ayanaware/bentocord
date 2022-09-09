@@ -2,20 +2,22 @@ import type { BaseContext } from '../../contexts/BaseContext';
 import type { AgnosticMessageContent } from '../../interfaces/AgnosticMessageContent';
 import { PossiblyTranslatable } from '../../interfaces/Translatable';
 
-import type { CodeblockPaginator } from './CodeblockPaginator';
-
 export interface PaginatorItem<T> {
 	label: PossiblyTranslatable;
 	description?: PossiblyTranslatable;
+
 	value?: T;
 }
 
-export interface PaginatorRender<T> {
-	content: AgnosticMessageContent;
-	items: Array<PaginatorItem<T>>;
+export interface PaginatorPageItem<T> extends PaginatorItem<T> {
+	label: string;
+	description?: string;
+
+	index: number;
 }
 
-export abstract class Paginator<T = string> {
+export type PaginatorItems<T> = PaginatorItem<T> | PossiblyTranslatable | number;
+export abstract class Paginator<T = void> {
 	protected readonly ctx: BaseContext;
 	protected readonly items: Array<PaginatorItem<T>> = [];
 
@@ -23,12 +25,16 @@ export abstract class Paginator<T = string> {
 
 	public itemsPerPage = 10;
 
-	public constructor(ctx: BaseContext, items: Array<T | PaginatorItem<T>>) {
+	public constructor(ctx: BaseContext, items: Array<PaginatorItems<T>>) {
 		this.ctx = ctx;
 
 		// inflate Array<T> to Array<PaginatorItem<T>>
 		this.items = items.map(i => {
+			// handle PaginatorItem
 			if (typeof i === 'object' && 'label' in i) return i;
+			// handle PossiblyTranslatable
+			if (typeof i === 'object' && 'key' in i) return { label: i };
+			// handle numer
 			return { label: i.toString() };
 		});
 	}
@@ -61,5 +67,26 @@ export abstract class Paginator<T = string> {
 		return this.pageCount === 1;
 	}
 
-	public abstract render(): Promise<PaginatorRender<T>>;
+	public async getPageItems(): Promise<Array<PaginatorPageItem<T>>> {
+		const start = this.page * this.itemsPerPage;
+		const end = start + this.itemsPerPage;
+
+		const items: Array<PaginatorPageItem<T>> = [];
+		for (let index = start; index < end; index++) {
+			const item = this.items[index];
+			if (!item) break;
+
+			let label = item.label;
+			if (typeof label === 'object') label = await this.ctx.formatTranslation(label);
+
+			let description = item.description;
+			if (typeof description === 'object') description = await this.ctx.formatTranslation(description);
+
+			items.push({ ...item, index, label, description });
+		}
+
+		return items;
+	}
+
+	public abstract render(): Promise<AgnosticMessageContent>;
 }
