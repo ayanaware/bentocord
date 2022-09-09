@@ -6,9 +6,9 @@ import { Select } from '../../components/helpers/Select';
 import type { BaseContext } from '../../contexts/BaseContext';
 import { PossiblyTranslatable } from '../../interfaces/Translatable';
 import { PaginationPrompt } from '../PaginationPrompt';
+import { PromptOptions } from '../Prompt';
 import { CodeblockPaginator } from '../helpers/CodeblockPaginator';
 import { PaginatorItem } from '../helpers/Paginator';
-import { PromptOptions } from '../Prompt';
 
 export interface ChoicePromptChoice<T> extends PaginatorItem<T> {
 	value: T;
@@ -59,6 +59,7 @@ export class ChoicePrompt<T> extends PaginationPrompt<T> {
 
 		const items = await this.paginator.getPageItems();
 		const options: Array<SelectMenuOptions> = items.map(i => ({ ...i,
+			label: `${i.index + 1}: ${i.label}`, // prefix label with items 1-index number
 			value: i.index.toString(),
 		}));
 		this.sltChoice.options(...options);

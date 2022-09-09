@@ -20,7 +20,7 @@ import { PossiblyTranslatable, Translatable } from '../interfaces/Translatable';
 import { PaginationPrompt } from '../prompt/PaginationPrompt';
 import { Prompt, PromptOptions, PromptValidator } from '../prompt/Prompt';
 import { CodeblockPaginator } from '../prompt/helpers/CodeblockPaginator';
-import { Paginator } from '../prompt/helpers/Paginator';
+import { Paginator, PaginatorItems } from '../prompt/helpers/Paginator';
 import { ChoicePrompt, ChoicePromptChoice } from '../prompt/prompts/ChoicePrompt';
 import { ConfirmPrompt } from '../prompt/prompts/ConfirmPrompt';
 import { IsTextableChannel } from '../util/IsTextableChannel';
@@ -205,7 +205,7 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param content details about what they are confirming
 	 * @returns boolean
 	 */
-	public async confirm(content?: PossiblyTranslatable, items?: Paginator<void> | Array<PossiblyTranslatable>): Promise<boolean> {
+	public async confirm(content?: PossiblyTranslatable, items?: Paginator<void> | Array<PaginatorItems<void>>): Promise<boolean> {
 		if (Array.isArray(items)) items = new CodeblockPaginator(this, items);
 
 		const confirm = new ConfirmPrompt(this, items);
@@ -224,7 +224,7 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param options PaginationOptions
 	 * @returns
 	 */
-	public async pagination(items: Paginator<void> | Array<PossiblyTranslatable>, content?: PossiblyTranslatable, options?: PromptOptions): Promise<void> {
+	public async pagination(items: Paginator<void> | Array<PaginatorItems<void>>, content?: PossiblyTranslatable, options?: PromptOptions): Promise<void> {
 		if (Array.isArray(items)) items = new CodeblockPaginator(this, items);
 		const pagination = new PaginationPrompt(this, items, options);
 
