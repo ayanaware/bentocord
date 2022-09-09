@@ -1,13 +1,11 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { SelectMenuOptions } from 'eris';
 
-import { NON_ERROR_HALT } from '../commands/constants/CommandManager';
 import { ButtonContext } from '../components/contexts/ButtonContext';
 import { SelectContext } from '../components/contexts/SelectContext';
 import { Button } from '../components/helpers/Button';
 import { Select } from '../components/helpers/Select';
 import type { BaseContext } from '../contexts/BaseContext';
-import { AgnosticMessageContent } from '../interfaces/AgnosticMessageContent';
 
 import { Prompt } from './Prompt';
 import type { Paginator } from './helpers/Paginator';

@@ -25,6 +25,10 @@ export class CodeblockPaginator<T = string> extends Paginator<T> {
 	public constructor(ctx: BaseContext, items: Array<T | PaginatorItem<T>>, options: CodeblockPaginatorOptions = {}) {
 		super(ctx, items);
 		this.options = options;
+
+		if (typeof options.focused === 'number') {
+			this.currentPage = Math.floor(options.focused / this.itemsPerPage) ?? 0;
+		}
 	}
 
 	public async render(): Promise<PaginatorRender<T>> {
