@@ -73,6 +73,7 @@ export * from './discord/constants/DiscordEvent';
 export * from './discord/constants/DiscordPermission';
 
 // Interfaces
+export * from './interfaces/AgnosticMessageContent';
 export * from './interfaces/Translatable';
 export * from './interfaces/MessageLocation';
 export * from './interfaces/PermissionScope';
@@ -82,11 +83,11 @@ export * from './prompt/PromptManager';
 export * from './prompt/Prompt';
 export * from './prompt/PaginationPrompt';
 
-export * from './prompt/prompts/ChoicePrompt';
 export * from './prompt/prompts/ConfirmPrompt';
 
-export * from './prompt/pagination/Paginator';
-export * from './prompt/pagination/CodeblockPaginator';
+export * from './prompt/helpers/Paginator';
+export * from './prompt/helpers/AnyPaginator';
+export * from './prompt/helpers/CodeblockPaginator';
 
 // Utils
 export * from './util/IsTextableChannel';

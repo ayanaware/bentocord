@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import { SelectMenuOptions } from 'eris';
 
 import { NON_ERROR_HALT } from '../commands/constants/CommandManager';
@@ -6,9 +7,10 @@ import { SelectContext } from '../components/contexts/SelectContext';
 import { Button } from '../components/helpers/Button';
 import { Select } from '../components/helpers/Select';
 import type { BaseContext } from '../contexts/BaseContext';
+import { AgnosticMessageContent } from '../interfaces/AgnosticMessageContent';
 
 import { Prompt } from './Prompt';
-import type { Paginator } from './pagination/Paginator';
+import type { Paginator } from './helpers/Paginator';
 
 export enum PaginationEmojis {
 	FIRST = '⏮️',
@@ -24,9 +26,7 @@ const TEXT_NEXT = ['>', 'next'];
 const TEXT_LAST = ['>>', 'last', 'l'];
 
 export class PaginationPrompt<T = void> extends Prompt<T> {
-	public paginator: Paginator<unknown>;
-
-	public resolveOnClose = true;
+	public readonly paginator: Paginator<unknown>;
 
 	// first, prev, next, last
 	protected btnFirst: Button;
@@ -36,21 +36,21 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	protected btnClose: Button;
 	protected sltPage: Select;
 
-	public constructor(ctx: BaseContext, paginator: Paginator<unknown>) {
+	public constructor(ctx: BaseContext, paginator?: Paginator<unknown>) {
 		super(ctx);
 		this.paginator = paginator;
 
 		this.btnFirst = new Button(this.ctx, 'first', this.handleButton.bind(this))
-			.primary().emoji({ name: PaginationEmojis.FIRST });
+			.secondary().emoji({ name: PaginationEmojis.FIRST });
 
 		this.btnPrev = new Button(this.ctx, 'prev', this.handleButton.bind(this))
-			.primary().emoji({ name: PaginationEmojis.PREV });
+			.secondary().emoji({ name: PaginationEmojis.PREV });
 
 		this.btnNext = new Button(this.ctx, 'next', this.handleButton.bind(this))
-			.primary().emoji({ name: PaginationEmojis.NEXT });
+			.secondary().emoji({ name: PaginationEmojis.NEXT });
 
 		this.btnLast = new Button(this.ctx, 'last', this.handleButton.bind(this))
-			.primary().emoji({ name: PaginationEmojis.LAST });
+			.secondary().emoji({ name: PaginationEmojis.LAST });
 
 		this.btnClose = new Button(this.ctx, 'close', this.handleButton.bind(this))
 			.danger().emoji({ name: PaginationEmojis.CLOSE });
@@ -63,24 +63,33 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 
 	public async start(): Promise<T> {
 		await this.sltPage.placeholderTranslated('BENTOCORD_PAGINATION_JUMP', {}, 'Jump to Page');
-		await this.updatePage();
 
+		await this.update();
 		return super.start();
 	}
 
-	public async updatePage(): Promise<void> {
+	public async close(): Promise<void> {
+		await this.cleanup();
+
+		// raw pagination doesn't return anything
+		this.resolve();
+	}
+
+	public async update(): Promise<void> {
 		// get pagination content
 		const paginator = this.paginator;
+		if (!paginator) return super.render();
 
 		// render page
 		const result = await paginator.render();
-		this.content(result.content);
+		// merged by ComponentOperation.render()
+		this._merge = result.content;
 
 		// clear components
 		this.clearRows();
 
 		// single page; no need to display pagination controls
-		if (this.paginator.isSinglePage) return;
+		if (this.paginator.isSinglePage) return super.render();
 
 		// update state & add buttons
 		this.addRows([
@@ -92,7 +101,6 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		]);
 
 		// Add page selector
-
 		const page = this.paginator.page;
 		const pageCount = this.paginator.pageCount;
 
@@ -130,6 +138,9 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	}
 
 	protected async handleButton(btn: ButtonContext): Promise<void> {
+		if (!this.paginator) return;
+
+		// defer update
 		await btn.deferUpdate();
 
 		const action = btn.parseCustomId();
@@ -155,10 +166,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 			}
 
 			case 'close': {
-				await this.close();
-				if (this.resolveOnClose) this.resolve();
-				else this.reject(NON_ERROR_HALT);
-				return;
+				return this.close();
 			}
 
 			default: {
@@ -166,7 +174,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 			}
 		}
 
-		await this.updatePage();
+		await this.update();
 		return this.render();
 	}
 
@@ -179,11 +187,13 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		await slt.deferUpdate();
 		this.paginator.page = page;
 
-		await this.updatePage();
+		await this.update();
 		return this.render();
 	}
 
 	protected async handleText(response: string): Promise<[boolean, T]> {
+		if (!this.paginator) return;
+
 		response = response.toLocaleLowerCase();
 
 		// Using arrays to allow localization in the future
@@ -209,7 +219,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		// refresh timeout, valid text page swap
 		this.refreshTimeout();
 
-		await this.updatePage();
+		await this.update();
 		await this.render();
 
 		// validator; take no action

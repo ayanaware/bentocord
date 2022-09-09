@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { ActionRow, ActionRowComponents, AdvancedMessageContent, Constants, FileContent, InteractionContent, MessageContent } from 'eris';
+import { ActionRow, ActionRowComponents, Constants, FileContent, InteractionContent, MessageContent } from 'eris';
 
 import type { AnyContext } from '../contexts/AnyContext';
+import type { AgnosticMessageContent } from '../interfaces/AgnosticMessageContent';
 
 import type { ComponentsManager } from './ComponentsManager';
 import type { AnyComponentContext } from './contexts/AnyComponentContext';
@@ -12,11 +13,15 @@ const { ComponentTypes } = Constants;
 
 export type AnyComponent = Button | Select;
 
+export type ContentTransformer = (content?: AgnosticMessageContent) => Promise<AgnosticMessageContent>;
 export class ComponentOperation<T = unknown> {
 	protected readonly ctx: AnyContext;
 	protected readonly cm: ComponentsManager;
 
-	protected _content: AdvancedMessageContent | InteractionContent;
+	protected _content: AgnosticMessageContent;
+	protected _merge: AgnosticMessageContent;
+	public transformer: ContentTransformer;
+
 	protected _files: Array<FileContent> = [];
 	protected _rows: Array<Array<AnyComponent>> = [];
 	public readonly maxRowCount = 5;
@@ -29,15 +34,13 @@ export class ComponentOperation<T = unknown> {
 	protected resolve: (value?: T) => void;
 	protected reject: (reason?: any) => void;
 
-	protected resolveOnClose = true;
-
 	public constructor(ctx: AnyContext) {
 		this.ctx = ctx;
 		// using entity name to prevent circular depends
 		this.cm = ctx.api.getEntity('@ayanaware/bentocord:ComponentsManager');
 	}
 
-	public content(content: MessageContent | InteractionContent): this {
+	public content(content: string | AgnosticMessageContent): this {
 		if (typeof content === 'string') content = { content };
 
 		this._content = content;
@@ -79,8 +82,20 @@ export class ComponentOperation<T = unknown> {
 			rows.push({ type: ComponentTypes.ACTION_ROW, components });
 		}
 
-		const content = this._content;
+		// TODO: Think of a better way to solve this
+
+		// smash objects together
+		let content = Object.assign({}, this._content, this._merge ?? {});
 		content.components = rows;
+
+		// join content & embeds
+		if (this._merge) {
+			content.content = `${this._content.content}\n${this._merge.content}`;
+			content.embeds = [...this._content.embeds ?? [], ...this._merge.embeds ?? []];
+		}
+
+		// run transformer
+		if (typeof this.transformer === 'function') content = await this.transformer(content);
 
 		try {
 			await this.ctx.createResponse(content, this._files);
@@ -90,7 +105,7 @@ export class ComponentOperation<T = unknown> {
 			if (this.messageId !== message.id) {
 				if (this.messageId) this.cm.removeMessageHandler(this.messageId);
 
-				this.cm.addMessageHandler(message.id, this.handleInteraction.bind(this), this.close.bind(this));
+				this.cm.addMessageHandler(message.id, this.handleInteraction.bind(this), this.cleanup.bind(this));
 				this.messageId = message.id;
 			}
 		} catch { /* NO-OP */ }
@@ -135,7 +150,7 @@ export class ComponentOperation<T = unknown> {
 	}
 
 	protected async handleTimeout(): Promise<void> {
-		return this.close();
+		return this.cleanup();
 	}
 
 	/**
@@ -152,6 +167,12 @@ export class ComponentOperation<T = unknown> {
 	}
 
 	public async close(): Promise<void> {
+		await this.cleanup();
+
+		this.resolve();
+	}
+
+	public async cleanup(): Promise<void> {
 		// disable all components
 		this._rows.forEach(components => {
 			components.forEach(c => {
@@ -169,8 +190,5 @@ export class ComponentOperation<T = unknown> {
 
 		// clearTimeout
 		clearTimeout(this.timeout);
-
-		// resolve start if need be
-		if (this.resolve && this.resolveOnClose) this.resolve();
 	}
 }

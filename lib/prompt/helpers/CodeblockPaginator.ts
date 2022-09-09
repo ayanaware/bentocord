@@ -2,6 +2,7 @@ import { AdvancedMessageContent, InteractionContent } from 'eris';
 
 import { LocalizedCodeblockBuilder } from '../../builders/LocalizedCodeblockBuilder';
 import type { BaseContext } from '../../contexts/BaseContext';
+import type { AgnosticMessageContent } from '../../interfaces/AgnosticMessageContent';
 import { PossiblyTranslatable } from '../../interfaces/Translatable';
 
 import { Paginator, PaginatorItem, PaginatorRender } from './Paginator';
@@ -18,7 +19,7 @@ export interface CodeblockPaginatorOptions {
 	};
 }
 
-export class CodeblockPaginator<T = void> extends Paginator<T> {
+export class CodeblockPaginator<T = string> extends Paginator<T> {
 	protected options: CodeblockPaginatorOptions;
 
 	public constructor(ctx: BaseContext, items: Array<T | PaginatorItem<T>>, options: CodeblockPaginatorOptions = {}) {
@@ -80,7 +81,7 @@ export class CodeblockPaginator<T = void> extends Paginator<T> {
 		}
 
 		// create content
-		const content: AdvancedMessageContent & InteractionContent = {};
+		const content: AgnosticMessageContent = {};
 		content.content = cbb.render();
 
 		return { content, items };

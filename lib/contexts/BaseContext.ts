@@ -17,11 +17,12 @@ import { BentocordInterface } from '../BentocordInterface';
 import { Discord } from '../discord/Discord';
 import { DiscordPermission } from '../discord/constants/DiscordPermission';
 import { PossiblyTranslatable, Translatable } from '../interfaces/Translatable';
+import { PaginationPrompt } from '../prompt/PaginationPrompt';
 import { Prompt, PromptValidator } from '../prompt/Prompt';
-import { CodeblockPaginator } from '../prompt/pagination/CodeblockPaginator';
+import { CodeblockPaginator } from '../prompt/helpers/CodeblockPaginator';
+import { Paginator } from '../prompt/helpers/Paginator';
 import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
 import { ConfirmPrompt } from '../prompt/prompts/ConfirmPrompt';
-import { PaginationPrompt } from '../prompt/PaginationPrompt';
 import { IsTextableChannel } from '../util/IsTextableChannel';
 
 export class BaseContext<C extends MessageContent = MessageContent> {
@@ -204,11 +205,14 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param content details about what they are confirming
 	 * @returns boolean
 	 */
-	public async confirm(content?: PossiblyTranslatable, items?: Array<PossiblyTranslatable>): Promise<boolean> {
-		const confirm = new ConfirmPrompt(this);
+	public async confirm(content?: PossiblyTranslatable, items?: Paginator<PossiblyTranslatable> | Array<PossiblyTranslatable>): Promise<boolean> {
+		if (Array.isArray(items)) items = new CodeblockPaginator(this, items);
+
+		const confirm = new ConfirmPrompt(this, items);
+		if (!content) content = await this.formatTranslation('BENTOCORD_PROMPT_CONFIRM', {}, 'Please confirm you wish to continue');
+
 		if (typeof content === 'object') await confirm.contentTranslated(content.key, content.repl, content.backup);
 		else if (content) confirm.content(content);
-		else confirm.content(await this.formatTranslation('BENTOCORD_PROMPT_CONFIRM', {}, 'Please confirm you wish to continue [y/n]:'));
 
 		return confirm.start();
 	}

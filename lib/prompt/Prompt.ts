@@ -23,9 +23,6 @@ export class Prompt<T = unknown> extends ComponentOperation<T> {
 	protected selfMessages: Array<Message> = [];
 	protected attempts = 0;
 
-	// disable super.close() from calling super.resolve
-	protected resolveOnClose = false;
-
 	public constructor(ctx: AnyContext, validator?: PromptValidator<T>) {
 		super(ctx);
 		// using entity name to prevent circular depends
@@ -37,7 +34,7 @@ export class Prompt<T = unknown> extends ComponentOperation<T> {
 	public async render(): Promise<void> {
 		// add handler if need be
 		if (!this.hasHandler) {
-			await this.pm.addPrompt(this.ctx.channelId, this.ctx.userId, this.handleResponse.bind(this), this.close.bind(this));
+			await this.pm.addPrompt(this.ctx.channelId, this.ctx.userId, this.handleResponse.bind(this), this.cleanup.bind(this));
 			this.hasHandler = true;
 		}
 
@@ -69,7 +66,7 @@ export class Prompt<T = unknown> extends ComponentOperation<T> {
 		const close = TEXT_CLOSE.some(c => c.toLocaleLowerCase() === response.toLocaleLowerCase());
 		if (close) {
 			// User requested close
-			await this.close();
+			await this.cleanup();
 			this.reject(NON_ERROR_HALT);
 
 			return;
@@ -77,7 +74,7 @@ export class Prompt<T = unknown> extends ComponentOperation<T> {
 
 		// no validator, just resolve
 		if (typeof this.validator !== 'function') {
-			await this.close();
+			await this.cleanup();
 			return this.resolve();
 		}
 
@@ -88,7 +85,7 @@ export class Prompt<T = unknown> extends ComponentOperation<T> {
 
 			// passed validator, resolve
 			if (result) {
-				await this.close();
+				await this.cleanup();
 				return this.resolve(value);
 			}
 
@@ -124,20 +121,25 @@ export class Prompt<T = unknown> extends ComponentOperation<T> {
 	}
 
 	public async close(reason?: PossiblyTranslatable): Promise<void> {
-		// detach handler
-		if (this.hasHandler) await this.pm.removePrompt(this.ctx.channelId, this.ctx.userId);
-
 		// Replace content with close message
 		if (reason) {
 			if (typeof reason === 'object') reason = await this.ctx.formatTranslation(reason);
 			this.content(reason);
 		}
 
+		await this.cleanup();
+		this.reject(NON_ERROR_HALT);
+	}
+
+	public async cleanup(): Promise<void> {
+		// detach handler
+		if (this.hasHandler) await this.pm.removePrompt(this.ctx.channelId, this.ctx.userId);
+
 		// Remove components
 		this.clearRows();
 
 		// cleanup components, final render, timeouts, etc
-		await super.close();
+		await super.cleanup();
 
 		// clean up selfMessages
 		if (this.selfMessages.length > 0) {
