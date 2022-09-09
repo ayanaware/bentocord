@@ -62,7 +62,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	}
 
 	public async start(): Promise<T> {
-		await this.sltPage.placeholderTranslated('BENTOCORD_PAGINATION_JUMP', {}, 'Jump to Page');
+		await this.sltPage.placeholderTranslated('BENTOCORD_PAGINATION_SELECT', {}, 'Jump to Page');
 
 		await this.update();
 		return super.start();
@@ -78,7 +78,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	public async update(): Promise<void> {
 		// get pagination content
 		const paginator = this.paginator;
-		if (!paginator) return super.render();
+		if (!paginator) return;
 
 		// render page
 		const result = await paginator.render();
@@ -89,7 +89,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		this.clearRows();
 
 		// single page; no need to display pagination controls
-		if (this.paginator.isSinglePage) return super.render();
+		if (this.paginator.isSinglePage) return;
 
 		// update state & add buttons
 		this.addRows([
@@ -103,6 +103,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		// Add page selector
 		const page = this.paginator.page;
 		const pageCount = this.paginator.pageCount;
+		if (pageCount < 5) return;
 
 		const padding = Math.floor(this.sltPage.maxOptions / 2);
 
@@ -192,7 +193,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 	}
 
 	protected async handleText(response: string): Promise<[boolean, T]> {
-		if (!this.paginator) return;
+		if (!this.paginator) return [null, null];
 
 		response = response.toLocaleLowerCase();
 
@@ -208,7 +209,7 @@ export class PaginationPrompt<T = void> extends Prompt<T> {
 		} else {
 			// check for p{num} syntax
 			const matches = /^p\s?(\d+)/.exec(response);
-			if (!matches) return;
+			if (!matches) return [null, null];
 
 			const page = Number(matches[1]);
 			if (isNaN(page)) return [null, null];

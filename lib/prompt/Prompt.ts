@@ -56,16 +56,19 @@ export class Prompt<T = unknown> extends ComponentOperation<T> {
 
 	public async handleResponse(response: string, message?: Message): Promise<void> {
 		// delete message if we have one and can
-		const hasManage = this.ctx.selfHasPermission(DiscordPermission.MANAGE_MESSAGES);
-		if (message && hasManage) {
-			try {
-				await message.delete();
-			} catch { /* NO-OP */}
-		}
+		const deleteMessage = async () => {
+			const hasManage = this.ctx.selfHasPermission(DiscordPermission.MANAGE_MESSAGES);
+			if (message && hasManage) {
+				try {
+					await message.delete();
+				} catch { /* NO-OP */}
+			}
+		};
 
 		const close = TEXT_CLOSE.some(c => c.toLocaleLowerCase() === response.toLocaleLowerCase());
 		if (close) {
 			// User requested close
+			await deleteMessage();
 			await this.cleanup();
 			this.reject(NON_ERROR_HALT);
 
@@ -74,6 +77,7 @@ export class Prompt<T = unknown> extends ComponentOperation<T> {
 
 		// no validator, just resolve
 		if (typeof this.validator !== 'function') {
+			await deleteMessage();
 			await this.cleanup();
 			return this.resolve();
 		}
@@ -85,6 +89,7 @@ export class Prompt<T = unknown> extends ComponentOperation<T> {
 
 			// passed validator, resolve
 			if (result) {
+				await deleteMessage();
 				await this.cleanup();
 				return this.resolve(value);
 			}
