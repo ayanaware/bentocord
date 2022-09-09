@@ -83,15 +83,17 @@ export class ComponentOperation<T = unknown> {
 		}
 
 		// TODO: Think of a better way to solve this
-
 		// smash objects together
-		let content = Object.assign({}, this._content, this._merge ?? {});
+		let content = Object.assign({}, this._content ?? {}, this._merge ?? {});
 		content.components = rows;
 
-		// join content & embeds
-		if (this._merge) {
-			content.content = `${this._content.content}\n${this._merge.content}`;
-			content.embeds = [...this._content.embeds ?? [], ...this._merge.embeds ?? []];
+		// join content & embeds as needed
+		if (this._content && this._merge) {
+			// merge content
+			if (this._content.content && this._merge.content) content.content = `${this._content.content}\n${this._merge.content}`;
+
+			// merge embeds
+			if (this._content.embeds && this._merge.embeds) content.embeds = [...this._content.embeds ?? [], ...this._merge.embeds ?? []];
 		}
 
 		// run transformer
