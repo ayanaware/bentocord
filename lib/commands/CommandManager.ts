@@ -822,7 +822,7 @@ export class CommandManager implements Component {
 				const content = await ctx.formatTranslation('BENTOCORD_PROMPT_CHOICE_OPTION', { option: primary }, 'Please select one of the following choices for option `{option}`');
 
 				const finalChoices: Array<ChoicePromptChoice<number | string>> = choices.map(c => ({
-					label: c.name, value: c.value, match: [c.value.toString()],
+					...c, match: [c.value.toString()],
 				}));
 
 				out = await ctx.choice<number | string>(finalChoices, content) as unknown as T;

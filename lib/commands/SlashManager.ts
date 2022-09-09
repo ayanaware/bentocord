@@ -255,7 +255,7 @@ export class SlashManager implements Component {
 				if (typeof choices === 'function') choices = await choices();
 
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-				(appOption as any).choices = choices;
+				(appOption as any).choices = choices.map(c => ({ name: c.label, value: c.value }));
 			}
 
 			// min/max support

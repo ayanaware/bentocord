@@ -50,8 +50,10 @@ export interface CommandOptionValue<T extends OptionType, U = unknown> extends C
 }
 
 export interface CommandOptionChoice<T> {
-	name: PossiblyTranslatable;
+	label: PossiblyTranslatable;
 	value: T;
+
+	description?: PossiblyTranslatable;
 }
 
 export type CommandOptionChoiceCallable<T> = Array<CommandOptionChoice<T>> | (() => Promise<Array<CommandOptionChoice<T>>>);
