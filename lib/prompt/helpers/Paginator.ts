@@ -16,17 +16,22 @@ export interface PaginatorPageItem<T> extends PaginatorItem<T> {
 	index: number;
 }
 
+export interface PaginatorOptions {
+	itemsPerPage?: number;
+}
+
 export type PaginatorItems<T> = PaginatorItem<T> | PossiblyTranslatable | number;
 export abstract class Paginator<T = void> {
 	protected readonly ctx: BaseContext;
 	protected readonly items: Array<PaginatorItem<T>> = [];
 
 	protected currentPage = 0;
-
 	public itemsPerPage = 10;
 
-	public constructor(ctx: BaseContext, items: Array<PaginatorItems<T>>) {
+	public constructor(ctx: BaseContext, items: Array<PaginatorItems<T>>, options: PaginatorOptions = {}) {
 		this.ctx = ctx;
+
+		if (typeof options.itemsPerPage === 'number') this.itemsPerPage = options.itemsPerPage;
 
 		// inflate Array<T> to Array<PaginatorItem<T>>
 		this.items = items.map(i => {

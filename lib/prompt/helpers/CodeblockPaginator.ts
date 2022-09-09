@@ -19,7 +19,7 @@ export interface CodeblockPaginatorOptions {
 	};
 }
 
-export class CodeblockPaginator<T = string> extends Paginator<T> {
+export class CodeblockPaginator<T = void> extends Paginator<T> {
 	public readonly options: CodeblockPaginatorOptions;
 
 	public constructor(ctx: BaseContext, items: Array<PaginatorItems<T>>, options: CodeblockPaginatorOptions = {}) {
