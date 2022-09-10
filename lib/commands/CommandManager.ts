@@ -504,28 +504,27 @@ export class CommandManager implements Component {
 			// TODO: Use Typescript metadata to ensure .execute() and options match
 
 			await command.execute(ctx, options);
-			const end = process.hrtime(start);
 
+			const end = process.hrtime(start);
 			const nano = end[0] * 1e9 + end[1];
 			const mili = nano / 1e6;
 
 			this.api.emit(CommandManagerEvent.COMMAND_SUCCESS, command, ctx, options, mili);
 			log.debug(`Command "${primary}" executed by "${ctx.userId}", took ${mili}ms`);
 		} catch (e) {
+			const end = process.hrtime(start);
+			const nano = end[0] * 1e9 + end[1];
+			const mili = nano / 1e6;
+
 			// halt requested (this is lazy, I'll fix it later, probably)
 			if (e === NON_ERROR_HALT) {
-				const end = process.hrtime(start);
-
-				const nano = end[0] * 1e9 + end[1];
-				const mili = nano / 1e6;
-
 				this.api.emit(CommandManagerEvent.COMMAND_SUCCESS, command, ctx, options, mili);
 				log.debug(`Command "${primary}" executed by "${ctx.userId}", took ${mili}ms`);
 
 				return;
 			}
 
-			this.api.emit(CommandManagerEvent.COMMAND_FAILURE, command, ctx, options, e);
+			this.api.emit(CommandManagerEvent.COMMAND_FAILURE, e, command, ctx, options, mili);
 			log.error(`Command ${primary}.execute() error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {

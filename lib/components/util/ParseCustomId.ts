@@ -6,9 +6,9 @@ export interface ParsedCustomId {
 
 /**
  * custom_id format: primary delimeter is ","
- * the first group contains the id, remaining
+ * the first group contains the id with optional prefix, remaining
  * groups contain k/v pair states delimetered by "="
- * Example of a full custom_id: some_id,foo=bar,bizz=bazz
+ * Example of a full custom_id: prefix:some_id,foo=bar,bizz=bazz
  *
  * @param raw
  */

@@ -1,3 +1,5 @@
+import * as util from 'util';
+
 import { Component, ComponentAPI, Subscribe } from '@ayanaware/bento';
 import { Logger } from '@ayanaware/logger-api';
 
@@ -15,6 +17,23 @@ import type { ParsedCustomId } from './util/ParseCustomId';
 const { ComponentTypes } = Constants;
 
 export type CloseHandler = () => Promise<void>;
+
+export enum ComponentManagerEvent {
+	/**
+	 * Fired when a component handler was successfully executed
+	 * @param ctx AnyComponentContext
+	 * @param mili Miliseconds
+	 */
+	COMPONENT_SUCCESS = 'componentSuccess',
+
+	/**
+	 * Fired when a component handler throws an error
+	 * @param error Error
+	 * @param ctx AnyComponentContext
+	 * @param mili Miliseconds
+	 */
+	COMPONENT_FAILURE = 'componentFailure',
+}
 
 const log = Logger.get();
 export class ComponentsManager implements Component {
@@ -98,10 +117,23 @@ export class ComponentsManager implements Component {
 		const handler = await this.findHandler(ctx, parsed);
 		if (!handler) return;
 
+		const start = process.hrtime();
 		try {
 			await handler(ctx);
+
+			const end = process.hrtime(start);
+			const nano = end[0] * 1e9 + end[1];
+			const mili = nano / 1e6;
+
+			this.api.emit(ComponentManagerEvent.COMPONENT_SUCCESS, ctx, mili);
+			log.debug(`Component "${ctx.customId}" executed by "${ctx.userId}", took ${mili}ms`);
 		} catch (e) {
-			log.error(`Interaction Handler Error: ${e}`);
+			const end = process.hrtime(start);
+			const nano = end[0] * 1e9 + end[1];
+			const mili = nano / 1e6;
+
+			this.api.emit(ComponentManagerEvent.COMPONENT_FAILURE, e, ctx, mili);
+			log.error(`Component handler error:\n${util.inspect(e)}`);
 		}
 	}
 }
