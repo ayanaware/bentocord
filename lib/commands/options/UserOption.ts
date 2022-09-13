@@ -22,7 +22,7 @@ export class UserOptionResolver implements Resolver<User|Member> {
 		const client = ctx.discord.client;
 
 		// Limit to author and self if no guild
-		let users: Array<User|Member> = [ctx.author, ctx.self];
+		let users: Array<User|Member> = [ctx.user, ctx.self];
 		if (ctx.guild) users = Array.from(ctx.guild.members.values());
 
 		const filter = users.filter(u => this.matchUser(input, u));

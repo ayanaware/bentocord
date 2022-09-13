@@ -1,14 +1,12 @@
-import { AnyCommandContext } from '../commands/CommandContext';
-import { Translateable } from '../interfaces/Translateable';
+import type { BaseContext } from '../contexts/BaseContext';
+import { PossiblyTranslatable } from '../interfaces/Translatable';
 
 import { CodeblockLineItem, CodeblockBuilder } from './CodeblockBuilder';
 
-export type LocalizedLineItem = string | Translateable;
-
 export class LocalizedCodeblockBuilder extends CodeblockBuilder {
-	private readonly ctx: AnyCommandContext;
+	private readonly ctx: BaseContext;
 
-	public constructor(ctx: AnyCommandContext, language?: string) {
+	public constructor(ctx: BaseContext, language?: string) {
 		super(language);
 
 		this.ctx = ctx;
@@ -24,13 +22,13 @@ export class LocalizedCodeblockBuilder extends CodeblockBuilder {
 		return this.setFooter(translated);
 	}
 
-	public async addTranslatedLine(item: LocalizedLineItem, value?: LocalizedLineItem | CodeblockLineItem): Promise<LocalizedCodeblockBuilder> {
+	public async addTranslatedLine(item: PossiblyTranslatable, value?: PossiblyTranslatable | CodeblockLineItem): Promise<LocalizedCodeblockBuilder> {
 		if (typeof item === 'string') item = { key: item };
-		const itemTranslated = await this.ctx.formatTranslation(item.key, item.repl, item.backup);
+		const itemTranslated = await this.ctx.formatTranslation(item);
 
 		if (value !== undefined) {
 			let valueTranslated: CodeblockLineItem;
-			if (typeof value === 'object') valueTranslated = await this.ctx.formatTranslation(value.key, value.repl, value.backup);
+			if (typeof value === 'object') valueTranslated = await this.ctx.formatTranslation(value);
 			else valueTranslated = value;
 
 			this.addLine(itemTranslated, valueTranslated);

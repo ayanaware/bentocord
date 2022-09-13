@@ -1,4 +1,4 @@
-import { Translateable } from '../../interfaces/Translateable';
+import { PossiblyTranslatable } from '../../interfaces/Translatable';
 import { OptionType } from '../constants/OptionType';
 import type { BigIntegerOption } from '../options/BigIntegerOption';
 import type { BooleanOption } from '../options/BooleanOption';
@@ -23,10 +23,10 @@ export interface CommandOption<T extends OptionType | string> {
 	type: T;
 
 	/** The name of the option */
-	name: string | [string, ...Array<string | Translateable>];
+	name: string | [string, ...Array<PossiblyTranslatable>];
 
 	/** The description of the option */
-	description?: string | Translateable;
+	description?: PossiblyTranslatable;
 
 	/** Domain-specific options */
 	extra?: Record<string, unknown>;
@@ -50,8 +50,10 @@ export interface CommandOptionValue<T extends OptionType, U = unknown> extends C
 }
 
 export interface CommandOptionChoice<T> {
-	name: string | Translateable;
+	label: PossiblyTranslatable;
 	value: T;
+
+	description?: PossiblyTranslatable;
 }
 
 export type CommandOptionChoiceCallable<T> = Array<CommandOptionChoice<T>> | (() => Promise<Array<CommandOptionChoice<T>>>);
@@ -59,7 +61,7 @@ export type CommandOptionChoiceCallable<T> = Array<CommandOptionChoice<T>> | (()
 // SUBCOMMAND GROUP
 export interface CommandOptionSubCommandGroup extends CommandOption<OptionType.SUB_COMMAND_GROUP> {
 	/** The description of the option */
-	description: string | Translateable;
+	description: PossiblyTranslatable;
 
 	/** The subcommands of the option */
 	options: Array<CommandOptionSubCommand>;
@@ -80,7 +82,7 @@ export interface CommandOptionSubCommandGroup extends CommandOption<OptionType.S
 // SUBCOMMAND
 export interface CommandOptionSubCommand extends CommandOption<OptionType.SUB_COMMAND> {
 	/** The description of the option */
-	description: string | Translateable;
+	description: PossiblyTranslatable;
 
 	/** The subcommands of the option */
 	options?: Array<AnyValueCommandOption>;

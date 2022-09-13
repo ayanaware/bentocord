@@ -14,6 +14,25 @@ export * from './commands/CommandContext';
 export * from './commands/HelpManager';
 export * from './commands/SlashManager';
 
+// Components
+export * from './components/ComponentsManager';
+export * from './components/contexts/AnyComponentContext';
+export * from './components/contexts/ComponentContext';
+export * from './components/contexts/ButtonContext';
+export * from './components/contexts/SelectContext';
+
+export * from './components/ComponentOperation';
+export * from './components/helpers/Button';
+export * from './components/helpers/Select';
+export * from './components/interfaces/ComponentHandler';
+export * from './components/util/ParseCustomId';
+
+// Contexts
+export * from './contexts/BaseContext';
+export * from './contexts/InteractionContext';
+export * from './contexts/MessageContext';
+
+// Commands
 export * from './commands/constants/ChannelTypes';
 export * from './commands/constants/CommandManager';
 export * from './commands/constants/DiscordLocales';
@@ -54,13 +73,23 @@ export * from './discord/constants/DiscordEvent';
 export * from './discord/constants/DiscordPermission';
 
 // Interfaces
-export * from './interfaces/Translateable';
-export * from './interfaces/MessageContext';
+export * from './interfaces/AgnosticMessageContent';
+export * from './interfaces/Translatable';
+export * from './interfaces/MessageLocation';
 export * from './interfaces/PermissionScope';
 
 // Prompts
-export * from './prompt/Prompt';
 export * from './prompt/PromptManager';
+export * from './prompt/Prompt';
+export * from './prompt/PaginationPrompt';
+
 export * from './prompt/prompts/ChoicePrompt';
 export * from './prompt/prompts/ConfirmPrompt';
-export * from './prompt/prompts/PaginationPrompt';
+
+export * from './prompt/helpers/Paginator';
+export * from './prompt/helpers/AnyPaginator';
+export * from './prompt/helpers/CodeblockPaginator';
+
+// Utils
+export * from './util/IsTextableChannel';
+

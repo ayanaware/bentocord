@@ -1,6 +1,6 @@
 import { ComponentAPI, Inject } from '@ayanaware/bento';
 
-import { InteractionCommandContext, MessageCommandContext } from '../../commands/CommandContext';
+import { AnyCommandContext, InteractionCommandContext } from '../../commands/CommandContext';
 import { CommandManager } from '../../commands/CommandManager';
 import { OptionType } from '../../commands/constants/OptionType';
 import { CommandDefinition } from '../../commands/interfaces/CommandDefinition';
@@ -12,7 +12,7 @@ export class ReplyCommand implements CommandEntity {
 	public api!: ComponentAPI;
 	public parent = CommandManager;
 
-	@Inject() private readonly promptManager: PromptManager;
+	@Inject() private readonly pm: PromptManager;
 
 	public definition: CommandDefinition = {
 		name: ['r', 'reply'],
@@ -22,14 +22,13 @@ export class ReplyCommand implements CommandEntity {
 		],
 	};
 
-	public async execute(ctx: InteractionCommandContext | MessageCommandContext, { response }: { response: string }): Promise<unknown> {
-		try {
-			if (ctx.type === 'interaction') await ctx.acknowledge();
-			else if (ctx.type === 'message' && ctx.message) await ctx.message.delete();
+	public async execute(ctx: AnyCommandContext, { response }: { response: string }): Promise<unknown> {
+		if (ctx instanceof InteractionCommandContext) {
+			try {
+				await ctx.deleteExecutionMessage();
+			} catch { /* Failed */}
+		}
 
-			await ctx.deleteResponse();
-		} catch { /* Failed */}
-
-		return this.promptManager.handleResponse(ctx.channelId, ctx.authorId, response);
+		return this.pm.handleResponse(ctx.channelId, ctx.userId, response);
 	}
 }

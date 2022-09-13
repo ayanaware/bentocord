@@ -148,8 +148,11 @@ export class SlashManager implements Component {
 
 		// add name localizations (convert for discord needed)
 		if (Object.keys(translations).length > 0) {
+			// truncate to 32 chars
+			const truncated = Object.fromEntries(Object.entries(translations).map(([l, t]) => [l, t.slice(0, 32)]));
+
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-			(appCommand as any).name_localizations = await this.interface.convertTranslationMap(translations);
+			(appCommand as any).name_localizations = await this.interface.convertTranslationMap(truncated);
 		}
 
 		// add description localizations (convert for discord needed)
@@ -199,8 +202,11 @@ export class SlashManager implements Component {
 
 				// add name localizations (convert for discord needed)
 				if (Object.keys(translations).length > 0) {
+					// truncate to 32 chars
+					const truncated = Object.fromEntries(Object.entries(translations).map(([l, t]) => [l, t.slice(0, 32)]));
+
 					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-					(subOption as any).name_localizations = await this.interface.convertTranslationMap(translations);
+					(subOption as any).name_localizations = await this.interface.convertTranslationMap(truncated);
 				}
 
 				// add description localizations (convert for discord needed)
@@ -255,7 +261,7 @@ export class SlashManager implements Component {
 				if (typeof choices === 'function') choices = await choices();
 
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-				(appOption as any).choices = choices;
+				(appOption as any).choices = choices.map(c => ({ name: c.label, value: c.value }));
 			}
 
 			// min/max support

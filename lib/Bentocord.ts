@@ -14,6 +14,7 @@ import { PrefixCommand } from './commands/builtin/Prefix';
 import { SetAvatarCommand } from './commands/builtin/SetAvatar';
 import { SetGameCommand } from './commands/builtin/SetGame';
 import { SlashCommand } from './commands/builtin/Slash';
+import { ComponentsManager } from './components/ComponentsManager';
 import { Discord } from './discord/Discord';
 import { PromptManager } from './prompt/PromptManager';
 import { ReplyCommand } from './prompt/commands/Reply';
@@ -45,6 +46,7 @@ export class Bentocord implements Plugin {
 			Discord,
 			PromptManager,
 			CommandManager,
+			ComponentsManager,
 			SlashManager,
 			HelpManager,
 			ReplyCommand,

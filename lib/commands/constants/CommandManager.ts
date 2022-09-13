@@ -19,18 +19,19 @@ export enum CommandManagerEvent {
 	/**
 	 * Fired when a command is successfully executed
 	 * @param command Command
-	 * @param context CommandContext
+	 * @param context AnyCommandContext
 	 * @param options Options
-	 * @param mili Milliseconds
+	 * @param mili Miliseconds
 	 */
 	COMMAND_SUCCESS = 'commandSuccess',
 
 	/**
 	 * Fired when a command throws an error
-	 * @param command Command
-	 * @param context CommandContext
-	 * @param options Options
 	 * @param error Error
+	 * @param command Command
+	 * @param context AnyCommandContext
+	 * @param options Options
+	 * @param mili Miliseconds
 	 */
 	COMMAND_FAILURE = 'commandFailure',
 }

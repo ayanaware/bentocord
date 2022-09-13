@@ -5,11 +5,11 @@ import { ActivityPartial, BotActivityType, Message } from 'eris';
 
 import { BentocordVariable } from './BentocordVariable';
 import type { LocalizedEmbedBuilder } from './builders/LocalizedEmbedBuilder';
-import type { AnyCommandContext, CommandContext } from './commands/CommandContext';
+import type { AnyCommandContext } from './commands/CommandContext';
 import type { Command } from './commands/interfaces/Command';
 import type { CommandPermissionDefaults } from './commands/interfaces/CommandDefinition';
 import { DiscordPermission } from './discord/constants/DiscordPermission';
-import type { MessageContext } from './interfaces/MessageContext';
+import type { MessageLocation } from './interfaces/MessageLocation';
 import { PermissionScope, PermissionScopeType } from './interfaces/PermissionScope';
 
 export interface ShardData {
@@ -222,7 +222,7 @@ export class BentocordInterface implements Plugin {
 	 * @param snowflakes Snowflakes of the context
 	 * @returns Tuple with [state, where] boolean if explicitly set, otherwise null
 	 */
-	public async findPermission(permission: string, snowflakes?: MessageContext): Promise<[boolean, string]> {
+	public async findPermission(permission: string, snowflakes?: MessageLocation): Promise<[boolean, string]> {
 		if (snowflakes.userId && await this.isOwner(snowflakes.userId)) return [true, 'owner'];
 
 		// Global Check
@@ -291,19 +291,19 @@ export class BentocordInterface implements Plugin {
 	 * @param def Permission defaults
 	 * @returns Whether context has the provided permission.
 	 */
-	public async checkPermission(ctx: CommandContext, perm: string | Array<string>, def?: CommandPermissionDefaults | boolean): Promise<boolean> {
+	public async checkPermission(ctx: AnyCommandContext, perm: string | Array<string>, def?: CommandPermissionDefaults | boolean): Promise<boolean> {
 		// convert permission to "." separated string
 		if (Array.isArray(perm)) perm = perm.join('.');
 
 		// bot-owner bypass (bot owner has all permissions)
-		if (await this.isOwner(ctx.author.id)) return true;
+		if (await this.isOwner(ctx.userId)) return true;
 
 		// get defaults
 		let defaults = def ?? { user: true, admin: true };
 		if (typeof defaults === 'boolean') defaults = { user: defaults, admin: true };
 
 		// create messagecontext
-		const permCtx: MessageContext = { userId: ctx.authorId, channelId: ctx.channelId };
+		const permCtx: MessageLocation = { userId: ctx.userId, channelId: ctx.channelId };
 		if (ctx.guildId) permCtx.guildId = ctx.guildId;
 		if (ctx.member?.roles) permCtx.roleIds = ctx.member.roles;
 

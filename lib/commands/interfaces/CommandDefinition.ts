@@ -1,6 +1,6 @@
 import type { DiscordPermission } from '../../discord/constants/DiscordPermission';
-import { Translateable } from '../../interfaces/Translateable';
-import type { CommandContext } from '../CommandContext';
+import { PossiblyTranslatable } from '../../interfaces/Translatable';
+import type { AnyCommandContext } from '../CommandContext';
 
 import type { AnyCommandOption } from './CommandOption';
 import type { SuppressorDefinition } from './Suppressor';
@@ -15,7 +15,7 @@ export interface CommandPermissionDefaults {
 
 export interface CommandDefinition {
 	/** Command Aliases; First will be used for slash command name */
-	name: [string, ...Array<string | Translateable>];
+	name: [string, ...Array<PossiblyTranslatable>];
 
 	/**
 	 * Please use the `name` key instead
@@ -27,7 +27,7 @@ export interface CommandDefinition {
 	category?: string;
 
 	/** Command Description */
-	description: string | Translateable;
+	description: PossiblyTranslatable;
 
 	/** Command Options */
 	options?: Array<AnyCommandOption>;
@@ -60,5 +60,5 @@ export interface CommandDefinition {
 	extra?: Record<string, unknown>;
 
 	/** Function name or implementation to execute */
-	execute?: string | ((ctx?: CommandContext) => Promise<any>);
+	execute?: string | ((ctx?: AnyCommandContext) => Promise<any>);
 }

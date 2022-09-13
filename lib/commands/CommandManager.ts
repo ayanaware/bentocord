@@ -19,9 +19,9 @@ import { BentocordInterface } from '../BentocordInterface';
 import { BentocordVariable } from '../BentocordVariable';
 import { Discord } from '../discord/Discord';
 import { DiscordEvent } from '../discord/constants/DiscordEvent';
-import { Translateable } from '../interfaces/Translateable';
+import { PossiblyTranslatable } from '../interfaces/Translatable';
 import { PromptManager } from '../prompt/PromptManager';
-import { PromptChoice } from '../prompt/prompts/ChoicePrompt';
+import { ChoicePromptChoice } from '../prompt/prompts/ChoicePrompt';
 
 import { AnyCommandContext, InteractionCommandContext, MessageCommandContext } from './CommandContext';
 import { CommandManagerEvent, NON_ERROR_HALT } from './constants/CommandManager';
@@ -46,6 +46,8 @@ import { ParsedItem, Parser, ParserOutput } from './internal/Parser';
 import { Tokenizer } from './internal/Tokenizer';
 import { Resolvers } from './options';
 import { Suppressors } from './supressors';
+
+const { MessageFlags } = Constants;
 
 export interface CommandDetails {
 	/** The command */
@@ -233,10 +235,10 @@ export class CommandManager implements Component {
 
 	/**
 	 * Get primary name of command alias or option name
-	 * @param name string or array of string and translateables. First element is always a string
+	 * @param name string or array of string and translatables. First element is always a string
 	 * @returns string
 	 */
-	public getPrimaryName(name: string | [string, ...Array<string | Translateable>]): string {
+	public getPrimaryName(name: string | [string, ...Array<PossiblyTranslatable>]): string {
 		let primary = name;
 		if (Array.isArray(primary)) primary = primary[0];
 
@@ -245,10 +247,10 @@ export class CommandManager implements Component {
 
 	/**
 	 * Get all translations for a possibly translatable
-	 * @param item Array<string | Translatable>
+	 * @param item Array<PossiblyTranslatable>
 	 * @returns Array of Tuple [string, Array<{ lang: string }>]
 	 */
-	public async getItemTranslations(items: string | Translateable | Array<string | Translateable>, normalize = false): Promise<Array<[string, Record<string, string>]>> {
+	public async getItemTranslations(items: PossiblyTranslatable | Array<PossiblyTranslatable>, normalize = false): Promise<Array<[string, Record<string, string>]>> {
 		if (!Array.isArray(items)) items = [items];
 
 		const collector: Array<[string, Record<string, string>]> = [];
@@ -434,15 +436,16 @@ export class CommandManager implements Component {
 
 		// handle ignoreMode
 		if (this.ignoreMode === 'true' && !(await ctx.isBotOwner())) {
-			log.warn(`Skipped Command "${primary}" execution by "${ctx.author.id}", because the bot is in ignoreMode.`);
-			await ctx.acknowledge();
+			log.warn(`Skipped Command "${primary}" execution by "${ctx.userId}", because the bot is in ignoreMode.`);
+			if (ctx instanceof InteractionCommandContext) await ctx.createResponse({ content: 'Execution disabled, bot is in ignoreMode', flags: MessageFlags.EPHEMERAL });
+
 			return false;
 		}
 
 		// handle checkCommand
 		const check = await this.interface.checkCommand(command, ctx);
 		if (!check) {
-			if (ctx.type === 'interaction') await ctx.deleteExecutionMessage();
+			if (ctx instanceof InteractionCommandContext) await ctx.deleteExecutionMessage();
 			return false;
 		}
 
@@ -501,28 +504,27 @@ export class CommandManager implements Component {
 			// TODO: Use Typescript metadata to ensure .execute() and options match
 
 			await command.execute(ctx, options);
-			const end = process.hrtime(start);
 
+			const end = process.hrtime(start);
 			const nano = end[0] * 1e9 + end[1];
 			const mili = nano / 1e6;
 
 			this.api.emit(CommandManagerEvent.COMMAND_SUCCESS, command, ctx, options, mili);
-			log.debug(`Command "${primary}" executed by "${ctx.author.id}", took ${mili}ms`);
+			log.debug(`Command "${primary}" executed by "${ctx.userId}", took ${mili}ms`);
 		} catch (e) {
+			const end = process.hrtime(start);
+			const nano = end[0] * 1e9 + end[1];
+			const mili = nano / 1e6;
+
 			// halt requested (this is lazy, I'll fix it later, probably)
 			if (e === NON_ERROR_HALT) {
-				const end = process.hrtime(start);
-
-				const nano = end[0] * 1e9 + end[1];
-				const mili = nano / 1e6;
-
 				this.api.emit(CommandManagerEvent.COMMAND_SUCCESS, command, ctx, options, mili);
-				log.debug(`Command "${primary}" executed by "${ctx.author.id}", took ${mili}ms`);
+				log.debug(`Command "${primary}" executed by "${ctx.userId}", took ${mili}ms`);
 
 				return;
 			}
 
-			this.api.emit(CommandManagerEvent.COMMAND_FAILURE, command, ctx, options, e);
+			this.api.emit(CommandManagerEvent.COMMAND_FAILURE, e, command, ctx, options, mili);
 			log.error(`Command ${primary}.execute() error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
@@ -705,15 +707,12 @@ export class CommandManager implements Component {
 		// Prompt for subcommand option
 		let useSub: string = null;
 		if (promptSubs.length > 1) {
-			const choices: Array<PromptChoice<string>> = [];
+			const choices: Array<ChoicePromptChoice<string>> = [];
 			for (const sub of promptSubs) {
 				if (sub.hidden ?? false) continue; // don't show hidden subcommands/groups
 				const primary = this.getPrimaryName(sub.name);
 
-				let description = sub.description;
-				if (typeof description === 'object') description = await ctx.formatTranslation(description.key, description.repl, description.backup);
-
-				choices.push({ value: primary, name: `${primary} - ${description}`, match: [primary] });
+				choices.push({ value: primary, label: primary, description: sub.description, match: [primary] });
 			}
 
 			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_SUBCOMMAND', {}, 'Please select a subcommand:');
@@ -756,7 +755,7 @@ export class CommandManager implements Component {
 		if (inputs.length < 1 && (typeof option.required !== 'boolean' || option.required) && !('choices' in option)) {
 			const type = this.getTypePreview(option);
 			const content = await ctx.formatTranslation('BENTOCORD_PROMPT_OPTION', { option: primary, type },  'Please provide an input for option `{option}` of type `{type}`');
-			const input = await ctx.prompt<string>(content, async (s: string) => s);
+			const input = await ctx.prompt<string>(content, async (s: string) => [true, s]);
 
 			inputs = option.array ? input.split(/,\s?/gi) : [input];
 			inputs = inputs.filter(i => !!i);
@@ -778,19 +777,19 @@ export class CommandManager implements Component {
 
 				const resolver = this.resolvers.get(option.type) as Resolver<T>;
 
-				const choices: Array<PromptChoice<T>> = [];
+				const choices: Array<ChoicePromptChoice<T>> = [];
 				for (const item of result) {
 					const match = [];
-					let display = item.toString();
+					let label = item.toString();
 
 					if (resolver && typeof resolver.reduce === 'function') {
 						const reduce = await resolver.reduce(ctx, option, item);
-						display = reduce.display;
+						label = reduce.display;
 
 						if (reduce.extra) match.push(reduce.extra);
 					}
 
-					choices.push({ value: item, name: display, match });
+					choices.push({ value: item, label, match });
 				}
 
 				const choice = await ctx.choice<T>(choices);
@@ -821,14 +820,9 @@ export class CommandManager implements Component {
 			if (!findChoice) {
 				const content = await ctx.formatTranslation('BENTOCORD_PROMPT_CHOICE_OPTION', { option: primary }, 'Please select one of the following choices for option `{option}`');
 
-				const finalChoices: Array<PromptChoice<number | string>> = [];
-				for (const choice of choices) {
-					let display = choice.name;
-					if (typeof display === 'object') display = await ctx.formatTranslation(display.key, display.repl, display.backup);
-
-					const final = { name: display, value: choice.value, match: [choice.value.toString()] };
-					finalChoices.push(final);
-				}
+				const finalChoices: Array<ChoicePromptChoice<number | string>> = choices.map(c => ({
+					...c, match: [c.value.toString()],
+				}));
 
 				out = await ctx.choice<number | string>(finalChoices, content) as unknown as T;
 			}
@@ -855,15 +849,14 @@ export class CommandManager implements Component {
 		const definition = command.definition;
 		if (typeof definition.registerSlash === 'boolean' && !definition.registerSlash) return; // slash disabled
 
-		const ctx = new InteractionCommandContext(this, this.promptManager, command, interaction);
+		const ctx = new InteractionCommandContext(this.api, interaction, command);
 		ctx.alias = data.name;
 
 		try {
-			// prepare context
 			await ctx.prepare();
 
 			// Deny interactions from bots; Safety precaution
-			if (ctx.author.bot) return;
+			if (ctx.user.bot) return;
 
 			// pre-flight checks, perms, suppressors, etc
 			if (!(await this.prepareCommand(command, ctx))) return;
@@ -953,12 +946,11 @@ export class CommandManager implements Component {
 		if (definition.disablePrefix) return;
 
 		// CommandContext
-		const ctx = new MessageCommandContext(this, this.promptManager, command, message);
+		const ctx = new MessageCommandContext(this.api, message, command);
 		ctx.prefix = prefix;
 		ctx.alias = name;
 
 		try {
-			// prepare context
 			await ctx.prepare();
 
 			// pre-flight checks, perms, suppressors, etc

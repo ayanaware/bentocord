@@ -1,51 +1,71 @@
-import { Message } from 'eris';
+import { ButtonContext } from '../../components/contexts/ButtonContext';
+import { Button } from '../../components/helpers/Button';
+import type { AnyContext } from '../../contexts/AnyContext';
+import { PaginationPrompt } from '../PaginationPrompt';
+import { Paginator } from '../helpers/Paginator';
 
-import { AnyCommandContext } from '../../commands/CommandContext';
-import { Translateable } from '../../interfaces/Translateable';
-import { PROMPT_CLOSE } from '../Prompt';
+export class ConfirmPrompt extends PaginationPrompt<boolean, void> {
+	protected btnYes: Button;
+	protected btnNo: Button;
 
-import { PaginationOptions, PaginationPrompt } from './PaginationPrompt';
+	public constructor(ctx: AnyContext, paginator?: Paginator<void>) {
+		super(ctx, paginator);
 
-export class ConfirmPrompt extends PaginationPrompt<boolean> {
-	public constructor(ctx: AnyCommandContext, items?: Array<string | Translateable>, options: PaginationOptions = {}) {
-		options = Object.assign({
-			resolveOnClose: false,
-		} as PaginationOptions, options);
-
-		super(ctx, items, options);
+		this.validator = this.handleText.bind(this);
 	}
 
-	public async open(content: string | Translateable): Promise<boolean> {
-		if (typeof content === 'object') content = await this.ctx.formatTranslation(content.key, content.repl, content.backup);
-		this.content = content;
+	public async start(): Promise<boolean> {
+		// add buttons
+		this.btnYes = await new Button(this.ctx, 'yes', this.yes.bind(this))
+			.success().labelTranslated('WORD_YES', null, 'Yes');
 
-		await this.render();
+		this.btnNo = await new Button(this.ctx, 'no', this.no.bind(this))
+			.danger().labelTranslated('WORD_NO', null, 'No');
 
-		// not a single page add reactions & start prompt
-		if (!this.isSinglePage) {
-			this.addReactions().catch(() => { /* no-op */ });
-		}
-
-		return this.start();
+		// Pagination.start() calls update
+		return super.start();
 	}
 
-	public async handleResponse(input: string, message?: Message): Promise<void> {
-		const close = PROMPT_CLOSE.some(c => c.toLocaleLowerCase() === input.toLocaleLowerCase());
-		if (close) {
-			this.deleteMessage(message).catch(() => { /* no-op */ });
+	public async close(): Promise<void> {
+		await this.cleanup();
 
-			return this.close();
+		// confirm close needs to resolve with false
+		this.resolve(false);
+	}
+
+	public async update(): Promise<void> {
+		this.clearRows();
+
+		// update pagination
+		await super.update();
+
+		// add yes/no
+		this.addRows([this.btnYes, this.btnNo]);
+	}
+
+	protected async yes(btn?: ButtonContext): Promise<void> {
+		if (btn) await btn.deferUpdate();
+		await this.cleanup();
+
+		this.resolve(true);
+	}
+
+	protected async no(btn?: ButtonContext): Promise<void> {
+		if (btn) await btn.deferUpdate();
+		await this.cleanup();
+
+		this.resolve(false);
+	}
+
+	protected async handleText(response: string): Promise<[boolean, boolean]> {
+		if (/^(true|t|yes|y|1)$/i.exec(response)) {
+			await this.cleanup();
+			return [true, true];
+		} else if (/^(false|f|no|n|0)$/i.exec(response)) {
+			await this.cleanup();
+			return [true, false];
 		}
 
-		if (/^(true|t|yes|y|1)$/i.exec(input)) {
-			Promise.all([this.removeReactions(), this.deleteMessage(message)]).catch(() => { /* no-op */ });
-			return this.resolve(true);
-		} else if (/^(false|f|no|n|0)$/i.exec(input)) {
-			Promise.all([this.removeReactions(), this.deleteMessage(message)]).catch(() => { /* no-op */ });
-			return this.resolve(false);
-		}
-
-		// nothing matched hand off to super
-		return super.handleResponse(input, message);
+		return super.handleText(response);
 	}
 }

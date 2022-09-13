@@ -57,7 +57,7 @@ export class Discord implements Component {
 		this.clientOptions = clientOptions;
 		log.info(`ClientOptions = ${JSON.stringify(clientOptions)}`);
 
-		this.client = new Client(`Bot ${token}`, clientOptions);
+		this.client = new Client(`Bot ${token}`, this.clientOptions);
 		this.api.forwardEvents(this.client, Object.values(DiscordEvent));
 
 		// refresh application object
