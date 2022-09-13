@@ -1,5 +1,5 @@
 import type { BaseContext } from '../contexts/BaseContext';
-import { PossiblyTranslatable, Translatable } from '../interfaces/Translatable';
+import { PossiblyTranslatable } from '../interfaces/Translatable';
 
 import { CodeblockLineItem, CodeblockBuilder } from './CodeblockBuilder';
 

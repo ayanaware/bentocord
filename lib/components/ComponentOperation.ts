@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { ActionRow, ActionRowComponents, Constants, FileContent, InteractionContent, MessageContent } from 'eris';
+import { ActionRow, ActionRowComponents, Constants, FileContent } from 'eris';
 
 import type { AnyContext } from '../contexts/AnyContext';
 import type { AgnosticMessageContent } from '../interfaces/AgnosticMessageContent';

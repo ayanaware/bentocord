@@ -1,5 +1,3 @@
-import { AdvancedMessageContent, InteractionContent } from 'eris';
-
 import { LocalizedCodeblockBuilder } from '../../builders/LocalizedCodeblockBuilder';
 import type { BaseContext } from '../../contexts/BaseContext';
 import type { AgnosticMessageContent } from '../../interfaces/AgnosticMessageContent';

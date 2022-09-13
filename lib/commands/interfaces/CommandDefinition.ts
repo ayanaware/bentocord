@@ -1,5 +1,5 @@
 import type { DiscordPermission } from '../../discord/constants/DiscordPermission';
-import { PossiblyTranslatable, Translatable } from '../../interfaces/Translatable';
+import { PossiblyTranslatable } from '../../interfaces/Translatable';
 import type { AnyCommandContext } from '../CommandContext';
 
 import type { AnyCommandOption } from './CommandOption';

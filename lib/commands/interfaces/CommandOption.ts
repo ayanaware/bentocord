@@ -1,4 +1,4 @@
-import { PossiblyTranslatable, Translatable } from '../../interfaces/Translatable';
+import { PossiblyTranslatable } from '../../interfaces/Translatable';
 import { OptionType } from '../constants/OptionType';
 import type { BigIntegerOption } from '../options/BigIntegerOption';
 import type { BooleanOption } from '../options/BooleanOption';
