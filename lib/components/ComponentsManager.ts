@@ -62,7 +62,7 @@ export class ComponentsManager implements Component {
 	}
 
 	public addPrefixHandler(prefix: string, handler: ComponentHandler, close?: CloseHandler): void {
-		if (this.hasPrefixHandler) throw new Error(`Prefix handler already exists for "${prefix}"`);
+		if (this.hasPrefixHandler(prefix)) throw new Error(`Prefix handler already exists for "${prefix}"`);
 		if (!close) close = async () => { /* NO-OP */ };
 
 		this.prefixHandlers.set(prefix, [handler, close]);
