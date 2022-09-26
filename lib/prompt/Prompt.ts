@@ -134,6 +134,8 @@ export class Prompt<T = unknown> extends ComponentOperation<T> {
 	}
 
 	public async close(reason?: PossiblyTranslatable): Promise<void> {
+		await this.update();
+
 		// Handle close reason, respect PromptOptions
 		if (reason) {
 			if (typeof reason === 'object') reason = await this.ctx.formatTranslation(reason);

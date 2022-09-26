@@ -65,6 +65,7 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 	}
 
 	public async close(): Promise<void> {
+		await this.update();
 		await this.cleanup();
 
 		// raw pagination doesn't return anything

@@ -74,9 +74,10 @@ export class ComponentOperation<T = void> {
 	}
 
 	/**
-	 * Called before render; Helper function used to update content / rows
+	 * A helper function to help build more complex/dynamic operations
+	 * Some examples would be a button that re-renders itself etc
 	 *
-	 * Helpful when building more dynamic / auto-refreshing operations
+	 * By default only called in start() and close()
 	 */
 	public async update(): Promise<void> {
 		/* NO-OP */
@@ -183,8 +184,9 @@ export class ComponentOperation<T = void> {
 	}
 
 	public async close(): Promise<void> {
-		await this.cleanup();
+		await this.update();
 
+		await this.cleanup();
 		this.resolve();
 	}
 
@@ -198,7 +200,6 @@ export class ComponentOperation<T = void> {
 
 		// preform final render
 		try {
-			await this.update();
 			await this.render();
 		} catch { /* NO-OP */ }
 

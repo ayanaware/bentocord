@@ -27,6 +27,7 @@ export class ConfirmPrompt extends PaginationPrompt<boolean, void> {
 	}
 
 	public async close(): Promise<void> {
+		await this.update();
 		await this.cleanup();
 
 		// confirm close needs to resolve with false
