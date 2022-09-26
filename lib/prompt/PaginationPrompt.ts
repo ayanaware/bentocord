@@ -61,7 +61,6 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 	public async start(): Promise<T> {
 		await this.sltPage.placeholderTranslated('BENTOCORD_PAGINATION_SELECT', {}, 'Jump to Page');
 
-		await this.update();
 		return super.start();
 	}
 

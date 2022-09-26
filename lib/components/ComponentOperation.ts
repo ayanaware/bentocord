@@ -73,6 +73,19 @@ export class ComponentOperation<T = void> {
 		return this.rows(...[...this._rows, ...rows]);
 	}
 
+	/**
+	 * Called before render; Helper function used to update content / rows
+	 *
+	 * Helpful when building more dynamic / auto-refreshing operations
+	 */
+	public async update(): Promise<void> {
+		/* NO-OP */
+	}
+
+	/**
+	 * Actually "writes/makes visible" the state of this operation to the user.
+	 * When overriding this function take care that you always super.render();
+	 */
 	public async render(): Promise<void> {
 		const rows: Array<ActionRow> = [];
 		for (const row of this._rows) {
@@ -160,6 +173,7 @@ export class ComponentOperation<T = void> {
 	 * Can be used to block further execution
 	 */
 	public async start(): Promise<T> {
+		await this.update();
 		await this.render();
 
 		return new Promise((resolve, reject) => {
@@ -184,6 +198,7 @@ export class ComponentOperation<T = void> {
 
 		// preform final render
 		try {
+			await this.update();
 			await this.render();
 		} catch { /* NO-OP */ }
 
