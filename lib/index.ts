@@ -28,6 +28,7 @@ export * from './components/interfaces/ComponentHandler';
 export * from './components/util/ParseCustomId';
 
 // Contexts
+export * from './contexts/AnyContext';
 export * from './contexts/BaseContext';
 export * from './contexts/InteractionContext';
 export * from './contexts/MessageContext';
