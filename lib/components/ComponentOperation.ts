@@ -113,6 +113,7 @@ export class ComponentOperation<T = void> {
 		// run transformer
 		if (typeof this.transformer === 'function') content = await this.transformer(content);
 
+		// ensure refreshTimeout is called
 		try {
 			await this.ctx.createResponse(content, this._files);
 			const message = await this.ctx.getResponse();
@@ -124,10 +125,10 @@ export class ComponentOperation<T = void> {
 				this.cm.addMessageHandler(message.id, this.handleInteraction.bind(this), this.cleanup.bind(this));
 				this.messageId = message.id;
 			}
-		} catch { /* NO-OP */ }
-
-		// refresh timeout
-		this.refreshTimeout();
+		} finally {
+			// refresh timeout
+			this.refreshTimeout();
+		}
 	}
 
 	protected async handleInteraction(ctx: AnyComponentContext): Promise<void> {
