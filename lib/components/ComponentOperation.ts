@@ -110,6 +110,9 @@ export class ComponentOperation<T = void> {
 			if (this._content.embeds && this._merge.embeds) content.embeds = [...this._content.embeds ?? [], ...this._merge.embeds ?? []];
 		}
 
+		// no embeds, make sure to send a empty array so discord removes them from the message
+		if (!Array.isArray(content.embeds)) content.embeds = [];
+
 		// run transformer
 		if (typeof this.transformer === 'function') content = await this.transformer(content);
 
