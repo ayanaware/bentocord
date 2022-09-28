@@ -16,6 +16,7 @@ import {
 import { BentocordInterface } from '../BentocordInterface';
 import { Discord } from '../discord/Discord';
 import { DiscordPermission } from '../discord/constants/DiscordPermission';
+import { AgnosticMessageContent } from '../interfaces/AgnosticMessageContent';
 import { PossiblyTranslatable, Translatable } from '../interfaces/Translatable';
 import { PaginationPrompt } from '../prompt/PaginationPrompt';
 import { Prompt, PromptOptions, PromptValidator } from '../prompt/Prompt';
@@ -192,9 +193,9 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param options PromptOptions
 	 * @returns Validated input
 	 */
-	public async prompt<T = string>(content: PossiblyTranslatable, validator?: PromptValidator<T>, options?: PromptOptions): Promise<T> {
+	public async prompt<T = string>(content: PossiblyTranslatable | AgnosticMessageContent, validator?: PromptValidator<T>, options?: PromptOptions): Promise<T> {
 		const prompt = new Prompt<T>(this, validator, options);
-		if (typeof content === 'object') await prompt.contentTranslated(content.key, content.repl, content.backup);
+		if (typeof content === 'object' && 'key' in content) await prompt.contentTranslated(content.key, content.repl, content.backup);
 		else prompt.content(content);
 
 		return prompt.start();
@@ -205,13 +206,13 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param content details about what they are confirming
 	 * @returns boolean
 	 */
-	public async confirm(content?: PossiblyTranslatable, items?: Paginator<void> | Array<PaginatorItems<void>>): Promise<boolean> {
+	public async confirm(content?: PossiblyTranslatable | AgnosticMessageContent, items?: Paginator<void> | Array<PaginatorItems<void>>): Promise<boolean> {
 		if (Array.isArray(items)) items = new CodeblockPaginator(this, items);
 
 		const confirm = new ConfirmPrompt(this, items);
 		if (!content) content = await this.formatTranslation('BENTOCORD_PROMPT_CONFIRM', {}, 'Please confirm you wish to continue');
 
-		if (typeof content === 'object') await confirm.contentTranslated(content.key, content.repl, content.backup);
+		if (typeof content === 'object' && 'key' in content) await confirm.contentTranslated(content.key, content.repl, content.backup);
 		else if (content) confirm.content(content);
 
 		return confirm.start();
@@ -224,11 +225,11 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param options PaginationOptions
 	 * @returns
 	 */
-	public async pagination(items: Paginator<void> | Array<PaginatorItems<void>>, content?: PossiblyTranslatable, options?: PromptOptions): Promise<void> {
+	public async pagination(items: Paginator<void> | Array<PaginatorItems<void>>, content?: PossiblyTranslatable | AgnosticMessageContent, options?: PromptOptions): Promise<void> {
 		if (Array.isArray(items)) items = new CodeblockPaginator(this, items);
 		const pagination = new PaginationPrompt(this, items, options);
 
-		if (typeof content === 'object') await pagination.contentTranslated(content.key, content.repl, content.backup);
+		if (typeof content === 'object' && 'key' in content) await pagination.contentTranslated(content.key, content.repl, content.backup);
 		else if (content) pagination.content(content);
 
 		return pagination.start();
@@ -241,10 +242,10 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param options PagiantionOptions
 	 * @returns Selected PromptChoice value
 	 */
-	public async choice<T = string>(choices: Array<ChoicePromptChoice<T>>, content?: PossiblyTranslatable, options?: PromptOptions): Promise<T> {
+	public async choice<T = string>(choices: Array<ChoicePromptChoice<T>>, content?: PossiblyTranslatable | AgnosticMessageContent, options?: PromptOptions): Promise<T> {
 		const choice = new ChoicePrompt(this, choices, options);
 
-		if (typeof content === 'object') await choice.contentTranslated(content.key, content.repl, content.backup);
+		if (typeof content === 'object' && 'key' in content) await choice.contentTranslated(content.key, content.repl, content.backup);
 		else if (content) choice.content(content);
 
 		return choice.start();
