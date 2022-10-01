@@ -37,8 +37,8 @@ export class CodeblockPaginator<T = void> extends Paginator<CodeblockPaginatorIt
 				{ page: this.page + 1, total: this.pageCount }, '[Page {page}/{total}]');
 		}
 
-		const page = await this.getPage();
-		for (const { item, index } of page) {
+		const items = await this.getItems();
+		for (const { item, index } of items) {
 			const flare = this.options.flare ?? {};
 			const focused = index === this.options.focused;
 

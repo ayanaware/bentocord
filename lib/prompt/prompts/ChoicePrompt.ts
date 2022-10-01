@@ -56,7 +56,7 @@ export class ChoicePrompt<T> extends PaginationPrompt<T> {
 		// update pagination
 		await super.update();
 
-		const items = await this.paginator.getPage();
+		const items = await this.paginator.getItems();
 		// single option per page
 		if (items.length === 1) {
 			this.addRows([this.btnChoice]);
@@ -99,7 +99,7 @@ export class ChoicePrompt<T> extends PaginationPrompt<T> {
 
 		await slt.deferUpdate();
 
-		const { item } = await this.paginator.getItem(index);
+		const [item] = await this.paginator.getItem(index);
 		if (!item) return;
 
 		await this.cleanup();
@@ -107,7 +107,7 @@ export class ChoicePrompt<T> extends PaginationPrompt<T> {
 	}
 
 	protected async handleChoiceButton(btn: ButtonContext): Promise<void> {
-		const items = await this.paginator.getPage();
+		const items = await this.paginator.getItems();
 		if (items.length !== 1) return;
 		const { item } = items[0];
 		if (!item) return;
@@ -122,7 +122,7 @@ export class ChoicePrompt<T> extends PaginationPrompt<T> {
 		response = response.toLocaleLowerCase();
 
 		// handle number select
-		const items = await this.paginator.getPage();
+		const items = await this.paginator.getItems();
 		for (const { item, index } of items) {
 			// handle text: number
 			const num = index + 1; // convert to 1-index

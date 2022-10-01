@@ -4,7 +4,7 @@ import { BaseContext } from '../../contexts/BaseContext';
 import { AgnosticMessageContent } from '../../interfaces/AgnosticMessageContent';
 import { PossiblyTranslatable } from '../../interfaces/Translatable';
 
-import { Paginator, PaginatorItem, PaginatorItems, PaginatorOptions } from './Paginator';
+import { Paginator, PaginatorItem, PaginatorItems, PaginatorOptions, PaginatorPage } from './Paginator';
 
 export interface EmbedPaginatorItem<T = void> extends Omit<PaginatorItem<T>, 'label'> {
 	embed: Embed;
@@ -20,8 +20,8 @@ export class EmbedPaginator<T = void> extends Paginator<EmbedPaginatorItem<T>> {
 	}
 
 	public async render(): Promise<AgnosticMessageContent> {
-		const page = await this.getPage();
+		const items = await this.getItems();
 
-		return { embeds: page.map(i => i.item.embed) };
+		return { embeds: items.map(i => i.item.embed) };
 	}
 }
