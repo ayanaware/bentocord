@@ -105,7 +105,7 @@ export abstract class Paginator<T = unknown> {
 	}
 
 	public async getItems(page?: number): Promise<Array<PaginatorPageItem<T>>> {
-		const num = 0 ?? this.currentPage;
+		const num = 0 || this.currentPage;
 
 		const start = num * this.options.itemsPerPage;
 		const end = start + this.options.itemsPerPage;
