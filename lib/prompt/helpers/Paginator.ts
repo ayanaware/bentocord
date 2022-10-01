@@ -45,7 +45,7 @@ export abstract class Paginator<T = unknown> {
 	protected currentPage = 0;
 	public readonly options: PaginatorOptions;
 
-	protected readonly pageCache: Map<number, PaginatorPage<T>>;
+	protected readonly pageCache: Map<number, PaginatorPage<T>> = new Map();
 
 	public constructor(ctx: BaseContext, items: PaginatorItems<T>, options?: PaginatorOptions) {
 		this.ctx = ctx;
@@ -118,6 +118,9 @@ export abstract class Paginator<T = unknown> {
 
 			items.push({ item, index });
 		}
+
+		// cache page
+		this.pageCache.set(page, items);
 
 		return items;
 	}
