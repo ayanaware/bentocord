@@ -20,8 +20,8 @@ import { AgnosticMessageContent } from '../interfaces/AgnosticMessageContent';
 import { PossiblyTranslatable, Translatable } from '../interfaces/Translatable';
 import { PaginationPrompt } from '../prompt/PaginationPrompt';
 import { Prompt, PromptOptions, PromptValidator } from '../prompt/Prompt';
-import { CodeblockPaginator } from '../prompt/helpers/CodeblockPaginator';
-import { Paginator, PaginatorItems } from '../prompt/helpers/Paginator';
+import { AnyPaginator } from '../prompt/helpers/AnyPaginator';
+import { CodeblockPaginator, CodeblockPaginatorItems } from '../prompt/helpers/CodeblockPaginator';
 import { ChoicePrompt, ChoicePromptChoice } from '../prompt/prompts/ChoicePrompt';
 import { ConfirmPrompt } from '../prompt/prompts/ConfirmPrompt';
 import { IsTextableChannel } from '../util/IsTextableChannel';
@@ -206,8 +206,8 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param content details about what they are confirming
 	 * @returns boolean
 	 */
-	public async confirm(content?: PossiblyTranslatable | AgnosticMessageContent, items?: Paginator<void> | Array<PaginatorItems<void>>): Promise<boolean> {
-		if (Array.isArray(items)) items = new CodeblockPaginator(this, items);
+	public async confirm(content?: PossiblyTranslatable | AgnosticMessageContent, items?: AnyPaginator<void> | CodeblockPaginatorItems<void>): Promise<boolean> {
+		if (Array.isArray(items) || typeof items === 'function') items = new CodeblockPaginator(this, items);
 
 		const confirm = new ConfirmPrompt(this, items);
 		if (!content) content = await this.formatTranslation('BENTOCORD_PROMPT_CONFIRM', {}, 'Please confirm you wish to continue');
@@ -225,8 +225,8 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param options PaginationOptions
 	 * @returns
 	 */
-	public async pagination(items: Paginator<void> | Array<PaginatorItems<void>>, content?: PossiblyTranslatable | AgnosticMessageContent, options?: PromptOptions): Promise<void> {
-		if (Array.isArray(items)) items = new CodeblockPaginator(this, items);
+	public async pagination(items: AnyPaginator<void> | CodeblockPaginatorItems<void>, content?: PossiblyTranslatable | AgnosticMessageContent, options?: PromptOptions): Promise<void> {
+		if (Array.isArray(items) || typeof items === 'function') items = new CodeblockPaginator(this, items);
 		const pagination = new PaginationPrompt(this, items, options);
 
 		if (typeof content === 'object' && 'key' in content) await pagination.contentTranslated(content.key, content.repl, content.backup);
@@ -242,7 +242,8 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param options PagiantionOptions
 	 * @returns Selected PromptChoice value
 	 */
-	public async choice<T = string>(choices: Array<ChoicePromptChoice<T>>, content?: PossiblyTranslatable | AgnosticMessageContent, options?: PromptOptions): Promise<T> {
+	public async choice<T = string>(choices: AnyPaginator<T> | CodeblockPaginatorItems<T>, content?: PossiblyTranslatable | AgnosticMessageContent, options?: PromptOptions): Promise<T> {
+		if (Array.isArray(choices) || typeof choices === 'function') choices = new CodeblockPaginator(this, choices);
 		const choice = new ChoicePrompt(this, choices, options);
 
 		if (typeof content === 'object' && 'key' in content) await choice.contentTranslated(content.key, content.repl, content.backup);

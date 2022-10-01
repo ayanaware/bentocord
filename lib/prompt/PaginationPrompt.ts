@@ -8,7 +8,7 @@ import { Select } from '../components/helpers/Select';
 import type { BaseContext } from '../contexts/BaseContext';
 
 import { Prompt, PromptOptions } from './Prompt';
-import type { Paginator } from './helpers/Paginator';
+import type { AnyPaginator } from './helpers/AnyPaginator';
 
 export enum PaginationEmojis {
 	FIRST = '⏮️',
@@ -24,7 +24,7 @@ const TEXT_NEXT = ['>', 'next'];
 const TEXT_LAST = ['>>', 'last', 'l'];
 
 export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
-	public readonly paginator: Paginator<U>;
+	public readonly paginator: AnyPaginator<U>;
 
 	// first, prev, next, last
 	protected btnFirst: Button;
@@ -34,27 +34,27 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 	protected btnClose: Button;
 	protected sltPage: Select;
 
-	public constructor(ctx: BaseContext, paginator?: Paginator<U>, options?: PromptOptions) {
+	public constructor(ctx: BaseContext, paginator?: AnyPaginator<U>, options?: PromptOptions) {
 		super(ctx, null, options);
 		this.paginator = paginator;
 		this.validator = this.handleText.bind(this);
 
-		this.btnFirst = new Button(this.ctx, 'first', this.handleButton.bind(this))
+		this.btnFirst = new Button(this.ctx, 'bc:page:first', this.handleButton.bind(this))
 			.secondary().emoji({ name: PaginationEmojis.FIRST });
 
-		this.btnPrev = new Button(this.ctx, 'prev', this.handleButton.bind(this))
+		this.btnPrev = new Button(this.ctx, 'bc:page:prev', this.handleButton.bind(this))
 			.secondary().emoji({ name: PaginationEmojis.PREV });
 
-		this.btnNext = new Button(this.ctx, 'next', this.handleButton.bind(this))
+		this.btnNext = new Button(this.ctx, 'bc:page:next', this.handleButton.bind(this))
 			.secondary().emoji({ name: PaginationEmojis.NEXT });
 
-		this.btnLast = new Button(this.ctx, 'last', this.handleButton.bind(this))
+		this.btnLast = new Button(this.ctx, 'bc:page:last', this.handleButton.bind(this))
 			.secondary().emoji({ name: PaginationEmojis.LAST });
 
-		this.btnClose = new Button(this.ctx, 'close', this.handleButton.bind(this))
+		this.btnClose = new Button(this.ctx, 'bc:page:close', this.handleButton.bind(this))
 			.danger().emoji({ name: PaginationEmojis.CLOSE });
 
-		this.sltPage = new Select(this.ctx, 'page', this.handleSelect.bind(this))
+		this.sltPage = new Select(this.ctx, 'bc:page:select', this.handleSelect.bind(this))
 			.max(1);
 	}
 
@@ -126,7 +126,25 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 		// update select options
 		const options: Array<SelectMenuOptions> = [];
 		for (let i = start; i <= end; i++) {
-			options.push({ label: (i + 1).toString(), value: i.toString(), default: i === page });
+			const option: SelectMenuOptions = { value: i.toString(), label: (i + 1).toString(), default: i === page };
+			if (this.paginator.options.itemsPerPage === 1) {
+				const { item } = await this.paginator.getItem(i);
+
+				// label
+				let label = item.label ?? (i + 1).toString();
+				if (typeof label === 'object') label = await this.ctx.formatTranslation(label);
+				option.label = label;
+
+				// description
+				let description = item.description;
+				if (typeof description === 'object') description = await this.ctx.formatTranslation(description);
+				option.description = description;
+
+				// emoji
+				if (item.emoji) option.emoji = item.emoji;
+			}
+
+			options.push(option);
 		}
 
 		this.sltPage.options(...options);

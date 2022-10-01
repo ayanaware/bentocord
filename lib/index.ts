@@ -90,6 +90,7 @@ export * from './prompt/prompts/ConfirmPrompt';
 export * from './prompt/helpers/Paginator';
 export * from './prompt/helpers/AnyPaginator';
 export * from './prompt/helpers/CodeblockPaginator';
+export * from './prompt/helpers/EmbedPaginator';
 
 // Utils
 export * from './util/IsTextableChannel';

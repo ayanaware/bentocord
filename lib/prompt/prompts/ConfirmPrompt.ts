@@ -2,13 +2,13 @@ import { ButtonContext } from '../../components/contexts/ButtonContext';
 import { Button } from '../../components/helpers/Button';
 import type { AnyContext } from '../../contexts/AnyContext';
 import { PaginationPrompt } from '../PaginationPrompt';
-import { Paginator } from '../helpers/Paginator';
+import { AnyPaginator } from '../helpers/AnyPaginator';
 
 export class ConfirmPrompt extends PaginationPrompt<boolean, void> {
 	protected btnYes: Button;
 	protected btnNo: Button;
 
-	public constructor(ctx: AnyContext, paginator?: Paginator<void>) {
+	public constructor(ctx: AnyContext, paginator?: AnyPaginator<void>) {
 		super(ctx, paginator);
 
 		this.validator = this.handleText.bind(this);

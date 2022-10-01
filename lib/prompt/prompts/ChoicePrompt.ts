@@ -1,38 +1,33 @@
 import { SelectMenuOptions } from 'eris';
 
 import { NON_ERROR_HALT } from '../../commands/constants/CommandManager';
+import { ButtonContext } from '../../components/contexts/ButtonContext';
 import { SelectContext } from '../../components/contexts/SelectContext';
+import { Button } from '../../components/helpers/Button';
 import { Select } from '../../components/helpers/Select';
 import type { BaseContext } from '../../contexts/BaseContext';
 import { PossiblyTranslatable } from '../../interfaces/Translatable';
 import { PaginationPrompt } from '../PaginationPrompt';
 import { PromptOptions } from '../Prompt';
-import { CodeblockPaginator } from '../helpers/CodeblockPaginator';
+import { AnyPaginator } from '../helpers/AnyPaginator';
 import { PaginatorItem } from '../helpers/Paginator';
 
-export interface ChoicePromptChoice<T> extends PaginatorItem<T> {
-	value: T;
-
-	match?: Array<string>;
-}
-
+export type ChoicePromptChoice<T> = PaginatorItem<T>;
 export class ChoicePrompt<T> extends PaginationPrompt<T> {
-	protected choices: Array<ChoicePromptChoice<T>>;
 	protected sltChoice: Select;
+	protected btnChoice: Button;
 
-	public constructor(ctx: BaseContext, choices: Array<ChoicePromptChoice<T>>, options?: PromptOptions) {
-		const paginator = new CodeblockPaginator(ctx, choices);
+	public constructor(ctx: BaseContext, paginator: AnyPaginator<T>, options?: PromptOptions) {
 		super(ctx, paginator, options);
 		this.validator = this.handleText.bind(this);
 
-		this.choices = choices;
-
-		this.sltChoice = new Select(this.ctx, 'choice', this.handleChoice.bind(this))
-			.max(1);
+		this.sltChoice = new Select(this.ctx, 'bc:choice:select', this.handleChoiceSelect.bind(this)).max(1);
+		this.btnChoice = new Button(this.ctx, 'bc:choice:button', this.handleChoiceButton.bind(this)).success();
 	}
 
 	public async start(): Promise<T> {
 		await this.sltChoice.placeholderTranslated('BENTOCORD_CHOICE_SELECT', {}, 'Please choose an item');
+		await this.btnChoice.labelTranslated('BENTOCORD_CHOICE_SELECT_CHOOSE', {}, 'Choose');
 
 		return super.start();
 	}
@@ -59,18 +54,42 @@ export class ChoicePrompt<T> extends PaginationPrompt<T> {
 		// update pagination
 		await super.update();
 
-		const items = await this.paginator.getPageItems();
-		const options: Array<SelectMenuOptions> = items.map(i => ({ ...i,
-			label: `${i.index + 1}: ${i.label}`, // prefix label with items 1-index number
-			value: i.index.toString(),
-		}));
+		const items = await this.paginator.getPage();
+		// single option per page
+		if (items.length === 1) {
+			this.addRows([this.btnChoice]);
+
+			return;
+		}
+
+		// multiple options per page
+		const options: Array<SelectMenuOptions> = [];
+		for (const { item, index } of items) {
+			const option: SelectMenuOptions = { value: index.toString(), label: index.toString() };
+
+			// label
+			let label = item.label;
+			if (typeof label === 'object') label = await this.ctx.formatTranslation(label);
+			option.label = `${index + 1}: ${label}`;
+
+			// description
+			let description = item.description;
+			if (typeof description === 'object') description = await this.ctx.formatTranslation(description);
+			option.description = description;
+
+			// emoji
+			if (item.emoji) option.emoji = item.emoji;
+
+			options.push(option);
+		}
+
 		this.sltChoice.options(...options);
 
-		// add choice
+		// add select
 		this.addRows([this.sltChoice]);
 	}
 
-	protected async handleChoice(slt: SelectContext): Promise<void> {
+	protected async handleChoiceSelect(slt: SelectContext): Promise<void> {
 		if (slt.values.length !== 1) return;
 
 		const index = Number(slt.values[0]);
@@ -78,35 +97,47 @@ export class ChoicePrompt<T> extends PaginationPrompt<T> {
 
 		await slt.deferUpdate();
 
-		const choice = this.choices[index];
-		if (!choice) return;
+		const { item } = await this.paginator.getItem(index);
+		if (!item) return;
 
 		await this.cleanup();
-		this.resolve(choice.value);
+		this.resolve(item.value);
+	}
+
+	protected async handleChoiceButton(btn: ButtonContext): Promise<void> {
+		const items = await this.paginator.getPage();
+		if (items.length !== 1) return;
+		const { item } = items[0];
+		if (!item) return;
+
+		await btn.deferUpdate();
+
+		await this.cleanup();
+		this.resolve(item.value);
 	}
 
 	protected async handleText(response: string): Promise<[boolean, T]> {
 		response = response.toLocaleLowerCase();
 
 		// handle number select
-		for (const item of await this.paginator.getPageItems()) {
-			const num = item.index + 1; // convert to 1-index
-			if (response !== num.toString()) continue;
+		const items = await this.paginator.getPage();
+		for (const { item, index } of items) {
+			// handle text: number
+			const num = index + 1; // convert to 1-index
+			if (response === num.toString())  {
+				await this.cleanup();
+				return [true, item.value];
+			}
 
-			await this.cleanup();
-			return [true, item.value];
-		}
-
-		// handle choice.match
-		for (const choice of this.choices) {
-			if (!Array.isArray(choice.match)) continue;
+			// handle text: item.match
+			if (!Array.isArray(item.match)) continue;
 
 			// lowercase
-			const match = choice.match.map(m => m.toLocaleLowerCase());
+			const match = item.match.map(m => m.toLocaleLowerCase());
 			if (!match.some(m => response === m)) continue;
 
 			await this.cleanup();
-			return [true, choice.value];
+			return [true, item.value];
 		}
 
 		return super.handleText(response);

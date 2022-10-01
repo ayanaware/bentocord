@@ -1,31 +1,33 @@
+import { Emoji } from 'eris';
+
 import { LocalizedCodeblockBuilder } from '../../builders/LocalizedCodeblockBuilder';
 import type { BaseContext } from '../../contexts/BaseContext';
 import type { AgnosticMessageContent } from '../../interfaces/AgnosticMessageContent';
 import { PossiblyTranslatable } from '../../interfaces/Translatable';
 
-import { Paginator, PaginatorItems, PaginatorOptions } from './Paginator';
+import { Paginator, PaginatorItem, PaginatorItems, PaginatorOptions } from './Paginator';
+
+export interface CodeblockPaginatorItem<T = void> extends PaginatorItem<T> {
+	label: PossiblyTranslatable;
+}
+export type CodeblockPaginatorItems<T> = PaginatorItems<CodeblockPaginatorItem<T>>;
 
 export interface CodeblockPaginatorOptions extends PaginatorOptions {
+	/** Codeblock syntax highlighting language to use */
 	language?: string;
 
-	focused?: number;
-
+	/** Works in tandem with the focused option */
 	flare?: {
 		above?: PossiblyTranslatable,
 		below?: PossiblyTranslatable,
 		padStart?: number,
 	};
 }
-
-export class CodeblockPaginator<T = void> extends Paginator<T> {
+export class CodeblockPaginator<T = void> extends Paginator<CodeblockPaginatorItem<T>> {
 	public readonly options: CodeblockPaginatorOptions;
 
-	public constructor(ctx: BaseContext, items: Array<PaginatorItems<T>>, options: CodeblockPaginatorOptions = {}) {
+	public constructor(ctx: BaseContext, items: CodeblockPaginatorItems<T>, options: CodeblockPaginatorOptions = {}) {
 		super(ctx, items, options);
-
-		if (typeof this.options.focused === 'number') {
-			this.currentPage = Math.floor(options.focused / this.options.itemsPerPage) ?? 0;
-		}
 	}
 
 	public async render(): Promise<AgnosticMessageContent> {
@@ -37,9 +39,10 @@ export class CodeblockPaginator<T = void> extends Paginator<T> {
 				{ page: this.page + 1, total: this.pageCount }, '[Page {page}/{total}]');
 		}
 
-		for (const item of await this.getPageItems()) {
+		const page = await this.getPage();
+		for (const { item, index } of page) {
 			const flare = this.options.flare ?? {};
-			const focused = item.index === this.options.focused;
+			const focused = index === this.options.focused;
 
 			// handle above flare
 			let above = flare.above;
@@ -61,7 +64,7 @@ export class CodeblockPaginator<T = void> extends Paginator<T> {
 			if (item.description) display = `${display} - ${item.description}`;
 
 			// add item
-			cbb.addLine((item.index + 1).toString(), display);
+			cbb.addLine((index + 1).toString(), display);
 
 			// handle below flare
 			let below = flare.below;
