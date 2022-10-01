@@ -20,7 +20,7 @@ export class EmbedPaginator<T = void> extends Paginator<EmbedPaginatorItem<T>> {
 	}
 
 	public async render(): Promise<AgnosticMessageContent> {
-		const items = await this.getItems();
+		const items = await this.getItems(null, true);
 
 		return { embeds: items.map(i => i.item.embed) };
 	}

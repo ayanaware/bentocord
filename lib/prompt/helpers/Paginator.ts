@@ -46,6 +46,8 @@ export abstract class Paginator<T = unknown> {
 	protected currentPage = 0;
 	public readonly options: PaginatorOptions;
 
+	protected pageCache: Map<number, Array<PaginatorPageItem<T>>> = new Map();
+
 	public constructor(ctx: BaseContext, items: PaginatorItems<T>, options?: PaginatorOptions) {
 		this.ctx = ctx;
 		this.items = items;
@@ -104,8 +106,11 @@ export abstract class Paginator<T = unknown> {
 		return this.items(index);
 	}
 
-	public async getItems(page?: number): Promise<Array<PaginatorPageItem<T>>> {
+	public async getItems(page?: number, force = false): Promise<Array<PaginatorPageItem<T>>> {
 		const num = 0 || this.currentPage;
+
+		// check cache
+		if (this.pageCache.has(page) && !force) return this.pageCache.get(page);
 
 		const start = num * this.options.itemsPerPage;
 		const end = start + this.options.itemsPerPage;
@@ -120,6 +125,9 @@ export abstract class Paginator<T = unknown> {
 
 			items.push({ item, index });
 		}
+
+		// cache page
+		this.pageCache.set(page, items);
 
 		return items;
 	}
