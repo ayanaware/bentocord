@@ -7,7 +7,7 @@ import { PossiblyTranslatable } from '../../interfaces/Translatable';
 
 import { Paginator, PaginatorItem, PaginatorItems, PaginatorOptions } from './Paginator';
 
-export interface CodeblockPaginatorItem<T = void> extends PaginatorItem<T> {
+export interface CodeblockPaginatorItem<T> extends PaginatorItem<T> {
 	label: PossiblyTranslatable;
 }
 export type CodeblockPaginatorItems<T> = PaginatorItems<CodeblockPaginatorItem<T>>;
@@ -23,7 +23,7 @@ export interface CodeblockPaginatorOptions extends PaginatorOptions {
 		padStart?: number,
 	};
 }
-export class CodeblockPaginator<T = void> extends Paginator<CodeblockPaginatorItem<T>> {
+export class CodeblockPaginator<T> extends Paginator<CodeblockPaginatorItem<T>> {
 	public readonly options: CodeblockPaginatorOptions;
 
 	public constructor(ctx: BaseContext, items: CodeblockPaginatorItems<T>, options: CodeblockPaginatorOptions = {}) {
