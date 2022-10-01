@@ -110,7 +110,7 @@ export abstract class Paginator<T = unknown> {
 		const num = 0 || this.currentPage;
 
 		// check cache
-		if (this.pageCache.has(page) && !force) return this.pageCache.get(page);
+		if (this.pageCache.has(num) && !force) return this.pageCache.get(page);
 
 		const start = num * this.options.itemsPerPage;
 		const end = start + this.options.itemsPerPage;
@@ -127,7 +127,7 @@ export abstract class Paginator<T = unknown> {
 		}
 
 		// cache page
-		this.pageCache.set(page, items);
+		this.pageCache.set(num, items);
 
 		return items;
 	}
