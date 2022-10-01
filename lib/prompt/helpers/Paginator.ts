@@ -107,7 +107,7 @@ export abstract class Paginator<T = unknown> {
 	}
 
 	public async getItems(page?: number, force = false): Promise<Array<PaginatorPageItem<T>>> {
-		const num = 0 || this.currentPage;
+		const num = page || this.currentPage;
 
 		// check cache
 		if (this.pageCache.has(num) && !force) return this.pageCache.get(num);
