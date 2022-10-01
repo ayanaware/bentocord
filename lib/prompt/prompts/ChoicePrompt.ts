@@ -12,7 +12,9 @@ import { PromptOptions } from '../Prompt';
 import { AnyPaginator } from '../helpers/AnyPaginator';
 import { PaginatorItem } from '../helpers/Paginator';
 
-export type ChoicePromptChoice<T> = PaginatorItem<T>;
+export interface ChoicePromptChoice<T = unknown> extends PaginatorItem<T> {
+	value: T;
+}
 export class ChoicePrompt<T> extends PaginationPrompt<T> {
 	protected sltChoice: Select;
 	protected btnChoice: Button;

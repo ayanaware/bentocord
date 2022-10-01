@@ -7,9 +7,7 @@ import { PossiblyTranslatable } from '../../interfaces/Translatable';
 
 import { Paginator, PaginatorItem, PaginatorItems, PaginatorOptions } from './Paginator';
 
-export interface CodeblockPaginatorItem<T> extends PaginatorItem<T> {
-	label: PossiblyTranslatable;
-}
+export type CodeblockPaginatorItem<T = void> = PaginatorItem<T>;
 export type CodeblockPaginatorItems<T> = PaginatorItems<CodeblockPaginatorItem<T>>;
 
 export interface CodeblockPaginatorOptions extends PaginatorOptions {

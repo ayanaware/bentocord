@@ -6,8 +6,9 @@ import { PossiblyTranslatable } from '../../interfaces/Translatable';
 
 import { Paginator, PaginatorItem, PaginatorItems, PaginatorOptions } from './Paginator';
 
-export interface EmbedPaginatorItem<T> extends Omit<PaginatorItem<T>, 'label'> {
+export interface EmbedPaginatorItem<T = void> extends Omit<PaginatorItem<T>, 'label'> {
 	embed: Embed;
+
 	label?: PossiblyTranslatable;
 }
 export type EmbedPaginatorItems<T> = PaginatorItems<EmbedPaginatorItem<T>>;

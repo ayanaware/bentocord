@@ -4,10 +4,10 @@ import type { BaseContext } from '../../contexts/BaseContext';
 import type { AgnosticMessageContent } from '../../interfaces/AgnosticMessageContent';
 import { PossiblyTranslatable } from '../../interfaces/Translatable';
 
-export interface PaginatorItem<T> {
-	value: T;
-
+export interface PaginatorItem<T = void> {
 	label: PossiblyTranslatable;
+	value?: T;
+
 	description?: PossiblyTranslatable;
 	emoji?: Partial<Emoji>;
 
