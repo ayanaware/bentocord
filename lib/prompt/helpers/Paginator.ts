@@ -99,9 +99,9 @@ export abstract class Paginator<T = unknown> {
 		if (Array.isArray(this.items)) {
 			const item = this.items[index];
 			return [item, this.items.length ];
-		} else if (typeof this.items === 'function') {
-			return this.items(index);
 		}
+
+		return this.items(index);
 	}
 
 	public async getItems(page?: number): Promise<Array<PaginatorPageItem<T>>> {
