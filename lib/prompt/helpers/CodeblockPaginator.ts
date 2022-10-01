@@ -21,7 +21,7 @@ export interface CodeblockPaginatorOptions extends PaginatorOptions {
 		padStart?: number,
 	};
 }
-export class CodeblockPaginator<T> extends Paginator<CodeblockPaginatorItem<T>> {
+export class CodeblockPaginator<T = void> extends Paginator<CodeblockPaginatorItem<T>> {
 	public readonly options: CodeblockPaginatorOptions;
 
 	public constructor(ctx: BaseContext, items: CodeblockPaginatorItems<T>, options: CodeblockPaginatorOptions = {}) {
