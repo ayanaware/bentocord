@@ -301,9 +301,9 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param backup Backup
 	 * @returns Message/Interaction
 	 */
-	public async createTranslatedResponse(key: string, repl?: Record<string, unknown>, backup?: string): Promise<unknown> {
-		const content = await this.formatTranslation(key, repl, backup);
-		return this.createResponse({ content } as C);
+	public async createTranslatedResponse(key: string, repl?: Record<string, unknown>, backup?: string, content: AgnosticMessageContent = {}): Promise<unknown> {
+		const str = await this.formatTranslation(key, repl, backup);
+		return this.createResponse({ ...content, content: str } as C);
 	}
 
 	/**
@@ -313,9 +313,9 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param backup Backup
 	 * @returns Message/Interaction
 	 */
-	public async editTranslatedResponse(key: string, repl?: Record<string, unknown>, backup?: string): Promise<unknown> {
-		const content = await this.formatTranslation(key, repl, backup);
-		return this.editResponse({ content } as C);
+	public async editTranslatedResponse(key: string, repl?: Record<string, unknown>, backup?: string, content: AgnosticMessageContent = {}): Promise<unknown> {
+		const str = await this.formatTranslation(key, repl, backup);
+		return this.editResponse({ ...content, content: str } as C);
 	}
 
 	public async createMessage(content: C, files?: Array<FileContent>): Promise<Message> {
@@ -333,13 +333,13 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 		return this.channel.deleteMessage(messageId);
 	}
 
-	public async createTranslatedMessage(key: string, repl?: Record<string, unknown>, backup?: string): Promise<Message> {
-		const content = await this.formatTranslation(key, repl, backup);
-		return this.createMessage({ content } as C);
+	public async createTranslatedMessage(key: string, repl?: Record<string, unknown>, backup?: string, content: AgnosticMessageContent = {}): Promise<Message> {
+		const str = await this.formatTranslation(key, repl, backup);
+		return this.createMessage({ ...content, content: str } as C);
 	}
 
-	public async editTranslatedMessage(messageId: string, key: string, repl?: Record<string, unknown>, backup?: string): Promise<Message> {
-		const content = await this.formatTranslation(key, repl, backup);
-		return this.editMessage(messageId, { content } as C);
+	public async editTranslatedMessage(messageId: string, key: string, repl?: Record<string, unknown>, backup?: string, content: AgnosticMessageContent = {}): Promise<Message> {
+		const str = await this.formatTranslation(key, repl, backup);
+		return this.editMessage(messageId, { ...content, content: str } as C);
 	}
 }
