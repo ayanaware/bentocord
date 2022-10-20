@@ -23,17 +23,13 @@ export class LocalizedCodeblockBuilder extends CodeblockBuilder {
 	}
 
 	public async addTranslatedLine(item: PossiblyTranslatable, value?: PossiblyTranslatable | CodeblockLineItem): Promise<LocalizedCodeblockBuilder> {
-		if (typeof item === 'string') item = { key: item };
-		const itemTranslated = await this.ctx.formatTranslation(item);
+		if (typeof item === 'object') item = await this.ctx.formatTranslation(item);
 
 		if (value !== undefined) {
-			let valueTranslated: CodeblockLineItem;
-			if (typeof value === 'object') valueTranslated = await this.ctx.formatTranslation(value);
-			else valueTranslated = value;
-
-			this.addLine(itemTranslated, valueTranslated);
+			if (typeof value === 'object') value = await this.ctx.formatTranslation(value);
+			this.addLine(item, value);
 		} else {
-			this.addLine(itemTranslated);
+			this.addLine(item);
 		}
 
 		return this;
