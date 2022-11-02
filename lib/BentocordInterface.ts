@@ -310,12 +310,16 @@ export class BentocordInterface implements Plugin {
 		// explicit check
 		const checks = [perm];
 
-		// "all.category" check, if needed
-		const category = ctx.command.definition.category;
-		if (category) checks.push(`all.${category}`);
+		// prevent explicit-only permissions from being modified via 'all' checks
+		// such permissions should only be explicitly granted by a bot owner
+		if (defaults.user || defaults.admin) {
+			// "all.category" check
+			const category = ctx.command.definition.category;
+			if (category) checks.push(`all.${category}`);
 
-		// "all" check
-		checks.push('all');
+			// "all" check
+			checks.push('all');
+		}
 
 		// cache guild-admin check
 		const isGuildAdmin = ctx.member && ctx.member.permissions.has('administrator');
