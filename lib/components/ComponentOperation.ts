@@ -156,9 +156,7 @@ export class ComponentOperation<T = void> {
 		// refresh timeout
 		this.refreshTimeout();
 
-		try {
-			await found.handler(ctx);
-		} catch { /* NO-OP */ }
+		await found.handler(ctx);
 	}
 
 	protected refreshTimeout(): void {
