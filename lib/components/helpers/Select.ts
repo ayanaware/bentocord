@@ -23,6 +23,11 @@ export class Select extends BaseComponent {
 	public options(...options: Array<SelectMenuOptions>): this {
 		if (options.length > this.maxOptions) throw new Error(`setOptions: Cannot have more then ${this.maxOptions} options`);
 
+		// truncate option label if longer then 100 characters
+		for (const option of options) {
+			if (option.label.length > 100) option.label = option.label.slice(0, 100);
+		}
+
 		this.definition.options = options;
 		return this;
 	}
