@@ -7,8 +7,7 @@ import { Button } from '../../components/helpers/Button';
 import { Select } from '../../components/helpers/Select';
 import type { BaseContext } from '../../contexts/BaseContext';
 import { PossiblyTranslatable } from '../../interfaces/Translatable';
-import { PaginationPrompt } from '../PaginationPrompt';
-import { PromptOptions } from '../Prompt';
+import { PaginationOptions, PaginationPrompt } from '../PaginationPrompt';
 import { AnyPaginator } from '../helpers/AnyPaginator';
 import { PaginatorItem } from '../helpers/Paginator';
 
@@ -19,7 +18,7 @@ export class ChoicePrompt<T> extends PaginationPrompt<T> {
 	protected sltChoice: Select;
 	protected btnChoice: Button;
 
-	public constructor(ctx: BaseContext, paginator: AnyPaginator<T>, options?: PromptOptions) {
+	public constructor(ctx: BaseContext, paginator: AnyPaginator<T>, options?: PaginationOptions) {
 		super(ctx, paginator, options);
 		this.validator = this.handleText.bind(this);
 

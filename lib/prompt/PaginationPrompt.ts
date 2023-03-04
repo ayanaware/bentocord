@@ -10,6 +10,11 @@ import type { BaseContext } from '../contexts/BaseContext';
 import { Prompt, PromptOptions } from './Prompt';
 import type { AnyPaginator } from './helpers/AnyPaginator';
 
+export interface PaginationOptions extends PromptOptions {
+	/** always force showing page selector; even if there is less then 5 pages */
+	forcePageSelect?: boolean;
+}
+
 export enum PaginationEmojis {
 	FIRST = '⏮️',
 	PREV = '◀️',
@@ -25,6 +30,7 @@ const TEXT_LAST = ['>>', 'last', 'l'];
 
 export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 	public readonly paginator: AnyPaginator<U>;
+	protected options: PaginationOptions;
 
 	// first, prev, next, last
 	protected btnFirst: Button;
@@ -34,7 +40,7 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 	protected btnClose: Button;
 	protected sltPage: Select;
 
-	public constructor(ctx: BaseContext, paginator?: AnyPaginator<U>, options?: PromptOptions) {
+	public constructor(ctx: BaseContext, paginator?: AnyPaginator<U>, options?: PaginationOptions) {
 		super(ctx, null, options);
 		this.paginator = paginator;
 		this.validator = this.handleText.bind(this);
@@ -99,7 +105,7 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 		// Add page selector
 		const page = this.paginator.page;
 		const pageCount = this.paginator.pageCount;
-		if (pageCount < 5) return;
+		if (!(this.options?.forcePageSelect ?? false) || pageCount < 5) return;
 
 		const padding = Math.floor(this.sltPage.maxOptions / 2);
 

@@ -18,7 +18,7 @@ import { Discord } from '../discord/Discord';
 import { DiscordPermission } from '../discord/constants/DiscordPermission';
 import { AgnosticMessageContent } from '../interfaces/AgnosticMessageContent';
 import { PossiblyTranslatable, Translatable } from '../interfaces/Translatable';
-import { PaginationPrompt } from '../prompt/PaginationPrompt';
+import { PaginationPrompt, PaginationOptions } from '../prompt/PaginationPrompt';
 import { Prompt, PromptOptions, PromptValidator } from '../prompt/Prompt';
 import { AnyPaginator } from '../prompt/helpers/AnyPaginator';
 import { CodeblockPaginator, CodeblockPaginatorItems } from '../prompt/helpers/CodeblockPaginator';
@@ -225,7 +225,7 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param options PaginationOptions
 	 * @returns
 	 */
-	public async pagination(items: AnyPaginator<void> | CodeblockPaginatorItems<void>, content?: PossiblyTranslatable | AgnosticMessageContent, options?: PromptOptions): Promise<void> {
+	public async pagination(items: AnyPaginator<void> | CodeblockPaginatorItems<void>, content?: PossiblyTranslatable | AgnosticMessageContent, options?: PaginationOptions): Promise<void> {
 		if (Array.isArray(items) || typeof items === 'function') items = new CodeblockPaginator(this, items);
 		const pagination = new PaginationPrompt(this, items, options);
 
@@ -242,7 +242,7 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 * @param options PagiantionOptions
 	 * @returns Selected PromptChoice value
 	 */
-	public async choice<T = string>(choices: AnyPaginator<T> | CodeblockPaginatorItems<T>, content?: PossiblyTranslatable | AgnosticMessageContent, options?: PromptOptions): Promise<T> {
+	public async choice<T = string>(choices: AnyPaginator<T> | CodeblockPaginatorItems<T>, content?: PossiblyTranslatable | AgnosticMessageContent, options?: PaginationOptions): Promise<T> {
 		if (Array.isArray(choices) || typeof choices === 'function') choices = new CodeblockPaginator(this, choices);
 		const choice = new ChoicePrompt(this, choices, options);
 
