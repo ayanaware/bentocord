@@ -105,7 +105,7 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 		// Add page selector
 		const page = this.paginator.page;
 		const pageCount = this.paginator.pageCount;
-		if (!(this.options?.forcePageSelect ?? false) || pageCount < 5) return;
+		if (!(this.options?.forcePageSelect ?? false) && pageCount < 5) return;
 
 		const padding = Math.floor(this.sltPage.maxOptions / 2);
 
