@@ -529,7 +529,7 @@ export class CommandManager implements Component {
 
 			if (e instanceof Error) {
 				return ctx.createTranslatedResponse('BENTOCORD_COMMANDMANAGER_ERROR', { error: e.message },
-				'An error occured while executing this command: `{error}`');
+				'An error occurred while executing this command: `{error}`');
 			}
 		}
 	}
@@ -872,7 +872,7 @@ export class CommandManager implements Component {
 			log.error(`Command "${definition.name[0]}" option error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
-				return ctx.createTranslatedResponse('BENTOCORD_COMMANDMANAGER_ERROR', { error: e.message }, 'An error occured while executing this command: `{error}`');
+				return ctx.createTranslatedResponse('BENTOCORD_COMMANDMANAGER_ERROR', { error: e.message }, 'An error occurred while executing this command: `{error}`');
 			}
 		}
 	}
@@ -967,7 +967,7 @@ export class CommandManager implements Component {
 			log.error(`Command "${definition.name[0]}" error:\n${util.inspect(e)}`);
 
 			if (e instanceof Error) {
-				return ctx.createTranslatedResponse('BENTOCORD_COMMANDMANAGER_ERROR', { error: e.message }, 'An error occured while executing this command: `{error}`');
+				return ctx.createTranslatedResponse('BENTOCORD_COMMANDMANAGER_ERROR', { error: e.message }, 'An error occurred while executing this command: `{error}`');
 			}
 		}
 	}

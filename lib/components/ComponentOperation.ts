@@ -186,8 +186,6 @@ export class ComponentOperation<T = void> {
 	}
 
 	public async close(): Promise<void> {
-		await this.update();
-
 		await this.cleanup();
 		this.resolve();
 	}
