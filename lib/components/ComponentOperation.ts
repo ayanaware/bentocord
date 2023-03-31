@@ -18,6 +18,8 @@ export class ComponentOperation<T = void> {
 	protected readonly ctx: AnyContext;
 	protected readonly cm: ComponentsManager;
 
+	protected isClosed = false;
+
 	protected _content: AgnosticMessageContent;
 	protected _merge: AgnosticMessageContent;
 	public transformer: ContentTransformer;
@@ -88,6 +90,8 @@ export class ComponentOperation<T = void> {
 	 * When overriding this function take care that you always super.render();
 	 */
 	public async render(): Promise<void> {
+		if (this.isClosed) return; // prevent rendering after close
+
 		const rows: Array<ActionRow> = [];
 		for (const row of this._rows) {
 			const components: Array<ActionRowComponents> = row.map(c => c.definition);
@@ -202,6 +206,8 @@ export class ComponentOperation<T = void> {
 		try {
 			await this.render();
 		} catch { /* NO-OP */ }
+
+		this.isClosed = true;
 
 		// detach handler
 		if (this.messageId) this.cm.removeMessageHandler(this.messageId);
