@@ -62,6 +62,8 @@ export abstract class Paginator<T = unknown> {
 
 	public get page(): number {
 		if (this.currentPage > this.pageCount - 1) this.currentPage = this.pageCount - 1;
+		if (this.currentPage < 0) this.currentPage = 0;
+
 		return this.currentPage;
 	}
 
@@ -78,6 +80,7 @@ export abstract class Paginator<T = unknown> {
 		if (Array.isArray(this.items)) itemCount = this.items.length;
 		else itemCount = this.itemCount;
 
+		if (itemCount === 0) return 0;
 		return Math.ceil(itemCount / this.options.itemsPerPage) || 1;
 	}
 
@@ -87,10 +90,6 @@ export abstract class Paginator<T = unknown> {
 
 	public get hasPrev(): boolean {
 		return this.page > 0;
-	}
-
-	public get isSinglePage(): boolean {
-		return this.pageCount === 1;
 	}
 
 	/**
@@ -108,7 +107,8 @@ export abstract class Paginator<T = unknown> {
 	}
 
 	public async getItems(page?: number, force = false): Promise<Array<PaginatorPageItem<T>>> {
-		const num = page || this.currentPage;
+		if (this.pageCount === 0) return [];
+		const num = page || this.page;
 
 		// check cache
 		if (this.pageCache.has(num) && !force) return this.pageCache.get(num);

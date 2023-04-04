@@ -29,10 +29,11 @@ export class CodeblockPaginator<T = void> extends Paginator<CodeblockPaginatorIt
 	}
 
 	public async render(): Promise<AgnosticMessageContent> {
-		const cbb = new LocalizedCodeblockBuilder(this.ctx, this.options.language);
+		if (this.pageCount === 0) return { content: '' };
 
+		const cbb = new LocalizedCodeblockBuilder(this.ctx, this.options.language);
 		// show page header if more then 1 page
-		if (!this.isSinglePage) {
+		if (this.pageCount > 1) {
 			await cbb.setTranslatedHeader('BENTOCORD_PAGINATION_PAGE',
 				{ page: this.page + 1, total: this.pageCount }, '[Page {page}/{total}]');
 		}

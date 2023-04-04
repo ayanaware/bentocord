@@ -89,8 +89,8 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 		// clear components
 		this.clearRows();
 
-		// single page; no need to display pagination controls
-		if (this.paginator.isSinglePage) return;
+		// less then 2 pages; no need to display pagination controls
+		if (this.paginator.pageCount < 2) return;
 
 		// update state & add buttons
 		this.addRows([
