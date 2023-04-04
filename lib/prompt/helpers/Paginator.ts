@@ -56,11 +56,12 @@ export abstract class Paginator<T = unknown> {
 
 		// update currentPage if focused was provided
 		if (typeof this.options.focused === 'number') {
-			this.currentPage = Math.floor(options.focused / this.options.itemsPerPage) ?? 0;
+			this.page = Math.floor(options.focused / this.options.itemsPerPage) ?? 0;
 		}
 	}
 
 	public get page(): number {
+		if (this.currentPage > this.pageCount - 1) this.currentPage = this.pageCount - 1;
 		return this.currentPage;
 	}
 
@@ -81,11 +82,11 @@ export abstract class Paginator<T = unknown> {
 	}
 
 	public get hasNext(): boolean {
-		return this.currentPage < (this.pageCount - 1);
+		return this.page < this.pageCount - 1;
 	}
 
 	public get hasPrev(): boolean {
-		return this.currentPage > 0;
+		return this.page > 0;
 	}
 
 	public get isSinglePage(): boolean {
@@ -100,7 +101,7 @@ export abstract class Paginator<T = unknown> {
 	public async getItem(index: number): Promise<[T, number]> {
 		if (Array.isArray(this.items)) {
 			const item = this.items[index];
-			return [item, this.items.length ];
+			return [item, this.items.length];
 		}
 
 		return this.items(index);
