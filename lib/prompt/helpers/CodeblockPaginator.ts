@@ -29,6 +29,7 @@ export class CodeblockPaginator<T = void> extends Paginator<CodeblockPaginatorIt
 	}
 
 	public async render(): Promise<AgnosticMessageContent> {
+		const items = await this.getItems(null, true);
 		if (this.pageCount === 0) return { content: '' };
 
 		const cbb = new LocalizedCodeblockBuilder(this.ctx, this.options.language);
@@ -38,7 +39,6 @@ export class CodeblockPaginator<T = void> extends Paginator<CodeblockPaginatorIt
 				{ page: this.page + 1, total: this.pageCount }, '[Page {page}/{total}]');
 		}
 
-		const items = await this.getItems(null, true);
 		for (const { item, index } of items) {
 			const flare = this.options.flare ?? {};
 			const focused = index === this.options.focused;
