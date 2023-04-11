@@ -20,7 +20,6 @@ import { BentocordVariable } from '../BentocordVariable';
 import { Discord } from '../discord/Discord';
 import { DiscordEvent } from '../discord/constants/DiscordEvent';
 import { PossiblyTranslatable } from '../interfaces/Translatable';
-import { PromptManager } from '../prompt/PromptManager';
 import { ChoicePromptChoice } from '../prompt/prompts/ChoicePrompt';
 
 import { AnyCommandContext, InteractionCommandContext, MessageCommandContext } from './CommandContext';
@@ -90,8 +89,6 @@ export class CommandManager implements Component {
 
 	@Inject() private readonly interface: BentocordInterface;
 	@Inject() private readonly discord: Discord;
-
-	@Inject() private readonly promptManager: PromptManager;
 
 	private readonly commands: Map<string, CommandDetails> = new Map();
 	private readonly aliases: Map<string, string> = new Map();

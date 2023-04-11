@@ -86,12 +86,9 @@ export class ComponentOperation<T = void> {
 	}
 
 	/**
-	 * Actually "writes/makes visible" the state of this operation to the user.
-	 * When overriding this function take care that you always super.render();
+	 * Merge & build the final message content object
 	 */
-	public async render(): Promise<void> {
-		if (this.isClosed) return; // prevent rendering after close
-
+	public async build(): Promise<AgnosticMessageContent> {
 		const rows: Array<ActionRow> = [];
 		for (const row of this._rows) {
 			const components: Array<ActionRowComponents> = row.map(c => c.definition);
@@ -120,9 +117,19 @@ export class ComponentOperation<T = void> {
 		// run transformer
 		if (typeof this.transformer === 'function') content = await this.transformer(content);
 
+		return content;
+	}
+
+	/**
+	 * Actually "writes/makes visible" the state of this operation to the user.
+	 * When overriding this function take care that you always super.render();
+	 */
+	public async render(): Promise<void> {
+		if (this.isClosed) return; // prevent rendering after close
+
 		// ensure refreshTimeout is called
 		try {
-			await this.ctx.createResponse(content, this._files);
+			await this.ctx.createResponse(await this.build(), this._files);
 			const message = await this.ctx.getResponse();
 
 			// update our handler if need be
@@ -191,7 +198,7 @@ export class ComponentOperation<T = void> {
 
 	public async close(): Promise<void> {
 		await this.cleanup();
-		this.resolve();
+		return this.resolve();
 	}
 
 	public async cleanup(): Promise<void> {

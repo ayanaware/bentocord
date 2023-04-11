@@ -1,8 +1,9 @@
 import { EntityAPI } from '@ayanaware/bento';
 
-import { ComponentInteraction, Message } from 'eris';
+import { ComponentInteraction, Message, FileContent } from 'eris';
 
 import { InteractionContext } from '../../contexts/InteractionContext';
+import { AgnosticMessageContentEdit } from '../../interfaces/AgnosticMessageContent';
 import { ParseCustomId, ParsedCustomId } from '../util/ParseCustomId';
 
 export class ComponentContext extends InteractionContext {
@@ -32,8 +33,10 @@ export class ComponentContext extends InteractionContext {
 	}
 
 	public async deferUpdate(): Promise<void> {
-		if (this.interaction.acknowledged) return;
-
 		return this.interaction.deferUpdate();
+	}
+
+	public async updateMessage(content: AgnosticMessageContentEdit, files: Array<FileContent>): Promise<void> {
+		return this.interaction.editParent(content, files);
 	}
 }
