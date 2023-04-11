@@ -74,7 +74,7 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 		await this.cleanup();
 
 		// raw pagination doesn't return anything
-		this.resolve();
+		return this.resolve();
 	}
 
 	public async update(): Promise<void> {
@@ -160,9 +160,6 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 	protected async handleButton(btn: ButtonContext): Promise<void> {
 		if (!this.paginator) return;
 
-		// defer update
-		await btn.deferUpdate();
-
 		const action = btn.parseCustomId();
 		switch (action.id) {
 			case 'first': {
@@ -185,17 +182,14 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 				break;
 			}
 
-			case 'close': {
-				return this.close();
-			}
-
+			case 'close':
 			default: {
-				return;
+				return this.close();
 			}
 		}
 
 		await this.update();
-		return this.render();
+		return btn.updateMessage(await this.build(), this._files);
 	}
 
 	protected async handleSelect(slt: SelectContext): Promise<void> {
@@ -204,11 +198,10 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 		const page = Number(slt.values[0]);
 		if (isNaN(page)) return;
 
-		await slt.deferUpdate();
 		this.paginator.page = page;
-
 		await this.update();
-		return this.render();
+
+		return slt.updateMessage(await this.build(), this._files);
 	}
 
 	protected async handleText(response: string): Promise<[boolean, T]> {
