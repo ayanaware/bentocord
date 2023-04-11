@@ -36,7 +36,7 @@ export class ComponentContext extends InteractionContext {
 		return this.interaction.deferUpdate();
 	}
 
-	public async updateMessage(content: AgnosticMessageContentEdit, files: Array<FileContent>): Promise<void> {
+	public async updateMessage(content: AgnosticMessageContentEdit, files?: Array<FileContent>): Promise<void> {
 		return this.interaction.editParent(content, files);
 	}
 }
