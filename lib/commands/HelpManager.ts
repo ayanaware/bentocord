@@ -231,7 +231,6 @@ export class HelpManager implements CommandEntity {
 
 		// aliases
 		const names = await this.cm.getItemTranslations(command.name);
-		console.log(names);
 		const aliases = names.map(n => n[0]).filter(n => n !== primary);
 		if (aliases.length > 0) {
 			await embed.addTranslatedField({ key: 'BENTOCORD_WORD_ALIASES', backup: 'Aliases' }, aliases.map(a => `\`${a}\``).join(', '));
