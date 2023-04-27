@@ -2,7 +2,7 @@ import { AnyGuildChannel, Constants } from 'eris';
 
 import { AnyCommandContext } from '../CommandContext';
 import { OptionType } from '../constants/OptionType';
-import { CommandOptionValue } from '../interfaces/CommandOption';
+import { AnyValueCommandOption, CommandOptionValue } from '../interfaces/CommandOption';
 import { Resolver } from '../interfaces/Resolver';
 
 export interface ChannelOption extends CommandOptionValue<OptionType.CHANNEL> {
@@ -41,5 +41,24 @@ export class ChannelOptionResolver implements Resolver<AnyGuildChannel> {
 		// handle name
 		input = input.replace(/^#/, '');
 		return channel.name.toLocaleLowerCase().includes(input.toLocaleLowerCase());
+	}
+
+	public async help(ctx: AnyCommandContext, option: AnyValueCommandOption, data: Map<string, string>): Promise<Map<string, string>> {
+		if ('channelTypes' in option) {
+			// find channel names
+			const names: Array<string> = [];
+			for (const channelType of option.channelTypes) {
+				for (const [name, id] of Object.entries(Constants.ChannelTypes)) {
+					if (id !== channelType) continue;
+
+					names.push(name);
+					break;
+				}
+			}
+
+			data.set(await ctx.formatTranslation('BENTOCORD_WORD_CHANNELTYPES', {}, 'Channel Types'), names.map(n => `\`${n}\``).join(' '));
+		}
+
+		return data;
 	}
 }

@@ -1,5 +1,3 @@
-import { Emoji } from 'eris';
-
 import { LocalizedCodeblockBuilder } from '../../builders/LocalizedCodeblockBuilder';
 import type { BaseContext } from '../../contexts/BaseContext';
 import type { AgnosticMessageContent } from '../../interfaces/AgnosticMessageContent';
@@ -7,8 +5,8 @@ import { PossiblyTranslatable } from '../../interfaces/Translatable';
 
 import { Paginator, PaginatorItem, PaginatorItems, PaginatorOptions } from './Paginator';
 
-export type CodeblockPaginatorItem<T = void> = PaginatorItem<T>;
-export type CodeblockPaginatorItems<T> = PaginatorItems<CodeblockPaginatorItem<T>>;
+export type CodeblockPaginatorItem<T = unknown> = PaginatorItem<T>;
+export type CodeblockPaginatorItems<T = unknown> = PaginatorItems<CodeblockPaginatorItem<T>>;
 
 export interface CodeblockPaginatorOptions extends PaginatorOptions {
 	/** Codeblock syntax highlighting language to use */
@@ -28,11 +26,11 @@ export class CodeblockPaginator<T = void> extends Paginator<CodeblockPaginatorIt
 		super(ctx, items, options);
 	}
 
-	public async render(): Promise<AgnosticMessageContent> {
+	public async build(): Promise<LocalizedCodeblockBuilder> {
 		const items = await this.getItems(null, true);
-		if (this.pageCount === 0) return { content: '' };
-
 		const cbb = new LocalizedCodeblockBuilder(this.ctx, this.options.language);
+		if (this.pageCount === 0) return cbb;
+
 		// show page header if more then 1 page
 		if (this.pageCount > 1) {
 			await cbb.setTranslatedHeader('BENTOCORD_PAGINATION_PAGE',
@@ -75,7 +73,10 @@ export class CodeblockPaginator<T = void> extends Paginator<CodeblockPaginatorIt
 			}
 		}
 
-		// return agnostic message content
-		return { content: cbb.render() };
+		return cbb;
+	}
+
+	public async render(): Promise<AgnosticMessageContent> {
+		return { content: (await this.build()).render() };
 	}
 }

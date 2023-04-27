@@ -12,13 +12,13 @@ export class Componentexample implements CommandEntity {
 	};
 
 	public async execute(ctx: AnyCommandContext): Promise<any> {
-		const op = new ComponentOperation(ctx).rows([
+		const op = new ComponentOperation(ctx).setRows([[
 			// First Button
 			new Button(ctx, 'first', async (btn: ButtonContext) => {
 				await btn.deferUpdate();
 
 				// update rows & content
-				await op.rows([await new Button(ctx, 'who_cares').labelTranslated('TRANSLATED_LABEL', null, 'Who Cares')])
+				await op.setRows([[await new Button(ctx, 'who_cares').labelTranslated('TRANSLATED_LABEL', null, 'Who Cares')]])
 					.contentTranslated('TRANSLATED_EDIT', null, 'Edit go brr')
 
 				// re-render operation
@@ -37,8 +37,8 @@ export class Componentexample implements CommandEntity {
 				await slt.deferUpdate();
 
 				await op.content(JSON.stringify(slt.data.values)).render();
-			}).options({ label: 'Juan', value: '1' }, { label: 'Two', value: '2' }, { label: 'Three', value: '3' }).max(2),
-		]).content('Hello Components!');
+			}).addOptions([{ label: 'Juan', value: '1' }, { label: 'Two', value: '2' }, { label: 'Three', value: '3' }]).max(2),
+		]]).content('Hello Components!');
 		op.timeoutSeconds = 5;
 
 		await op.start();

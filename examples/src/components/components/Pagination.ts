@@ -18,7 +18,7 @@ export class PaginationTest implements CommandEntity {
 			items.push(i.toString());
 		}
 
-		const result = await ctx.confirm('Please Confirm:', items);
+		const result = await ctx.confirm('Please Confirm:', items.map(i => ({ label: i })));
 		return ctx.createMessage(result.toString())
 	}
 }

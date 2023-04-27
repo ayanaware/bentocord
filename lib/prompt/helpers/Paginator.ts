@@ -4,7 +4,7 @@ import type { BaseContext } from '../../contexts/BaseContext';
 import type { AgnosticMessageContent } from '../../interfaces/AgnosticMessageContent';
 import { PossiblyTranslatable } from '../../interfaces/Translatable';
 
-export interface PaginatorItem<T = void> {
+export interface PaginatorItem<T = unknown> {
 	label: PossiblyTranslatable;
 	value?: T;
 
@@ -97,13 +97,18 @@ export abstract class Paginator<T = unknown> {
 	 * @param index Index
 	 * @returns [T, number] Tuple of item, and total count of items
 	 */
-	public async getItem(index: number): Promise<[T, number]> {
+	public async getItem(index: number): Promise<[PaginatorPageItem<T>, number]> {
 		if (Array.isArray(this.items)) {
 			const item = this.items[index];
-			return [item, this.items.length];
+			if (!item) return [null, this.items.length];
+
+			return [{ item, index }, this.items.length];
 		}
 
-		return this.items(index);
+		const itm = await this.items(index);
+		if (!itm) return [null, 0];
+
+		return [{ item: itm[0], index }, itm[1]];
 	}
 
 	public async getItems(page?: number, force = false): Promise<Array<PaginatorPageItem<T>>> {
@@ -123,7 +128,7 @@ export abstract class Paginator<T = unknown> {
 
 			if (!item) break;
 
-			items.push({ item, index });
+			items.push(item);
 		}
 
 		// cache page

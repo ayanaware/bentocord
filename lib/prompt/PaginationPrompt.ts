@@ -8,7 +8,7 @@ import { Select } from '../components/helpers/Select';
 import type { BaseContext } from '../contexts/BaseContext';
 
 import { Prompt, PromptOptions } from './Prompt';
-import type { AnyPaginator } from './helpers/AnyPaginator';
+import { AnyPaginator } from './helpers/AnyPaginator';
 
 export interface PaginationOptions extends PromptOptions {
 	/** always force showing page selector; even if there is less then 5 pages */
@@ -77,7 +77,7 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 		return this.resolve();
 	}
 
-	public async update(): Promise<void> {
+	public async draw(): Promise<void> {
 		// get pagination content
 		const paginator = this.paginator;
 		if (!paginator) return;
@@ -93,7 +93,7 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 		if (this.paginator.pageCount < 2) return;
 
 		// update state & add buttons
-		this.addRows([
+		this.addRow([
 			this.btnFirst.enable(paginator.hasPrev),
 			this.btnPrev.enable(paginator.hasPrev),
 			this.btnNext.enable(paginator.hasNext),
@@ -133,7 +133,7 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 		for (let i = start; i <= end; i++) {
 			const option: SelectMenuOptions = { value: i.toString(), label: (i + 1).toString(), default: i === page };
 			if (this.paginator.options.itemsPerPage === 1) {
-				const [item] = await this.paginator.getItem(i);
+				const [{ item }] = await this.paginator.getItem(i);
 
 				// label
 				let label = item.label ?? (i + 1).toString();
@@ -152,9 +152,8 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 			options.push(option);
 		}
 
-		this.sltPage.options(...options);
-
-		this.addRows([this.sltPage]);
+		this.sltPage.setOptions(options);
+		this.addRow([this.sltPage]);
 	}
 
 	protected async handleButton(btn: ButtonContext): Promise<void> {
@@ -188,7 +187,6 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 			}
 		}
 
-		await this.update();
 		return btn.updateMessage(await this.build(), this._files);
 	}
 
@@ -199,8 +197,6 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 		if (isNaN(page)) return;
 
 		this.paginator.page = page;
-		await this.update();
-
 		return slt.updateMessage(await this.build(), this._files);
 	}
 
@@ -232,7 +228,6 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 		// refresh timeout, valid text page swap
 		this.refreshTimeout();
 
-		await this.update();
 		await this.render();
 
 		// validator; take no action

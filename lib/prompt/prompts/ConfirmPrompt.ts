@@ -3,7 +3,6 @@ import { Button } from '../../components/helpers/Button';
 import type { AnyContext } from '../../contexts/AnyContext';
 import { PaginationPrompt } from '../PaginationPrompt';
 import { AnyPaginator } from '../helpers/AnyPaginator';
-
 export class ConfirmPrompt extends PaginationPrompt<boolean, void> {
 	protected btnYes: Button;
 	protected btnNo: Button;
@@ -33,14 +32,14 @@ export class ConfirmPrompt extends PaginationPrompt<boolean, void> {
 		this.resolve(false);
 	}
 
-	public async update(): Promise<void> {
+	public async draw(): Promise<void> {
 		this.clearRows();
 
-		// update pagination
-		await super.update();
+		// draw pagination
+		await super.draw();
 
 		// add yes/no
-		this.addRows([this.btnYes, this.btnNo]);
+		this.addRow([this.btnYes, this.btnNo]);
 	}
 
 	protected async yes(btn?: ButtonContext): Promise<void> {

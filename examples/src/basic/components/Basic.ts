@@ -25,4 +25,9 @@ export class Basic implements Component {
 	private async onMessageCreate(message: Message) {
 		log.info(`${message.author.username}#${message.author.discriminator}: ${message.content}`);
 	}
+
+	@Subscribe(Discord, DiscordEvent.MESSAGE_UPDATE)
+	private async onMessageUpdate(message: Message) {
+		log.info(`${message.author.username}#${message.author.discriminator}: ${message.content}`);
+	}
 }

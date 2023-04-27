@@ -16,7 +16,7 @@ import type { SuppressorDefinition } from './Suppressor';
 
 export type AnyCommandOption = AnySubCommandOption | AnyValueCommandOption;
 export type AnySubCommandOption = CommandOptionSubCommandGroup | CommandOptionSubCommand;
-export type AnyValueCommandOption = CommandOptionPrimitive | CommandOptionDiscord;
+export type AnyValueCommandOption = CommandOptionPrimitive | CommandOptionDiscord | CommandOptionValue<string, unknown>;
 
 export interface CommandOption<T extends OptionType | string> {
 	/** The type of the option */
@@ -32,7 +32,7 @@ export interface CommandOption<T extends OptionType | string> {
 	extra?: Record<string, unknown>;
 }
 
-export interface CommandOptionValue<T extends OptionType, U = unknown> extends CommandOption<T> {
+export interface CommandOptionValue<T extends OptionType | string, U = unknown> extends CommandOption<T> {
 	/** The default value of the option */
 	default?: U;
 

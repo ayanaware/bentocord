@@ -32,4 +32,11 @@ export class IntegerOptionResolver implements Resolver<number> {
 
 		return value;
 	}
+
+	public async help(ctx: AnyCommandContext, option: IntegerOption, data: Map<string, string>): Promise<Map<string, string>> {
+		if ('min' in option) data.set(await ctx.formatTranslation('BENTOCORD_WORD_MIN', {}, 'Min'), option.min.toString());
+		if ('max' in option) data.set(await ctx.formatTranslation('BENTOCORD_WORD_MAX', {}, 'Max'), option.max.toString());
+
+		return data;
+	}
 }

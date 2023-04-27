@@ -20,7 +20,7 @@ export interface PromptOptions {
 
 export const TEXT_CLOSE = ['exit', 'x', 'close', 'c', ':q'];
 
-export class Prompt<T = unknown> extends ComponentOperation<T> {
+export class Prompt<T = void> extends ComponentOperation<T> {
 	protected readonly pm: PromptManager;
 	protected validator: PromptValidator<T>;
 	protected options: PromptOptions;

@@ -5,7 +5,7 @@ import { Message } from 'eris';
 
 import { Discord } from '../discord/Discord';
 import { DiscordEvent } from '../discord/constants/DiscordEvent';
-import { PossiblyTranslatable, Translatable } from '../interfaces/Translatable';
+import { PossiblyTranslatable } from '../interfaces/Translatable';
 
 export type PromptHandler = (response: string, message?: Message) => Promise<unknown>;
 type CloseHandler = (reason?: PossiblyTranslatable) => Promise<void>;

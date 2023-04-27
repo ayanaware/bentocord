@@ -4,8 +4,16 @@ import { AnyContext } from '../../contexts/AnyContext';
 import { ComponentHandler, SelectHandler } from '../interfaces/ComponentHandler';
 
 import { BaseComponent } from './BaseComponent';
+import { PossiblyTranslatable } from '../../interfaces/Translatable';
 
 const { ComponentTypes } = Constants;
+
+export type SelectOption = SelectMenuOptions;
+export interface SelectOptionTranslatable extends Omit<SelectOption, 'label' | 'description'> {
+	label: PossiblyTranslatable;
+	description?: PossiblyTranslatable;
+}
+
 
 export class Select extends BaseComponent {
 	public definition: SelectMenu;
@@ -20,7 +28,12 @@ export class Select extends BaseComponent {
 		this.definition.options = [];
 	}
 
-	public options(...options: Array<SelectMenuOptions>): this {
+	public clearOptions(): this {
+		this.definition.options = [];
+		return this;
+	}
+
+	public setOptions(options: Array<SelectOption>): this {
 		if (options.length > this.maxOptions) throw new Error(`setOptions: Cannot have more then ${this.maxOptions} options`);
 
 		// truncate option label if longer then 100 characters
@@ -32,13 +45,31 @@ export class Select extends BaseComponent {
 		return this;
 	}
 
-	public clearOptions(): this {
-		this.definition.options = [];
+	public async setOptionsTranslated(options: Array<SelectOptionTranslatable>): Promise<this> {
+		const transform: Array<SelectOption> = [];
+		for (const option of options) {
+			let label = option.label;
+			if (typeof label === 'object') label = await this.ctx.formatTranslation(label);
+
+			let description = option.description;
+			if (typeof description === 'object') description = await this.ctx.formatTranslation(description);
+
+			transform.push({ ...option, label, description });
+		}
+
+		return this.setOptions(transform);
+	}
+
+	public addOptions(options: Array<SelectMenuOptions>): this {
+		const existing = this.definition.options.length;
+		if (existing + options.length > this.maxOptions) throw new Error(`Cannot have more then ${this.maxOptions} options`);
+
+		this.definition.options = [...this.definition.options, ...options];
 		return this;
 	}
 
-	public addOptions(...options: Array<SelectMenuOptions>): this {
-		return this.options(...[...this.definition.options, ...options]);
+	public addOption(option: SelectMenuOptions): this {
+		return this.addOptions([option]);
 	}
 
 	public placeholder(placeholder: string): this {

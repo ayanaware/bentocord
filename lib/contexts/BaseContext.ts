@@ -22,7 +22,7 @@ import { PaginationPrompt, PaginationOptions } from '../prompt/PaginationPrompt'
 import { Prompt, PromptOptions, PromptValidator } from '../prompt/Prompt';
 import { AnyPaginator } from '../prompt/helpers/AnyPaginator';
 import { CodeblockPaginator, CodeblockPaginatorItems } from '../prompt/helpers/CodeblockPaginator';
-import { ChoicePrompt, ChoicePromptChoice } from '../prompt/prompts/ChoicePrompt';
+import { ChoicePrompt } from '../prompt/prompts/ChoicePrompt';
 import { ConfirmPrompt } from '../prompt/prompts/ConfirmPrompt';
 import { IsTextableChannel } from '../util/IsTextableChannel';
 
@@ -195,8 +195,10 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 */
 	public async prompt<T = string>(content: PossiblyTranslatable | AgnosticMessageContent, validator?: PromptValidator<T>, options?: PromptOptions): Promise<T> {
 		const prompt = new Prompt<T>(this, validator, options);
-		if (typeof content === 'object' && 'key' in content) await prompt.contentTranslated(content.key, content.repl, content.backup);
-		else prompt.content(content);
+		if (content) {
+			if (typeof content === 'object' && 'key' in content) await prompt.contentTranslated(content.key, content.repl, content.backup);
+			else prompt.content(content);
+		}
 
 		return prompt.start();
 	}
@@ -229,8 +231,10 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 		if (Array.isArray(items) || typeof items === 'function') items = new CodeblockPaginator(this, items);
 		const pagination = new PaginationPrompt(this, items, options);
 
-		if (typeof content === 'object' && 'key' in content) await pagination.contentTranslated(content.key, content.repl, content.backup);
-		else if (content) pagination.content(content);
+		if (content) {
+			if (typeof content === 'object' && 'key' in content) await pagination.contentTranslated(content.key, content.repl, content.backup);
+			else pagination.content(content);
+		}
 
 		return pagination.start();
 	}
@@ -244,10 +248,12 @@ export class BaseContext<C extends MessageContent = MessageContent> {
 	 */
 	public async choice<T = string>(choices: AnyPaginator<T> | CodeblockPaginatorItems<T>, content?: PossiblyTranslatable | AgnosticMessageContent, options?: PaginationOptions): Promise<T> {
 		if (Array.isArray(choices) || typeof choices === 'function') choices = new CodeblockPaginator(this, choices);
-		const choice = new ChoicePrompt(this, choices, options);
+		const choice = new ChoicePrompt<T>(this, choices, options);
 
-		if (typeof content === 'object' && 'key' in content) await choice.contentTranslated(content.key, content.repl, content.backup);
-		else if (content) choice.content(content);
+		if (content) {
+			if (typeof content === 'object' && 'key' in content) await choice.contentTranslated(content.key, content.repl, content.backup);
+			else choice.content(content);
+		}
 
 		return choice.start();
 	}

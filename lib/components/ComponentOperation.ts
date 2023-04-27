@@ -18,7 +18,7 @@ export class ComponentOperation<T = void> {
 	protected readonly ctx: AnyContext;
 	protected readonly cm: ComponentsManager;
 
-	protected isClosed = false;
+	protected isClosing = false;
 
 	protected _content: AgnosticMessageContent;
 	protected _merge: AgnosticMessageContent;
@@ -59,29 +59,55 @@ export class ComponentOperation<T = void> {
 		return this;
 	}
 
-	public rows(...rows: Array<Array<AnyComponent>>): this {
-		if (rows.length > 5) throw new Error('setRows: Must be 5 rows or less');
-
-		this._rows = rows;
-		return this;
-	}
-
 	public clearRows(): this {
 		this._rows = [];
 		return this;
 	}
 
-	public addRows(...rows: Array<Array<AnyComponent>>): this {
-		return this.rows(...[...this._rows, ...rows]);
+	public setRows(rows: Array<Array<AnyComponent>>): this {
+		if (rows.length > this.maxRowCount) throw new Error('Too many rows');
+
+		this._rows = rows;
+		return this;
+	}
+
+	public setRow(n: number, row: Array<AnyComponent>): this {
+		if (n > this.maxRowCount - 1) throw new Error('Invalid row id');
+
+		this._rows[n] = row;
+		return this;
+	}
+
+	public addRows(rows: Array<Array<AnyComponent>>): this {
+		for (const row of rows) {
+			let placed = false;
+			for (let i = 0; i < this.maxRowCount - 1; i++) {
+				if (this._rows[i]) continue;
+
+				this._rows[i] = row;
+				placed = true;
+				break;
+			}
+
+			if (!placed) throw new Error('Not enough row space');
+		}
+
+		return this;
+	}
+
+	public addRow(row: Array<AnyComponent>): this {
+		return this.addRows([row]);
 	}
 
 	/**
 	 * A helper function to help build more complex/dynamic operations
 	 * Some examples would be a button that re-renders itself etc
-	 *
-	 * By default only called in start() and close()
 	 */
 	public async update(): Promise<void> {
+		/* NO-OP */
+	}
+
+	public async draw(): Promise<void> {
 		/* NO-OP */
 	}
 
@@ -89,6 +115,16 @@ export class ComponentOperation<T = void> {
 	 * Merge & build the final message content object
 	 */
 	public async build(): Promise<AgnosticMessageContent> {
+		if (!this.isClosing) {
+			try {
+				await this.draw();
+				await this.update();
+			} catch (e) {
+				await this.close(e);
+				throw e;
+			}
+		}
+
 		const rows: Array<ActionRow> = [];
 		for (const row of this._rows) {
 			const components: Array<ActionRowComponents> = row.map(c => c.definition);
@@ -125,8 +161,6 @@ export class ComponentOperation<T = void> {
 	 * When overriding this function take care that you always super.render();
 	 */
 	public async render(): Promise<void> {
-		if (this.isClosed) return; // prevent rendering after close
-
 		// ensure refreshTimeout is called
 		try {
 			await this.ctx.createResponse(await this.build(), this._files);
@@ -187,7 +221,6 @@ export class ComponentOperation<T = void> {
 	 * Can be used to block further execution
 	 */
 	public async start(): Promise<T> {
-		await this.update();
 		await this.render();
 
 		return new Promise((resolve, reject) => {
@@ -196,12 +229,16 @@ export class ComponentOperation<T = void> {
 		});
 	}
 
-	public async close(): Promise<void> {
+	public async close(reason?: unknown): Promise<void> {
 		await this.cleanup();
+
+		if (reason) return this.reject(reason);
 		return this.resolve();
 	}
 
 	public async cleanup(): Promise<void> {
+		this.isClosing = true;
+
 		// disable all components
 		this._rows.forEach(components => {
 			components.forEach(c => {
@@ -213,8 +250,6 @@ export class ComponentOperation<T = void> {
 		try {
 			await this.render();
 		} catch { /* NO-OP */ }
-
-		this.isClosed = true;
 
 		// detach handler
 		if (this.messageId) this.cm.removeMessageHandler(this.messageId);

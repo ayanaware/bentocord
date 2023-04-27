@@ -17,4 +17,6 @@ export interface Resolver<T = unknown> {
 
 	/** Resolver function */
 	resolve(ctx: AnyCommandContext, option: AnyValueCommandOption, input: string): Promise<T | Array<T>>;
+
+	help?(ctx: AnyCommandContext, option: AnyValueCommandOption, data: Map<string, string>): Promise<Map<string, string>>;
 }

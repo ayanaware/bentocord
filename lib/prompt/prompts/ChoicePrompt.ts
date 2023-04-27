@@ -11,10 +11,8 @@ import { PaginationOptions, PaginationPrompt } from '../PaginationPrompt';
 import { AnyPaginator } from '../helpers/AnyPaginator';
 import { PaginatorItem } from '../helpers/Paginator';
 
-export interface ChoicePromptChoice<T = unknown> extends PaginatorItem<T> {
-	value: T;
-}
-export class ChoicePrompt<T> extends PaginationPrompt<T> {
+export type ChoicePromptChoice<T> = PaginatorItem<T>;
+export class ChoicePrompt<T = unknown> extends PaginationPrompt<T> {
 	protected sltChoice: Select;
 	protected btnChoice: Button;
 
@@ -47,16 +45,16 @@ export class ChoicePrompt<T> extends PaginationPrompt<T> {
 		this.reject(NON_ERROR_HALT);
 	}
 
-	public async update(): Promise<void> {
+	public async draw(): Promise<void> {
 		this.clearRows();
 
-		// update pagination
-		await super.update();
+		// draw pagination
+		await super.draw();
 
 		const items = await this.paginator.getItems();
 		// single option per page
 		if (items.length === 1) {
-			this.addRows([this.btnChoice]);
+			this.addRow([this.btnChoice]);
 
 			return;
 		}
@@ -81,11 +79,10 @@ export class ChoicePrompt<T> extends PaginationPrompt<T> {
 
 			options.push(option);
 		}
-
-		this.sltChoice.options(...options);
+		this.sltChoice.setOptions(options);
 
 		// add select
-		this.addRows([this.sltChoice]);
+		this.addRow([this.sltChoice]);
 	}
 
 	protected async handleChoiceSelect(slt: SelectContext): Promise<void> {
@@ -100,7 +97,7 @@ export class ChoicePrompt<T> extends PaginationPrompt<T> {
 		if (!item) return;
 
 		await this.cleanup();
-		this.resolve(item.value);
+		this.resolve(item.item.value);
 	}
 
 	protected async handleChoiceButton(btn: ButtonContext): Promise<void> {
