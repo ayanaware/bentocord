@@ -81,7 +81,7 @@ export class ComponentOperation<T = void> {
 	public addRows(rows: Array<Array<AnyComponent>>): this {
 		for (const row of rows) {
 			let placed = false;
-			for (let i = 0; i < this.maxRowCount - 1; i++) {
+			for (let i = 0; i < this.maxRowCount; i++) {
 				if (this._rows[i]) continue;
 
 				this._rows[i] = row;
