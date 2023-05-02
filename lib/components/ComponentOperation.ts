@@ -221,12 +221,14 @@ export class ComponentOperation<T = void> {
 	 * Can be used to block further execution
 	 */
 	public async start(): Promise<T> {
-		await this.render();
-
-		return new Promise((resolve, reject) => {
+		const promise = new Promise<T>((resolve, reject) => {
 			this.resolve = resolve;
 			this.reject = reject;
 		});
+
+		await this.render();
+
+		return promise;
 	}
 
 	public async close(reason?: unknown): Promise<void> {
