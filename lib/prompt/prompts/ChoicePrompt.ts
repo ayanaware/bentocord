@@ -93,11 +93,11 @@ export class ChoicePrompt<T = unknown> extends PaginationPrompt<T> {
 
 		await slt.deferUpdate();
 
-		const [item] = await this.paginator.getItem(index);
+		const { item } = await this.paginator.getItem(index);
 		if (!item) return;
 
 		await this.cleanup();
-		this.resolve(item.item.value);
+		this.resolve(item.value);
 	}
 
 	protected async handleChoiceButton(btn: ButtonContext): Promise<void> {

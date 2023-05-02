@@ -19,7 +19,7 @@ export interface PaginatorItem<T = unknown> {
  * @param index - The index
  * @returns [T, number] Tuple containing item, and count of total items
  */
-export type PaginatorItemFunction<T> = (index: number) => Promise<[T, number]>;
+export type PaginatorItemFunction<T> = () => Promise<Array<T>>;
 export type PaginatorItems<T> = Array<T> | PaginatorItemFunction<T>;
 
 export interface PaginatorOptions {
@@ -45,8 +45,6 @@ export abstract class Paginator<T = unknown> {
 
 	protected currentPage = 0;
 	public readonly options: PaginatorOptions;
-
-	protected pageCache: Map<number, Array<PaginatorPageItem<T>>> = new Map();
 
 	public constructor(ctx: BaseContext, items: PaginatorItems<T>, options?: PaginatorOptions) {
 		this.ctx = ctx;
@@ -95,46 +93,36 @@ export abstract class Paginator<T = unknown> {
 	/**
 	 * Get item at given index
 	 * @param index Index
-	 * @returns [T, number] Tuple of item, and total count of items
+	 * @returns PaginatorPageItem
 	 */
-	public async getItem(index: number): Promise<[PaginatorPageItem<T>, number]> {
-		if (Array.isArray(this.items)) {
-			const item = this.items[index];
-			if (!item) return [null, this.items.length];
+	public async getItem(index: number): Promise<PaginatorPageItem<T>> {
+		let items = this.items;
+		if (typeof items === 'function') items = await items();
+		this.itemCount = items.length;
 
-			return [{ item, index }, this.items.length];
-		}
-
-		const itm = await this.items(index);
-		if (!itm) return [null, 0];
-
-		return [{ item: itm[0], index }, itm[1]];
+		const item = items[index] ?? null;
+		return { item, index };
 	}
 
-	public async getItems(page?: number, force = false): Promise<Array<PaginatorPageItem<T>>> {
+	public async getItems(page?: number): Promise<Array<PaginatorPageItem<T>>> {
 		const num = page || this.currentPage;
-
-		// check cache
-		if (this.pageCache.has(num) && !force) return this.pageCache.get(num);
 
 		const start = num * this.options.itemsPerPage;
 		const end = start + this.options.itemsPerPage;
 
-		const items: Array<PaginatorPageItem<T>> = [];
-		for (let index = start; index < end; index++) {
-			const [item, count] = await this.getItem(index);
-			// cache count for pageCount getter
-			this.itemCount = count;
+		let items = this.items;
+		if (typeof items === 'function') items = await items();
+		this.itemCount = items.length;
 
+		const out: Array<PaginatorPageItem<T>> = [];
+		for (let index = start; index < end; index++) {
+			const item = items[index] ?? null;
 			if (!item) break;
 
-			items.push(item);
+			out.push({ item, index });
 		}
 
-		// cache page
-		this.pageCache.set(num, items);
-
-		return items;
+		return out;
 	}
 
 	public abstract render(): Promise<AgnosticMessageContent>;

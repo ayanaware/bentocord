@@ -27,7 +27,7 @@ export class CodeblockPaginator<T = void> extends Paginator<CodeblockPaginatorIt
 	}
 
 	public async build(): Promise<LocalizedCodeblockBuilder> {
-		const items = await this.getItems(null, true);
+		const items = await this.getItems();
 		const cbb = new LocalizedCodeblockBuilder(this.ctx, this.options.language);
 		if (this.pageCount === 0) return cbb;
 

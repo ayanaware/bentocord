@@ -133,7 +133,7 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 		for (let i = start; i <= end; i++) {
 			const option: SelectMenuOptions = { value: i.toString(), label: (i + 1).toString(), default: i === page };
 			if (this.paginator.options.itemsPerPage === 1) {
-				const [{ item }] = await this.paginator.getItem(i);
+				const { item } = await this.paginator.getItem(i);
 
 				// label
 				let label = item.label ?? (i + 1).toString();
