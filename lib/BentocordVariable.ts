@@ -25,7 +25,12 @@ export enum BentocordVariable {
 	BENTOCORD_COMMAND_PREFIX = 'BENTOCORD_COMMAND_PREFIX',
 
 	/**
-	 * The default activity for the bot.
+	 * The default activity type for the bot
+	 */
+	BENTOCORD_ACTIVITY_TYPE = 'BENTOCORD_ACTIVITY_TYPE',
+
+	/**
+	 * The default activity name for the bot.
 	 */
 	BENTOCORD_ACTIVITY_NAME = 'BENTOCORD_ACTIVITY_NAME',
 

@@ -22,8 +22,11 @@ export class SetGameCommand implements CommandEntity {
 
 	@Inject() protected readonly discord: Discord;
 
+	@Variable({ name: BentocordVariable.BENTOCORD_ACTIVITY_TYPE, default: '0' })
+	protected readonly defaultType: string;
+
 	@Variable({ name: BentocordVariable.BENTOCORD_ACTIVITY_NAME, default: 'with Bentocord' })
-	protected readonly default: string;
+	protected readonly defaultName: string;
 
 	protected activity: ActivityPartial<BotActivityType>;
 
@@ -121,7 +124,8 @@ export class SetGameCommand implements CommandEntity {
 	 * @returns The activity for the bot.
 	 */
 	protected async getActivity(): Promise<ActivityPartial<BotActivityType>> {
-		if (!this.activity) return { name: this.default };
+		const type = Number(this.defaultType) as BotActivityType;
+		if (!this.activity) return { type, name: this.defaultName };
 
 		return this.activity;
 	}
