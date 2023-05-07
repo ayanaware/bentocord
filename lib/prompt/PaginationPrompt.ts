@@ -82,12 +82,12 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 		const paginator = this.paginator;
 		if (!paginator) return;
 
+		// clear components
+		this.clearRows();
+
 		// render page
 		// merged by ComponentOperation.render()
 		this._merge = await paginator.render();
-
-		// clear components
-		this.clearRows();
 
 		// less then 2 pages; no need to display pagination controls
 		if (this.paginator.pageCount < 2) return;
