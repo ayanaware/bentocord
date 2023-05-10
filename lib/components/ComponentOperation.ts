@@ -175,7 +175,7 @@ export class ComponentOperation<T = void> {
 			}
 		} finally {
 			// refresh timeout
-			this.refreshTimeout();
+			if (!this.isClosing) this.refreshTimeout();
 		}
 	}
 
@@ -205,9 +205,11 @@ export class ComponentOperation<T = void> {
 	}
 
 	protected refreshTimeout(): void {
+		if (this.isClosing) return;
 		if (this.timeout) clearTimeout(this.timeout);
 
 		this.timeout = setTimeout(() => {
+			if (this.isClosing) return;
 			this.handleTimeout().catch(() => { /* NO-OP */ });
 		}, this.timeoutSeconds * 1000);
 	}
