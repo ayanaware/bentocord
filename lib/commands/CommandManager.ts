@@ -732,6 +732,10 @@ export class CommandManager implements Component {
 				const subPath = [...path, permissionName];
 				if (!(await this.interface.checkPermission(ctx, subPath, option.permissionDefaults))) throw NON_ERROR_HALT;
 
+				// process suppressors
+				const suppressed = await this.executeSuppressors(ctx, option);
+				if (suppressed) throw new Error(`Suppressor \`${suppressed.name}\` halted execution: ${suppressed.message}`);
+
 				if (option) collector = { ...collector, [useSub]: await this.processTextOptions(ctx, option.options, output, index, subPath) };
 			}
 		}
