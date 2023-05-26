@@ -201,6 +201,11 @@ export class PaginationPrompt<T = void, U = T> extends Prompt<T> {
 		if (isNaN(page)) return;
 
 		this.paginator.page = page;
+
+		// TEMP FIX: Discord bug related to images & interactions
+		await slt.deferUpdate();
+		return this.render();
+
 		return slt.updateMessage(await this.build(), this._files);
 	}
 
