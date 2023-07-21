@@ -1,6 +1,6 @@
 {
 	"name": "@ayanaware/bentocord",
-	"version": "1.0.0-beta.61",
+	"version": "1.0.0-beta.62",
 	"description": "Bentocord is a Bento plugin designed to rapidly build fully functional Discord Bots.",
 	"main": "build/index.js",
 	"module": "build/index.mjs",
